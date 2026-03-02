@@ -3,11 +3,7 @@ package com.medpull.kiosk.data.repository
 import com.medpull.kiosk.data.models.InventoryItem
 import com.medpull.kiosk.data.remote.sheets.GoogleSheetsApiService
 import com.medpull.kiosk.utils.Constants
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Singleton
-class InventoryRepository @Inject constructor(
+class InventoryRepository(
     private val sheetsApiService: GoogleSheetsApiService
 ) {
     private var cachedItems: List<InventoryItem>? = null
