@@ -13,7 +13,6 @@ import com.medpull.kiosk.data.remote.aws.CognitoAuthServiceV2
 import com.medpull.kiosk.data.remote.aws.S3Service
 import com.medpull.kiosk.data.remote.aws.TextractService
 import com.medpull.kiosk.data.remote.aws.TranslationService
-import com.medpull.kiosk.data.remote.sheets.GoogleSheetsApiService
 import com.medpull.kiosk.data.repository.*
 import com.medpull.kiosk.security.SecureStorageManager
 import com.medpull.kiosk.sync.SyncManager
@@ -96,13 +95,5 @@ object RepositoryModule {
         authRepository: AuthRepository
     ): AiRepository {
         return AiRepository(claudeApiService, auditLogDao, authRepository)
-    }
-
-    @Provides
-    @Singleton
-    fun provideInventoryRepository(
-        sheetsApiService: GoogleSheetsApiService
-    ): InventoryRepository {
-        return InventoryRepository(sheetsApiService)
     }
 }

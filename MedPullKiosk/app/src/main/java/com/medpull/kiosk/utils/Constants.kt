@@ -123,14 +123,6 @@ object Constants {
         const val ANIMATION_DURATION_MS = 300L
     }
 
-    // Google Sheets Inventory
-    object GoogleSheets {
-        const val BASE_URL = "https://sheets.googleapis.com/v4/"
-        const val API_KEY = BuildConfig.GOOGLE_SHEETS_API_KEY
-        const val SPREADSHEET_ID = BuildConfig.INVENTORY_SPREADSHEET_ID
-        const val SHEET_RANGE = "Sheet1!A:H"
-    }
-
     // Validation
     object Validation {
         const val MIN_PASSWORD_LENGTH = 8

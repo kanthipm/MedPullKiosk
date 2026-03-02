@@ -28,10 +28,6 @@ annotation class ApiGatewayRetrofit
 @Retention(AnnotationRetention.BINARY)
 annotation class CognitoRetrofit
 
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class GoogleSheetsRetrofit
-
 /**
  * Hilt module for network dependencies
  */
@@ -102,28 +98,6 @@ object NetworkModule {
         @CognitoRetrofit retrofit: Retrofit
     ): CognitoApiService {
         return retrofit.create(CognitoApiService::class.java)
-    }
-
-    @Provides
-    @Singleton
-    @GoogleSheetsRetrofit
-    fun provideGoogleSheetsRetrofit(
-        okHttpClient: OkHttpClient,
-        gson: Gson
-    ): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(Constants.GoogleSheets.BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideGoogleSheetsApiService(
-        @GoogleSheetsRetrofit retrofit: Retrofit
-    ): com.medpull.kiosk.data.remote.sheets.GoogleSheetsApiService {
-        return retrofit.create(com.medpull.kiosk.data.remote.sheets.GoogleSheetsApiService::class.java)
     }
 
     @Provides

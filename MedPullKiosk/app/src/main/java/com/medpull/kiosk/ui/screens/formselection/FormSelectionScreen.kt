@@ -36,7 +36,6 @@ fun FormSelectionScreen(
     sessionManager: SessionManager,
     onLogout: () -> Unit,
     onFormSelected: (String) -> Unit = {},
-    onNavigateToInventory: () -> Unit = {},
     viewModel: FormSelectionViewModel = hiltViewModel()
 ) {
     // Track activity for session management
@@ -89,12 +88,6 @@ fun FormSelectionScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToInventory) {
-                        Icon(
-                            imageVector = Icons.Default.Inventory2,
-                            contentDescription = stringResource(R.string.inventory_title)
-                        )
-                    }
                     IconButton(onClick = { viewModel.refreshForms() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
