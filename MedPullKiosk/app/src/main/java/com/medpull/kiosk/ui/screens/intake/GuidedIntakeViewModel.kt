@@ -1,12 +1,16 @@
 package com.medpull.kiosk.ui.screens.intake
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.medpull.kiosk.data.engine.IntakeConversationEngine
+import com.medpull.kiosk.data.models.FieldType
+import com.medpull.kiosk.data.models.Form
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.data.models.FormIntakeFlow
+import com.medpull.kiosk.data.models.FormStatus
 import com.medpull.kiosk.data.models.IntakeAction
 import com.medpull.kiosk.data.models.IntakeQuestion
 import com.medpull.kiosk.data.repository.FormRepository
@@ -15,12 +19,12 @@ import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.utils.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,6 +39,56 @@ class GuidedIntakeViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "GuidedIntakeViewModel"
+        private const val COASTAL_GATEWAY_ID = "coastal_gateway_intake"
+        private const val SCHEMA_FILE = "schemas/coastal_gateway_intake.json"
+
+        /** Parse the Coastal Gateway JSON schema into a synthetic Form + fields. */
+        fun loadCoastalGatewayForm(context: Context): Form {
+            val json = context.assets.open(SCHEMA_FILE).bufferedReader().readText()
+            val root = JSONObject(json)
+            val formName = root.optString("form_name", "Coastal Gateway Intake")
+            val sections = root.optJSONArray("sections") ?: return emptyForm(formName)
+
+            val fields = mutableListOf<FormField>()
+            for (s in 0 until sections.length()) {
+                val section = sections.getJSONObject(s)
+                val sectionFields = section.optJSONArray("fields") ?: continue
+                for (f in 0 until sectionFields.length()) {
+                    val field = sectionFields.getJSONObject(f)
+                    fields += FormField(
+                        id = field.optString("id"),
+                        formId = COASTAL_GATEWAY_ID,
+                        fieldName = field.optString("label"),
+                        originalText = field.optString("label"),
+                        translatedText = field.optString("label"),
+                        fieldType = when (field.optString("type")) {
+                            "date" -> FieldType.DATE
+                            "checkbox" -> FieldType.CHECKBOX
+                            "radio" -> FieldType.RADIO
+                            "dropdown" -> FieldType.DROPDOWN
+                            "number", "phone", "zip" -> FieldType.NUMBER
+                            else -> FieldType.TEXT
+                        },
+                        required = field.optBoolean("required", false)
+                    )
+                }
+            }
+
+            return Form(
+                id = COASTAL_GATEWAY_ID,
+                userId = "builtin",
+                fileName = formName,
+                originalFileUri = "",
+                status = FormStatus.READY,
+                fields = fields
+            )
+        }
+
+        private fun emptyForm(name: String) = Form(
+            id = COASTAL_GATEWAY_ID, userId = "builtin",
+            fileName = name, originalFileUri = "",
+            status = FormStatus.READY, fields = emptyList()
+        )
     }
 
     private val formId: String = savedStateHandle.get<String>("formId") ?: ""
@@ -53,32 +107,20 @@ class GuidedIntakeViewModel @Inject constructor(
     private fun loadForm() {
         viewModelScope.launch {
             try {
-                _state.update { it.copy(isLoading = true) }
-                _state.update { it.copy(userLanguage = localeManager.getCurrentLanguage(appContext)) }
+                _state.update { it.copy(isLoading = true, userLanguage = localeManager.getCurrentLanguage(appContext)) }
 
-                formRepository.getFormByIdFlow(formId).collect { form ->
-                    if (form != null) {
-                        val flow = intakeRepository.getOrCreateFlow(formId)
-                        val allQuestions = intakeRepository.generateQuestionsFromFields(form.fields)
-                        val activeQuestions = intakeRepository.getActiveQuestions(formId, allQuestions, flow)
-
-                        _state.update {
-                            it.copy(
-                                form = form,
-                                fields = form.fields,
-                                intakeFlow = flow,
-                                allQuestions = allQuestions,
-                                activeQuestions = activeQuestions,
-                                isLoading = false
-                            )
+                if (formId == COASTAL_GATEWAY_ID) {
+                    // Built-in form — parse from assets, seed DB if not already there
+                    val form = loadCoastalGatewayForm(appContext)
+                    formRepository.saveForm(form)   // upsert — satisfies FK for intake flow
+                    initFormState(form)
+                } else {
+                    formRepository.getFormByIdFlow(formId).collect { form ->
+                        if (form != null) {
+                            initFormState(form)
+                        } else {
+                            _state.update { it.copy(error = "Form not found", isLoading = false) }
                         }
-
-                        if (activeQuestions.isNotEmpty()) setCurrentQuestion(flow.currentQuestionIndex)
-
-                        // Ask first question via engine on session start
-                        if (_state.value.chatMessages.isEmpty()) askNextQuestion()
-                    } else {
-                        _state.update { it.copy(error = "Form not found", isLoading = false) }
                     }
                 }
             } catch (e: Exception) {
@@ -86,6 +128,49 @@ class GuidedIntakeViewModel @Inject constructor(
                 _state.update { it.copy(error = "Failed to load form: ${e.message}", isLoading = false) }
             }
         }
+    }
+
+    private suspend fun initFormState(form: Form) {
+        val flow = intakeRepository.getOrCreateFlow(form.id)
+
+        // Pre-fill language + self-filling fields from app state so Claude never asks them
+        val language = localeManager.getCurrentLanguage(appContext)
+        val languageLabel = when (language) {
+            "es" -> "Español"
+            "zh" -> "中文"
+            "fr" -> "Français"
+            "hi" -> "हिन्दी"
+            "ar" -> "Arabic"
+            else -> "English"
+        }
+        val prefilled = form.fields.map { f ->
+            when (f.id) {
+                "preferred_language" -> f.copy(value = languageLabel)
+                "filling_for_self"   -> f.copy(value = "Myself")
+                else                 -> f
+            }
+        }
+        // Persist pre-filled values to DB so engine sees them as already answered
+        prefilled.filter { it.value != null }.forEach { f ->
+            formRepository.updateFieldValue(f.id, f.value)
+        }
+
+        val allQuestions = intakeRepository.generateQuestionsFromFields(prefilled)
+        val activeQuestions = intakeRepository.getActiveQuestions(form.id, allQuestions, flow)
+
+        _state.update {
+            it.copy(
+                form = form,
+                fields = prefilled,
+                intakeFlow = flow,
+                allQuestions = allQuestions,
+                activeQuestions = activeQuestions,
+                isLoading = false
+            )
+        }
+
+        if (activeQuestions.isNotEmpty()) setCurrentQuestion(flow.currentQuestionIndex)
+        if (_state.value.chatMessages.isEmpty()) askNextQuestion()
     }
 
     /**

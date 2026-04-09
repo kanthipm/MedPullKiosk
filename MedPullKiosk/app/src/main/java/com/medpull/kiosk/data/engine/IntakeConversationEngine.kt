@@ -253,7 +253,7 @@ RESPOND WITH VALID JSON ONLY — no other text:
         return fallbackAction(fields, formId)
     }
 
-    private fun parseResponse(
+    private suspend fun parseResponse(
         json: String,
         clarificationCounts: Map<String, Int>,
         fields: List<FormField>,

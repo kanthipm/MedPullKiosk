@@ -27,6 +27,8 @@ import com.medpull.kiosk.utils.SessionManager
 import java.text.SimpleDateFormat
 import java.util.*
 
+private const val COASTAL_GATEWAY_FORM_ID = "coastal_gateway_intake"
+
 /**
  * Form selection screen with upload functionality
  */
@@ -133,15 +135,38 @@ fun FormSelectionScreen(
                 state.isLoading -> {
                     LoadingState()
                 }
-                state.forms.isEmpty() -> {
-                    EmptyState()
-                }
                 else -> {
-                    FormsList(
-                        forms = state.forms,
-                        onFormClick = onFormSelected,
-                        onDeleteClick = { viewModel.deleteForm(it) }
-                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Always show the built-in Coastal Gateway form at the top
+                        item {
+                            CoastalGatewayCard(onClick = { onFormSelected(COASTAL_GATEWAY_FORM_ID) })
+                        }
+
+                        // Uploaded forms below
+                        if (state.forms.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Uploaded Forms",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+                                )
+                            }
+                            items(state.forms, key = { it.id }) { form ->
+                                FormCard(
+                                    form = form,
+                                    onClick = { onFormSelected(form.id) },
+                                    onDeleteClick = { viewModel.deleteForm(form.id) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -224,6 +249,77 @@ fun FormSelectionScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CoastalGatewayCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon badge
+            Surface(
+                color = MaterialTheme.colorScheme.primary,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.LocalHospital,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(20.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Coastal Gateway Health Center",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Patient Intake — Registration, Health History, Consents",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = "Ready",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.Default.ArrowForwardIos,
+                contentDescription = "Start intake",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun LoadingState() {
     Box(
@@ -245,62 +341,6 @@ private fun LoadingState() {
     }
 }
 
-@Composable
-private fun EmptyState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Description,
-                contentDescription = null,
-                modifier = Modifier.size(120.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "No Forms Yet",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Tap the + button below to upload your first form",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-private fun FormsList(
-    forms: List<com.medpull.kiosk.data.models.Form>,
-    onFormClick: (String) -> Unit,
-    onDeleteClick: (String) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(forms, key = { it.id }) { form ->
-            FormCard(
-                form = form,
-                onClick = { onFormClick(form.id) },
-                onDeleteClick = { onDeleteClick(form.id) }
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -11,11 +11,15 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,20 +28,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.medpull.kiosk.R
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.ui.screens.ai.HandwritingInput
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
- * Guided intake conversational screen
- * Shows questions one-by-one with chat interface for natural language responses
+ * Guided intake screen.
+ *
+ * Layout: the current AI question is displayed large and centered on the left/main area.
+ * The patient types (or speaks) their answer in the input bar at the bottom.
+ * A "Need Help?" button on the right edge opens a collapsible chat sidebar showing the
+ * full conversation history and an extra clarification input.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +57,8 @@ fun GuidedIntakeScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     var messageText by remember { mutableStateOf("") }
-    val listState = rememberLazyListState()
+    var chatPanelOpen by remember { mutableStateOf(false) }
+    val chatListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var showHandwriting by remember { mutableStateOf(false) }
 
@@ -101,52 +110,48 @@ fun GuidedIntakeScreen(
 
     // Text-to-speech
     var ttsReady by remember { mutableStateOf(false) }
-    var speakingTimestamp by remember { mutableStateOf(-1L) }
+    var speakingMessageId by remember { mutableStateOf(-1L) }
     val tts = remember {
-        TextToSpeech(context) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-        }
+        TextToSpeech(context) { status -> ttsReady = status == TextToSpeech.SUCCESS }
     }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            tts.shutdown()
-        }
-    }
+    DisposableEffect(Unit) { onDispose { tts.shutdown() } }
 
     LaunchedEffect(state.userLanguage, ttsReady) {
         if (ttsReady) {
             val locale = when (state.userLanguage) {
-                "es" -> Locale("es")
-                "zh" -> Locale.CHINESE
-                "fr" -> Locale.FRENCH
-                "hi" -> Locale("hi")
-                "ar" -> Locale("ar")
+                "es" -> Locale("es"); "zh" -> Locale.CHINESE
+                "fr" -> Locale.FRENCH; "hi" -> Locale("hi"); "ar" -> Locale("ar")
                 else -> Locale.ENGLISH
             }
             tts.language = locale
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?) { speakingTimestamp = -1L }
+                override fun onDone(utteranceId: String?) { speakingMessageId = -1L }
                 @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) { speakingTimestamp = -1L }
+                override fun onError(utteranceId: String?) { speakingMessageId = -1L }
             })
         }
     }
 
-    // Auto-scroll to bottom when new messages arrive
+    // Auto-scroll sidebar to bottom when messages arrive
     LaunchedEffect(state.chatMessages.size) {
         if (state.chatMessages.isNotEmpty()) {
-            coroutineScope.launch {
-                listState.animateScrollToItem(state.chatMessages.size - 1)
-            }
+            coroutineScope.launch { chatListState.animateScrollToItem(state.chatMessages.size - 1) }
         }
     }
 
-    // Handle completion
-    LaunchedEffect(state.isComplete) {
-        if (state.isComplete) {
-            onComplete()
+    LaunchedEffect(state.isComplete) { if (state.isComplete) onComplete() }
+
+    // The last AI message is the current question to display
+    val currentQuestion = remember(state.chatMessages) {
+        state.chatMessages.lastOrNull { !it.isFromUser }
+    }
+
+    val sendMessage: () -> Unit = {
+        if (messageText.isNotBlank() && !state.isLoadingResponse) {
+            viewModel.sendMessage(messageText)
+            messageText = ""
+            showHandwriting = false
         }
     }
 
@@ -156,21 +161,19 @@ fun GuidedIntakeScreen(
                 title = {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = state.form?.fileName ?: "Guided Intake",
+                            text = state.form?.fileName ?: "Patient Intake",
                             style = MaterialTheme.typography.titleMedium
                         )
                         if (state.totalRequiredCount > 0) {
                             val progress = state.filledRequiredCount.toFloat() / state.totalRequiredCount
                             Text(
-                                text = "${state.filledRequiredCount} of ${state.totalRequiredCount} required fields",
+                                text = "${state.filledRequiredCount} of ${state.totalRequiredCount} required",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                             LinearProgressIndicator(
                                 progress = { progress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 4.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
@@ -189,213 +192,338 @@ fun GuidedIntakeScreen(
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when {
-                state.isLoading -> {
-                    LoadingState()
-                }
-                state.form == null -> {
-                    ErrorState(message = state.error ?: "Form not found")
-                }
+                state.isLoading -> LoadingState()
+                state.form == null -> ErrorState(message = state.error ?: "Form not found")
                 else -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        // Chat messages area
-                        Box(
+                    Row(modifier = Modifier.fillMaxSize()) {
+
+                        // ── Main question area ────────────────────────────────────
+                        Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxWidth()
+                                .fillMaxHeight()
                         ) {
-                            if (state.chatMessages.isEmpty() && !state.isLoadingResponse) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
+                            // Error banner
+                            state.error?.let { error ->
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(
-                                        text = "Tell us your answer",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            } else {
-                                LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    items(state.chatMessages) { message ->
-                                        ChatBubble(
-                                            message = message,
-                                            isSpeaking = speakingTimestamp == message.timestamp,
-                                            onSpeak = if (!message.isFromUser && ttsReady) {
-                                                {
-                                                    if (speakingTimestamp == message.timestamp) {
-                                                        tts.stop()
-                                                        speakingTimestamp = -1L
-                                                    } else {
-                                                        tts.stop()
-                                                        tts.speak(
-                                                            message.text,
-                                                            TextToSpeech.QUEUE_FLUSH,
-                                                            null,
-                                                            message.timestamp.toString()
-                                                        )
-                                                        speakingTimestamp = message.timestamp
-                                                    }
-                                                }
-                                            } else null
-                                        )
-                                    }
-
-                                    if (state.isLoadingResponse) {
-                                        item {
-                                            TypingIndicator()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Error message
-                        state.error?.let { error ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Error,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = error,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(onClick = { viewModel.clearError() }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Dismiss",
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Handwriting input panel (shown above input card when active)
-                        if (showHandwriting) {
-                            HandwritingInput(
-                                language = state.userLanguage,
-                                onTextRecognized = { text ->
-                                    messageText = if (messageText.isBlank()) text else "$messageText $text"
-                                },
-                                onSwitchToKeyboard = { showHandwriting = false },
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-
-                        // Input area
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                OutlinedTextField(
-                                    value = messageText,
-                                    onValueChange = { messageText = it },
-                                    modifier = Modifier.weight(1f),
-                                    placeholder = { Text("Type your answer...") },
-                                    enabled = !state.isLoadingResponse,
-                                    maxLines = 3
-                                )
-
-                                // Handwriting toggle
-                                IconButton(onClick = { showHandwriting = !showHandwriting }) {
-                                    Icon(
-                                        imageVector = if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
-                                        contentDescription = if (showHandwriting) "Keyboard" else "Write by hand",
-                                        tint = if (showHandwriting) MaterialTheme.colorScheme.primary
-                                               else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                // Speech-to-text
-                                if (speechAvailable) {
-                                    IconButton(
-                                        onClick = {
-                                            if (isListening) {
-                                                speechRecognizer?.stopListening()
-                                                isListening = false
-                                            } else if (ContextCompat.checkSelfPermission(
-                                                    context, Manifest.permission.RECORD_AUDIO
-                                                ) == PackageManager.PERMISSION_GRANTED
-                                            ) {
-                                                startListening()
-                                            } else {
-                                                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                            }
-                                        },
-                                        enabled = !state.isLoadingResponse
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                                            contentDescription = if (isListening) "Stop" else "Speak your answer",
-                                            tint = if (isListening) MaterialTheme.colorScheme.error
-                                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                                            Icons.Default.Error, null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = error,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(onClick = { viewModel.clearError() }) {
+                                            Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Center: big question
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                when {
+                                    state.isLoadingResponse -> {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            CircularProgressIndicator(modifier = Modifier.size(40.dp))
+                                            Spacer(Modifier.height(16.dp))
+                                            Text(
+                                                "Processing your answer...",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            )
+                                        }
+                                    }
+                                    currentQuestion != null -> {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.padding(horizontal = 48.dp, vertical = 24.dp)
+                                        ) {
+                                            // Speak button
+                                            if (ttsReady) {
+                                                IconButton(
+                                                    onClick = {
+                                                        if (speakingMessageId == currentQuestion.timestamp) {
+                                                            tts.stop(); speakingMessageId = -1L
+                                                        } else {
+                                                            tts.stop()
+                                                            tts.speak(
+                                                                currentQuestion.text,
+                                                                TextToSpeech.QUEUE_FLUSH, null,
+                                                                currentQuestion.timestamp.toString()
+                                                            )
+                                                            speakingMessageId = currentQuestion.timestamp
+                                                        }
+                                                    },
+                                                    modifier = Modifier
+                                                        .size(48.dp)
+                                                        .background(
+                                                            MaterialTheme.colorScheme.primaryContainer,
+                                                            shape = CircleShape
+                                                        )
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (speakingMessageId == currentQuestion.timestamp)
+                                                            Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                                        contentDescription = "Read aloud",
+                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(24.dp))
+                                            }
+
+                                            Text(
+                                                text = currentQuestion.text,
+                                                style = MaterialTheme.typography.headlineMedium.copy(
+                                                    fontWeight = FontWeight.Normal,
+                                                    fontSize = 28.sp,
+                                                    lineHeight = 40.sp
+                                                ),
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                    else -> {
+                                        Text(
+                                            "Starting your intake...",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                                         )
                                     }
                                 }
+                            }
 
-                                // Send
-                                IconButton(
-                                    onClick = {
-                                        if (messageText.isNotBlank()) {
-                                            viewModel.sendMessage(messageText)
-                                            messageText = ""
-                                            showHandwriting = false
-                                        }
+                            // Handwriting panel (above input)
+                            if (showHandwriting) {
+                                HandwritingInput(
+                                    language = state.userLanguage,
+                                    onTextRecognized = { text ->
+                                        messageText = if (messageText.isBlank()) text else "$messageText $text"
                                     },
-                                    enabled = messageText.isNotBlank() && !state.isLoadingResponse
+                                    onSwitchToKeyboard = { showHandwriting = false },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+
+                            // Answer input bar
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface,
+                                tonalElevation = 4.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.Bottom
+                                    ) {
+                                        OutlinedTextField(
+                                            value = messageText,
+                                            onValueChange = { messageText = it },
+                                            modifier = Modifier.weight(1f),
+                                            placeholder = {
+                                                Text(
+                                                    "Type your answer here...",
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                            },
+                                            enabled = !state.isLoadingResponse,
+                                            maxLines = 4,
+                                            textStyle = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+
+                                        // Handwriting
+                                        IconButton(onClick = { showHandwriting = !showHandwriting }) {
+                                            Icon(
+                                                if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
+                                                contentDescription = if (showHandwriting) "Keyboard" else "Write",
+                                                tint = if (showHandwriting) MaterialTheme.colorScheme.primary
+                                                       else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        // Mic
+                                        if (speechAvailable) {
+                                            IconButton(
+                                                onClick = {
+                                                    if (isListening) {
+                                                        speechRecognizer?.stopListening(); isListening = false
+                                                    } else if (ContextCompat.checkSelfPermission(
+                                                            context, Manifest.permission.RECORD_AUDIO
+                                                        ) == PackageManager.PERMISSION_GRANTED
+                                                    ) {
+                                                        startListening()
+                                                    } else {
+                                                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                    }
+                                                },
+                                                enabled = !state.isLoadingResponse
+                                            ) {
+                                                Icon(
+                                                    if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
+                                                    contentDescription = if (isListening) "Stop" else "Speak",
+                                                    tint = if (isListening) MaterialTheme.colorScheme.error
+                                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        // Send
+                                        FilledIconButton(
+                                            onClick = sendMessage,
+                                            enabled = messageText.isNotBlank() && !state.isLoadingResponse
+                                        ) {
+                                            Icon(Icons.Default.Send, contentDescription = "Send")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Chat panel toggle tab ─────────────────────────────────
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(if (chatPanelOpen) 0.dp else 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!chatPanelOpen) {
+                                FilledTonalButton(
+                                    onClick = { chatPanelOpen = true },
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Send,
-                                        contentDescription = "Send",
-                                        tint = if (messageText.isNotBlank() && !state.isLoadingResponse)
-                                            MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            Icons.Default.Chat,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = "Help",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Chat sidebar ──────────────────────────────────────────
+                        AnimatedVisibility(
+                            visible = chatPanelOpen,
+                            enter = slideInHorizontally(initialOffsetX = { it }),
+                            exit = slideOutHorizontally(targetOffsetX = { it })
+                        ) {
+                            Surface(
+                                modifier = Modifier.width(360.dp).fillMaxHeight(),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                tonalElevation = 2.dp
+                            ) {
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    // Header
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Chat,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = "Conversation",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(
+                                                onClick = { chatPanelOpen = false },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "Close",
+                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalDivider()
+
+                                    // Message history
+                                    LazyColumn(
+                                        state = chatListState,
+                                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                                        contentPadding = PaddingValues(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        items(state.chatMessages) { message ->
+                                            ChatBubble(message = message)
+                                        }
+                                        if (state.isLoadingResponse) {
+                                            item { TypingIndicator() }
+                                        }
+                                    }
+
+                                    HorizontalDivider()
+
+                                    // Clarification input in sidebar
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surface,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(8.dp),
+                                            verticalAlignment = Alignment.Bottom
+                                        ) {
+                                            OutlinedTextField(
+                                                value = messageText,
+                                                onValueChange = { messageText = it },
+                                                modifier = Modifier.weight(1f),
+                                                placeholder = { Text("Ask for clarification...") },
+                                                enabled = !state.isLoadingResponse,
+                                                maxLines = 3,
+                                                textStyle = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            FilledIconButton(
+                                                onClick = sendMessage,
+                                                enabled = messageText.isNotBlank() && !state.isLoadingResponse
+                                            ) {
+                                                Icon(Icons.Default.Send, contentDescription = "Send")
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -407,66 +535,34 @@ fun GuidedIntakeScreen(
 }
 
 @Composable
-private fun ChatBubble(
-    message: ChatMessage,
-    isSpeaking: Boolean = false,
-    onSpeak: (() -> Unit)? = null
-) {
+private fun ChatBubble(message: ChatMessage) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = if (message.isFromUser) Arrangement.End else Arrangement.Start
     ) {
         Card(
-            modifier = Modifier
-                .widthIn(max = 280.dp),
+            modifier = Modifier.widthIn(max = 280.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (message.isFromUser) {
+                containerColor = if (message.isFromUser)
                     MaterialTheme.colorScheme.primary
-                } else {
+                else
                     MaterialTheme.colorScheme.secondaryContainer
-                }
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(
+                topStart = 16.dp, topEnd = 16.dp,
+                bottomStart = if (message.isFromUser) 16.dp else 4.dp,
+                bottomEnd = if (message.isFromUser) 4.dp else 16.dp
+            )
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (message.isFromUser) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-
-                if (!message.isFromUser && onSpeak != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(
-                        onClick = onSpeak,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isSpeaking) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                            contentDescription = "Speak",
-                            modifier = Modifier.size(16.dp),
-                            tint = if (message.isFromUser) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSecondaryContainer
-                            }
-                        )
-                    }
-                }
-            }
+            Text(
+                text = message.text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (message.isFromUser)
+                    MaterialTheme.colorScheme.onPrimary
+                else
+                    MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(12.dp)
+            )
         }
     }
 }
@@ -474,59 +570,48 @@ private fun ChatBubble(
 @Composable
 private fun TypingIndicator() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.Center
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        repeat(3) { index ->
+        repeat(3) {
             Box(
                 modifier = Modifier
                     .size(8.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(4.dp)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        shape = CircleShape
                     )
-                    .padding(4.dp)
             )
+            if (it < 2) Spacer(Modifier.width(4.dp))
         }
     }
 }
 
 @Composable
 private fun LoadingState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Loading form...",
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Spacer(Modifier.height(16.dp))
+            Text("Loading form...", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
 
 @Composable
 private fun ErrorState(message: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(32.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Error,
-                contentDescription = null,
+                Icons.Default.Error, null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.error
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
