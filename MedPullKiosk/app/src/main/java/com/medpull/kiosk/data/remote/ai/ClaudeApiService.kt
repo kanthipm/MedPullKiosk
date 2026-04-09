@@ -34,7 +34,9 @@ class ClaudeApiService @Inject constructor(
     suspend fun sendMessage(
         userMessage: String,
         conversationHistory: List<ChatMessage> = emptyList(),
-        systemPrompt: String? = null
+        systemPrompt: String? = null,
+        model: String = Constants.AI.CLAUDE_MODEL,
+        maxTokens: Int = Constants.AI.MAX_TOKENS
     ): AiResponse = withContext(Dispatchers.IO) {
         try {
             // Build messages list from conversation history + new user message
@@ -51,8 +53,8 @@ class ClaudeApiService @Inject constructor(
             messages.add(ClaudeMessage(role = "user", content = userMessage))
 
             val requestBody = ClaudeRequest(
-                model = Constants.AI.CLAUDE_MODEL,
-                maxTokens = Constants.AI.MAX_TOKENS,
+                model = model,
+                maxTokens = maxTokens,
                 system = systemPrompt,
                 messages = messages
             )

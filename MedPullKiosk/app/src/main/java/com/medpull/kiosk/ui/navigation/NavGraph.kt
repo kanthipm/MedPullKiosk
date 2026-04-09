@@ -22,6 +22,7 @@ import com.medpull.kiosk.healthcare.ui.FhirSettingsScreen
 import com.medpull.kiosk.ui.screens.export.ExportScreen
 import com.medpull.kiosk.ui.screens.formselection.FormSelectionScreen
 import com.medpull.kiosk.ui.screens.formfill.FormFillScreen
+import com.medpull.kiosk.ui.screens.intake.GuidedIntakeScreen
 import com.medpull.kiosk.ui.screens.inventory.InventoryScreen
 import com.medpull.kiosk.ui.screens.language.LanguageSelectionScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeScreen
@@ -166,7 +167,7 @@ fun NavGraph(
                     }
                 },
                 onFormSelected = { formId ->
-                    navController.navigate(Screen.FormFill.createRoute(formId))
+                    navController.navigate(Screen.GuidedIntake.createRoute(formId))
                 },
                 onNavigateToInventory = {
                     navController.navigate(Screen.Inventory.route)
@@ -182,6 +183,23 @@ fun NavGraph(
                 },
                 onExport = { formId ->
                     navController.navigate(Screen.Export.createRoute(formId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.GuidedIntake.route,
+            arguments = listOf(navArgument("formId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val formId = backStackEntry.arguments?.getString("formId") ?: ""
+            GuidedIntakeScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onComplete = {
+                    navController.navigate(Screen.Export.createRoute(formId)) {
+                        popUpTo(Screen.FormSelection.route)
+                    }
                 }
             )
         }

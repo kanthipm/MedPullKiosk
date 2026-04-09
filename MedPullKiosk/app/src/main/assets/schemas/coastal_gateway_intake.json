@@ -1,0 +1,70 @@
+{
+  "form_id": "coastal_gateway_intake",
+  "form_name": "Coastal Gateway Patient Intake",
+  "version": "placeholder",
+  "_note": "PLACEHOLDER — replace with real schema extracted from Coastal Gateway form (Phase 0)",
+  "fields": [
+    {
+      "id": "first_name",
+      "label": "First Name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "last_name",
+      "label": "Last Name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "date_of_birth",
+      "label": "Date of Birth",
+      "type": "date",
+      "required": true,
+      "hint": "Format: MM/DD/YYYY"
+    },
+    {
+      "id": "phone_number",
+      "label": "Phone Number",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "insurance_status",
+      "label": "Insurance Status",
+      "type": "radio",
+      "required": true,
+      "options": ["insured", "uninsured", "medicaid", "medicare"],
+      "skip_rules": [
+        {
+          "if_value": "uninsured",
+          "skip_fields": ["insurance_company", "policy_number", "group_number"]
+        }
+      ]
+    },
+    {
+      "id": "insurance_company",
+      "label": "Insurance Company",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "policy_number",
+      "label": "Policy Number",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "group_number",
+      "label": "Group Number",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "reason_for_visit",
+      "label": "Reason for Visit",
+      "type": "text",
+      "required": true
+    }
+  ]
+}

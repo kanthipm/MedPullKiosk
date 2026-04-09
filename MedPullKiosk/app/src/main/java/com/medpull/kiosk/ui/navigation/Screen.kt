@@ -15,6 +15,9 @@ sealed class Screen(val route: String) {
     object FormFill : Screen("form_fill/{formId}") {
         fun createRoute(formId: String) = "form_fill/$formId"
     }
+    object GuidedIntake : Screen("guided_intake/{formId}") {
+        fun createRoute(formId: String) = "guided_intake/$formId"
+    }
     object Export : Screen("export/{formId}") {
         fun createRoute(formId: String) = "export/$formId"
     }

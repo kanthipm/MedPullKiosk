@@ -97,6 +97,10 @@ object Constants {
         const val CLAUDE_API_VERSION = "2023-06-01"
         const val MAX_TOKENS = 1024
 
+        // Conversational intake engine — uses Sonnet for better reasoning and JSON output
+        const val CONVERSATION_MODEL = "claude-sonnet-4-6"
+        const val CONVERSATION_MAX_TOKENS = 2048
+
         // Claude Vision post-processing
         const val CLAUDE_VISION_MODEL = "claude-haiku-4-5-20251001"
         const val VISION_MAX_TOKENS = 8192
