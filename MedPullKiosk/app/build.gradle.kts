@@ -5,7 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
-    kotlin("kapt")
+    // kotlin("kapt")  // removed — Hilt migrated to KSP to avoid kapt stub duplication bug
 }
 
 android {
@@ -32,13 +32,14 @@ android {
         buildConfigField("String", "AWS_API_ENDPOINT", "\"https://d40uuum7hj.execute-api.us-east-1.amazonaws.com/prod\"")
         buildConfigField("String", "AWS_S3_BUCKET", "\"medpull-hipaa-files-1759818639\"")
 
-        // Claude API — key loaded from local.properties (not checked into git)
+        // AI API keys — loaded from local.properties (not checked into git)
         val localProperties = Properties()
         val localPropsFile = rootProject.file("local.properties")
         if (localPropsFile.exists()) {
             localPropsFile.inputStream().use { localProperties.load(it) }
         }
         buildConfigField("String", "CLAUDE_API_KEY", "\"${localProperties.getProperty("CLAUDE_API_KEY", "")}\"")
+        buildConfigField("String", "GROK_API_KEY", "\"${localProperties.getProperty("GROK_API_KEY", "")}\"")
 
         // Google Sheets Inventory
         buildConfigField("String", "GOOGLE_SHEETS_API_KEY", "\"AIzaSyDh1tQGyxM9zEYO56sKVtu9AYYnf_eM8Yw\"")
@@ -137,12 +138,12 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
-    // Hilt Dependency Injection
+    // Hilt Dependency Injection — using KSP to avoid kapt stub duplication bug with Java 21
     implementation("com.google.dagger:hilt-android:2.48")
-    kapt("com.google.dagger:hilt-android-compiler:2.48")
+    ksp("com.google.dagger:hilt-android-compiler:2.48")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
     implementation("androidx.hilt:hilt-work:1.1.0")
-    kapt("androidx.hilt:hilt-compiler:1.1.0")
+    ksp("androidx.hilt:hilt-compiler:1.1.0")
 
     // Room Database
     implementation("androidx.room:room-runtime:2.6.1")
@@ -200,7 +201,4 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
 
-// Allow references to generated code
-kapt {
-    correctErrorTypes = true
-}
+// kapt block removed — Hilt migrated to KSP

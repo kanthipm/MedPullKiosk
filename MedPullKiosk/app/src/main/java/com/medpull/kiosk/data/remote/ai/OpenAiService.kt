@@ -156,14 +156,6 @@ class OpenAiService @Inject constructor(
 }
 
 /**
- * AI response sealed class
- */
-sealed class AiResponse {
-    data class Success(val message: String) : AiResponse()
-    data class Error(val message: String) : AiResponse()
-}
-
-/**
  * OpenAI API models
  */
 data class ChatCompletionRequest(

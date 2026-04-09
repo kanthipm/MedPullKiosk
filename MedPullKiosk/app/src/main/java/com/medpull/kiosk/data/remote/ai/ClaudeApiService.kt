@@ -16,8 +16,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Claude API service for AI assistance.
- * Calls the Anthropic Messages API directly with an API key.
+ * AI chat service — now backed by Grok (xAI) which exposes an OpenAI-compatible API.
+ * Keeps the same public interface so IntakeConversationEngine needs no changes.
  */
 @Singleton
 class ClaudeApiService @Inject constructor(
@@ -25,47 +25,53 @@ class ClaudeApiService @Inject constructor(
     private val gson: Gson
 ) {
     companion object {
-        private const val TAG = "ClaudeApiService"
+        private const val TAG = "GrokApiService"
     }
 
     /**
-     * Send a chat message to Claude with full conversation history for multi-turn context.
+     * Send a chat message with full conversation history for multi-turn context.
+     * System prompt is inserted as the first message with role="system".
      */
     suspend fun sendMessage(
         userMessage: String,
         conversationHistory: List<ChatMessage> = emptyList(),
         systemPrompt: String? = null,
-        model: String = Constants.AI.CLAUDE_MODEL,
+        model: String = Constants.AI.GROK_MODEL,
         maxTokens: Int = Constants.AI.MAX_TOKENS
     ): AiResponse = withContext(Dispatchers.IO) {
         try {
-            // Build messages list from conversation history + new user message
-            val messages = mutableListOf<ClaudeMessage>()
+            val messages = mutableListOf<GrokMessage>()
+
+            // System prompt goes as the first message
+            if (!systemPrompt.isNullOrBlank()) {
+                messages.add(GrokMessage(role = "system", content = systemPrompt))
+            }
+
+            // Conversation history
             for (msg in conversationHistory) {
                 messages.add(
-                    ClaudeMessage(
+                    GrokMessage(
                         role = if (msg.isFromUser) "user" else "assistant",
                         content = msg.text
                     )
                 )
             }
-            // Add the current user message
-            messages.add(ClaudeMessage(role = "user", content = userMessage))
 
-            val requestBody = ClaudeRequest(
+            // Current user message
+            messages.add(GrokMessage(role = "user", content = userMessage))
+
+            val requestBody = GrokRequest(
                 model = model,
                 maxTokens = maxTokens,
-                system = systemPrompt,
                 messages = messages
             )
 
             val bodyJson = gson.toJson(requestBody)
 
             val request = Request.Builder()
-                .url(Constants.AI.CLAUDE_API_URL)
-                .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY)
-                .addHeader("anthropic-version", Constants.AI.CLAUDE_API_VERSION)
-                .addHeader("content-type", "application/json")
+                .url(Constants.AI.GROK_API_URL)
+                .addHeader("Authorization", "Bearer ${BuildConfig.GROK_API_KEY}")
+                .addHeader("Content-Type", "application/json")
                 .post(bodyJson.toRequestBody("application/json".toMediaType()))
                 .build()
 
@@ -74,10 +80,10 @@ class ClaudeApiService @Inject constructor(
             if (response.isSuccessful) {
                 val responseJson = response.body?.string()
                 if (responseJson != null) {
-                    val claudeResponse = gson.fromJson(responseJson, ClaudeResponse::class.java)
-                    val text = claudeResponse.content?.firstOrNull()?.text
+                    val grokResponse = gson.fromJson(responseJson, GrokResponse::class.java)
+                    val text = grokResponse.choices?.firstOrNull()?.message?.content
                     if (!text.isNullOrBlank()) {
-                        Log.d(TAG, "Claude response received (${text.length} chars)")
+                        Log.d(TAG, "Grok response received (${text.length} chars)")
                         AiResponse.Success(text)
                     } else {
                         AiResponse.Error("Empty response from AI")
@@ -87,22 +93,21 @@ class ClaudeApiService @Inject constructor(
                 }
             } else {
                 val errorBody = response.body?.string()
-                Log.e(TAG, "Claude API error: ${response.code} - $errorBody")
+                Log.e(TAG, "Grok API error: ${response.code} - $errorBody")
                 when (response.code) {
-                    401 -> AiResponse.Error("Invalid API key. Check your Claude API key.")
+                    401 -> AiResponse.Error("Invalid API key. Check your Grok API key.")
                     429 -> AiResponse.Error("Rate limit exceeded. Please try again shortly.")
-                    529 -> AiResponse.Error("Claude is temporarily overloaded. Please try again.")
                     else -> AiResponse.Error("AI request failed (${response.code})")
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error calling Claude API", e)
+            Log.e(TAG, "Error calling Grok API", e)
             AiResponse.Error("Failed to connect to AI: ${e.message}")
         }
     }
 
     /**
-     * Get field suggestion
+     * Get field suggestion (used by AI assistant screen)
      */
     suspend fun suggestFieldValue(
         fieldName: String,
@@ -117,7 +122,7 @@ class ClaudeApiService @Inject constructor(
     }
 
     /**
-     * Explain medical term
+     * Explain medical term (used by AI assistant screen)
      */
     suspend fun explainMedicalTerm(
         term: String,
@@ -149,45 +154,43 @@ class ClaudeApiService @Inject constructor(
             Never provide medical advice or diagnoses. Only help with form-filling questions.
         """.trimIndent()
 
-        return if (context != null) {
-            "$base\n\nCurrent form context:\n$context"
-        } else {
-            base
-        }
+        return if (context != null) "$base\n\nCurrent form context:\n$context" else base
     }
 }
 
-// --- Claude API request/response models ---
+// --- Grok (OpenAI-compatible) request/response models ---
 
-data class ClaudeRequest(
+data class GrokRequest(
     val model: String,
     @SerializedName("max_tokens")
     val maxTokens: Int,
-    val system: String? = null,
-    val messages: List<ClaudeMessage>
+    val messages: List<GrokMessage>
 )
 
-data class ClaudeMessage(
+data class GrokMessage(
     val role: String,
     val content: String
 )
 
-data class ClaudeResponse(
+data class GrokResponse(
     val id: String?,
-    val content: List<ClaudeContent>?,
-    @SerializedName("stop_reason")
-    val stopReason: String?,
-    val usage: ClaudeUsage?
+    val choices: List<GrokChoice>?,
+    val usage: GrokUsage?
 )
 
-data class ClaudeContent(
-    val type: String?,
-    val text: String?
+data class GrokChoice(
+    val index: Int?,
+    val message: GrokMessage?,
+    @SerializedName("finish_reason")
+    val finishReason: String?
 )
 
-data class ClaudeUsage(
-    @SerializedName("input_tokens")
-    val inputTokens: Int?,
-    @SerializedName("output_tokens")
-    val outputTokens: Int?
+data class GrokUsage(
+    @SerializedName("prompt_tokens")
+    val promptTokens: Int?,
+    @SerializedName("completion_tokens")
+    val completionTokens: Int?,
+    @SerializedName("total_tokens")
+    val totalTokens: Int?
 )
+

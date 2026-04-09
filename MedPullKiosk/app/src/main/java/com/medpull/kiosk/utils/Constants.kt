@@ -90,18 +90,21 @@ object Constants {
         const val RETRY_DELAY_MS = 1000L
     }
 
-    // AI Assistance — uses Anthropic Claude API directly
+    // AI Assistance — uses Grok (xAI) API for intake conversation
     object AI {
+        // Grok API (OpenAI-compatible)
+        const val GROK_API_URL = "https://api.x.ai/v1/chat/completions"
+        const val GROK_MODEL = "grok-3"
+        const val MAX_TOKENS = 1024
+
+        // Conversational intake engine
+        const val CONVERSATION_MODEL = "grok-3"
+        const val CONVERSATION_MAX_TOKENS = 2048
+
+        // Legacy Claude constants (kept for ClaudeVisionService)
         const val CLAUDE_MODEL = "claude-3-haiku-20240307"
         const val CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
         const val CLAUDE_API_VERSION = "2023-06-01"
-        const val MAX_TOKENS = 1024
-
-        // Conversational intake engine — uses Sonnet for better reasoning and JSON output
-        const val CONVERSATION_MODEL = "claude-sonnet-4-6"
-        const val CONVERSATION_MAX_TOKENS = 2048
-
-        // Claude Vision post-processing
         const val CLAUDE_VISION_MODEL = "claude-haiku-4-5-20251001"
         const val VISION_MAX_TOKENS = 8192
         const val VISION_TIMEOUT_SECONDS = 120L
