@@ -1,70 +1,725 @@
 {
   "form_id": "coastal_gateway_intake",
-  "form_name": "Coastal Gateway Patient Intake",
-  "version": "placeholder",
-  "_note": "PLACEHOLDER — replace with real schema extracted from Coastal Gateway form (Phase 0)",
-  "fields": [
+  "form_name": "Coastal Gateway Health Center — Patient Intake",
+  "version": "1.0",
+  "ai_instructions": "You are conducting a patient intake at Coastal Gateway Health Center (CGHC). Work through all 4 sections in order: Registration, Health History, HIPAA Consent, General Consents. Ask one question at a time. Follow all skip_if rules to avoid asking irrelevant questions. Follow all flag_if rules to note clinical alerts. Deliver sensitive fields with the framing specified. Always offer 'Decline to specify' for sensitive demographic fields. Never show patients legal boilerplate — summarize in plain language. When a patient discloses attempted suicide, acknowledge with empathy before recording and moving on.",
+
+  "sections": [
     {
-      "id": "first_name",
-      "label": "First Name",
-      "type": "text",
-      "required": true
-    },
-    {
-      "id": "last_name",
-      "label": "Last Name",
-      "type": "text",
-      "required": true
-    },
-    {
-      "id": "date_of_birth",
-      "label": "Date of Birth",
-      "type": "date",
-      "required": true,
-      "hint": "Format: MM/DD/YYYY"
-    },
-    {
-      "id": "phone_number",
-      "label": "Phone Number",
-      "type": "text",
-      "required": false
-    },
-    {
-      "id": "insurance_status",
-      "label": "Insurance Status",
-      "type": "radio",
-      "required": true,
-      "options": ["insured", "uninsured", "medicaid", "medicare"],
-      "skip_rules": [
+      "id": "registration",
+      "name": "Section 1: Registration",
+      "intro": "Opens with language detection, then identity, contact, demographics, and insurance. Every skip and branch is driven by prior answers.",
+      "fields": [
         {
-          "if_value": "uninsured",
-          "skip_fields": ["insurance_company", "policy_number", "group_number"]
+          "id": "preferred_language",
+          "label": "Preferred Language",
+          "type": "radio",
+          "required": true,
+          "options": ["English", "Español", "Tiếng Việt", "Other"],
+          "ai_note": "Ask this FIRST before any other question. If 'Other', collect free text and proceed in English. All subsequent AI responses should be in the selected language. Form output is always English.",
+          "branch": "Sets translation layer for entire session."
+        },
+        {
+          "id": "filling_for_self",
+          "label": "Filling Out For",
+          "type": "radio",
+          "required": true,
+          "options": ["Myself", "Someone else"],
+          "ai_note": "Ask before name or DOB. If 'Someone else', switch to guardian mode — reframe all subsequent questions to third person ('What is the patient's name?' vs 'What is your name?'). Responsible party section becomes required.",
+          "branch": "'Myself' = standard flow. 'Someone else' = guardian mode, all pronouns adjusted."
+        },
+        {
+          "id": "patient_full_name",
+          "label": "Patient Full Name (Last, First)",
+          "type": "text",
+          "required": true,
+          "validate": "Must contain at least two word segments (first and last name). Flag if only one name provided.",
+          "ai_note": "If patient provides only one name, prompt: 'Could you give me both your first and last name?'"
+        },
+        {
+          "id": "date_of_birth",
+          "label": "Date of Birth",
+          "type": "date",
+          "required": true,
+          "hint": "MM/DD/YYYY",
+          "validate": "Must be a real date. Flag if DOB indicates patient is under 18 and guardian mode is not already active.",
+          "branch": "If age < 18 and not in guardian mode, prompt: 'It looks like this patient is a minor. Who is filling this out today?' Then activate guardian mode.",
+          "flag_if": "Age < 18 and no guardian — flag for staff."
+        },
+        {
+          "id": "mailing_address_street",
+          "label": "Mailing Address — Street / PO Box",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "mailing_city",
+          "label": "Mailing City",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "mailing_state",
+          "label": "Mailing State",
+          "type": "text",
+          "required": true,
+          "validate": "Must be a valid 2-letter US state abbreviation."
+        },
+        {
+          "id": "mailing_zip",
+          "label": "Mailing Zip Code",
+          "type": "text",
+          "required": true,
+          "validate": "Must be 5 digits (or 5+4 format)."
+        },
+        {
+          "id": "physical_same_as_mailing",
+          "label": "Physical Address Same as Mailing?",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "Yes",
+            "skip_fields": ["physical_address_street", "physical_city", "physical_state", "physical_zip"]
+          },
+          "ai_note": "If Yes, auto-populate physical address as 'Same as mailing' — do not ask physical address fields."
+        },
+        {
+          "id": "physical_address_street",
+          "label": "Physical Address — Street",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only ask if physical_same_as_mailing = No."
+        },
+        {
+          "id": "physical_city",
+          "label": "Physical City",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only ask if physical_same_as_mailing = No."
+        },
+        {
+          "id": "physical_state",
+          "label": "Physical State",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only ask if physical_same_as_mailing = No."
+        },
+        {
+          "id": "physical_zip",
+          "label": "Physical Zip Code",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only ask if physical_same_as_mailing = No."
+        },
+        {
+          "id": "cell_phone",
+          "label": "Cell Phone Number",
+          "type": "phone",
+          "required": true,
+          "validate": "Must be 10 digits. Strip formatting characters before validation.",
+          "ai_note": "Ask for cell first."
+        },
+        {
+          "id": "home_phone",
+          "label": "Home Phone Number",
+          "type": "phone",
+          "required": false,
+          "validate": "Must be 10 digits if provided.",
+          "ai_note": "Ask after cell. Optional."
+        },
+        {
+          "id": "work_phone",
+          "label": "Work Phone Number",
+          "type": "phone",
+          "required": false,
+          "validate": "Must be 10 digits if provided.",
+          "ai_note": "Only ask if fewer than 2 phone numbers have been collected (cell + home).",
+          "skip_if": {
+            "condition": "two_phones_already_collected",
+            "skip_fields": ["work_phone"]
+          }
+        },
+        {
+          "id": "email",
+          "label": "Email Address",
+          "type": "email",
+          "required": false,
+          "validate": "Must contain @ and a domain if provided.",
+          "ai_note": "Optional. Mention briefly: 'This will be used for appointment reminders and portal access (Healow).'"
+        },
+        {
+          "id": "demographics_framing",
+          "label": "Demographics Framing",
+          "type": "static_label",
+          "required": false,
+          "ai_note": "Deliver before all demographic questions: 'Now a few questions about identity and background — these help the clinic provide better care. You can skip any of them.' Do not skip this framing."
+        },
+        {
+          "id": "sex_assigned_at_birth",
+          "label": "Sex Assigned at Birth",
+          "type": "radio",
+          "required": false,
+          "options": ["Female", "Male", "Decline to specify"],
+          "sensitive": true,
+          "ai_note": "Keep separate from gender identity. Do not conflate the two. Decline to specify is a real, respected answer."
+        },
+        {
+          "id": "gender_identity",
+          "label": "Gender Identity",
+          "type": "radio",
+          "required": false,
+          "options": ["Female", "Male", "Transgender Female", "Transgender Male", "Other", "Decline to specify"],
+          "sensitive": true,
+          "ai_note": "Never assume gender identity from sex answer. Always ask. 'Other' allows free text."
+        },
+        {
+          "id": "sexual_orientation",
+          "label": "Sexual Orientation",
+          "type": "radio",
+          "required": false,
+          "options": ["Straight/Heterosexual", "Gay or Lesbian", "Bisexual", "Other", "Decline to specify"],
+          "sensitive": true
+        },
+        {
+          "id": "race",
+          "label": "Race (Select all that apply)",
+          "type": "multi_select",
+          "required": false,
+          "options": ["White", "African American/Black", "Asian", "American Indian or Alaska Native", "Native Hawaiian", "Other Pacific Islander", "Other", "Decline to specify"],
+          "sensitive": true
+        },
+        {
+          "id": "ethnicity",
+          "label": "Ethnicity",
+          "type": "radio",
+          "required": false,
+          "options": ["Not Hispanic or Latino", "Hispanic or Latino", "Decline to specify"],
+          "sensitive": true
+        },
+        {
+          "id": "veteran_status",
+          "label": "Veteran Status",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No", "Decline to specify"],
+          "flag_if": {
+            "if_value": "Yes",
+            "flag": "Veteran status — note in clinical summary for potential VA coordination and veteran-specific grant eligibility."
+          }
+        },
+        {
+          "id": "disability_status",
+          "label": "Disability Status",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No", "Decline to specify"],
+          "flag_if": {
+            "if_value": "Yes",
+            "flag": "Disability noted — flag for accessibility accommodations and eligibility screening."
+          }
+        },
+        {
+          "id": "marital_status",
+          "label": "Marital Status",
+          "type": "radio",
+          "required": false,
+          "options": ["Single", "Married", "Divorced", "Widowed"]
+        },
+        {
+          "id": "emergency_contact_name",
+          "label": "Emergency Contact Name",
+          "type": "text",
+          "required": true,
+          "ai_note": "Always ask — no skip condition."
+        },
+        {
+          "id": "emergency_contact_phone",
+          "label": "Emergency Contact Phone",
+          "type": "phone",
+          "required": true,
+          "validate": "Must be 10 digits."
+        },
+        {
+          "id": "emergency_contact_relationship",
+          "label": "Emergency Contact Relationship",
+          "type": "text",
+          "required": true,
+          "validate": "Must not be blank."
+        },
+        {
+          "id": "has_insurance",
+          "label": "Has Health Insurance",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "No",
+            "skip_fields": [
+              "primary_insurance_provider", "primary_insurance_id", "primary_insurance_group",
+              "policyholder_is_self", "policyholder_name", "policyholder_dob", "policyholder_relationship",
+              "has_secondary_insurance", "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"
+            ]
+          },
+          "ai_note": "If No, skip all insurance fields. Note sliding fee / self-pay pathway in output."
+        },
+        {
+          "id": "primary_insurance_provider",
+          "label": "Primary Insurance Provider Name",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only asked if has_insurance = Yes."
+        },
+        {
+          "id": "primary_insurance_id",
+          "label": "Primary Insurance ID Number",
+          "type": "text",
+          "required": false
+        },
+        {
+          "id": "primary_insurance_group",
+          "label": "Primary Insurance Group Number",
+          "type": "text",
+          "required": false
+        },
+        {
+          "id": "policyholder_is_self",
+          "label": "Is Policy Holder the Patient?",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "Yes",
+            "skip_fields": ["policyholder_name", "policyholder_dob", "policyholder_relationship"]
+          },
+          "ai_note": "If Yes, skip policyholder detail. If No, collect policyholder name, DOB, and relationship."
+        },
+        {
+          "id": "policyholder_name",
+          "label": "Policy Holder Name",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only if policyholder_is_self = No."
+        },
+        {
+          "id": "policyholder_dob",
+          "label": "Policy Holder Date of Birth",
+          "type": "date",
+          "required": false,
+          "ai_note": "Only if policyholder_is_self = No."
+        },
+        {
+          "id": "policyholder_relationship",
+          "label": "Policy Holder Relationship to Patient",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only if policyholder_is_self = No."
+        },
+        {
+          "id": "has_secondary_insurance",
+          "label": "Has Secondary Insurance",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "No",
+            "skip_fields": ["secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"]
+          }
+        },
+        {
+          "id": "secondary_insurance_provider",
+          "label": "Secondary Insurance Provider Name",
+          "type": "text",
+          "required": false
+        },
+        {
+          "id": "secondary_insurance_id",
+          "label": "Secondary Insurance ID Number",
+          "type": "text",
+          "required": false
+        },
+        {
+          "id": "secondary_insurance_group",
+          "label": "Secondary Insurance Group Number",
+          "type": "text",
+          "required": false
         }
       ]
     },
+
     {
-      "id": "insurance_company",
-      "label": "Insurance Company",
-      "type": "text",
-      "required": false
+      "id": "health_history",
+      "name": "Section 2: Health History",
+      "intro": "Medical history uses grouped multi-select. Family history collapses the matrix. Social/behavioral history needs sensitive framing. Every section has a 'None' fast-path that skips the detail.",
+      "fields": [
+        {
+          "id": "medical_conditions",
+          "label": "Diagnosed or Treated Conditions",
+          "type": "multi_select",
+          "required": false,
+          "options": [
+            "None",
+            "Heart Disease", "Heart Attack", "High Blood Pressure",
+            "Asthma / Lung Disease",
+            "Stroke", "Seizures / Epilepsy", "Headaches / Migraines", "Sleep Problems / Sleep Apnea",
+            "Diabetes", "Thyroid Problems",
+            "Hepatitis", "STDs", "Tuberculosis", "Sickle Cell Disease", "HIV / AIDS",
+            "Cancer", "Anemia", "Liver Disease",
+            "Skin Conditions", "Bladder Problems", "Vision Problems", "Hearing Problems",
+            "Back Problems", "Pregnancy Problems",
+            "Other"
+          ],
+          "skip_if": {
+            "if_value": "None",
+            "skip_fields": ["other_health_concerns"]
+          },
+          "flag_if": {
+            "if_any_of": ["Tuberculosis", "HIV / AIDS", "STDs"],
+            "flag": "Mandatory reporting context — note in clinical output per CGHC protocol."
+          },
+          "ai_note": "Present in grouped chunks by category: Cardiovascular, Respiratory, Neurological, Metabolic, Infectious, Other. If patient selects 'None', skip other_health_concerns and move on."
+        },
+        {
+          "id": "other_health_concerns",
+          "label": "Other Health Conditions or Concerns",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only shown if patient engaged with the conditions list (did not select None). Free text for anything not captured by checkboxes."
+        },
+        {
+          "id": "family_history_any",
+          "label": "Any Family History of Significant Conditions",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "No",
+            "skip_fields": ["family_history_conditions", "family_history_members"]
+          },
+          "ai_note": "Ask yes/no first. If No, mark family history as None and move on."
+        },
+        {
+          "id": "family_history_conditions",
+          "label": "Family History — Conditions Present",
+          "type": "multi_select",
+          "required": false,
+          "options": ["Cancer", "Diabetes", "High Blood Pressure", "Thyroid Problems", "Heart Attack", "Stroke", "Drug / Alcohol Abuse", "Learning Problems", "Mental Illness"],
+          "ai_note": "Only if family_history_any = Yes. Ask conditions first, then for each confirmed condition ask which family members (Mother, Father, Siblings, Other). Do NOT ask row by row ('does your mother have cancer...'). Collapse the matrix."
+        },
+        {
+          "id": "family_history_members",
+          "label": "Family History — Affected Family Members",
+          "type": "text",
+          "required": false,
+          "ai_note": "Free text summary: for each condition confirmed in family_history_conditions, note which family members are affected. E.g., 'Cancer: Mother, Siblings; Diabetes: Father'."
+        },
+        {
+          "id": "mental_health_framing",
+          "label": "Mental Health & Lifestyle Framing",
+          "type": "static_label",
+          "required": false,
+          "ai_note": "Deliver this before mental health questions: 'The next questions are about mental health and lifestyle. These help your care team support you fully — everything is confidential. You can skip any question.' This framing is mandatory — do not omit or abbreviate it."
+        },
+        {
+          "id": "mental_health_conditions",
+          "label": "Mental Health and Social History (Select all that apply)",
+          "type": "multi_select",
+          "required": false,
+          "sensitive": true,
+          "options": [
+            "None",
+            "ADHD", "Low Self-Esteem", "Depression / Anxiety", "OCD", "Mental Illness",
+            "Learning Problems", "Eating Disorder", "Autism",
+            "Drug / Alcohol Abuse", "Housing / Financial Problems", "Family Stressors",
+            "Physical / Emotional Abuse", "Attempted Suicide"
+          ],
+          "flag_if": [
+            {
+              "if_value": "Attempted Suicide",
+              "flag": "URGENT — Attempted Suicide disclosed. Flag for immediate staff notification before visit. AI must acknowledge with empathy before recording and moving on."
+            },
+            {
+              "if_value": "Physical / Emotional Abuse",
+              "flag": "Trauma-informed care protocol required. Flag for staff."
+            }
+          ],
+          "ai_note": "If patient selects 'Attempted Suicide', acknowledge first: 'Thank you for sharing that — our team will make sure you are well supported today.' Then record and continue. Do not skip past it clinically."
+        },
+        {
+          "id": "tobacco_use",
+          "label": "Current Tobacco / Nicotine Use",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "branch": "If Yes, collect tobacco_type and tobacco_frequency. If No, skip both."
+        },
+        {
+          "id": "tobacco_type",
+          "label": "Tobacco Type",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only if tobacco_use = Yes. Options include: cigarettes, vaping, chewing tobacco, cigars, other."
+        },
+        {
+          "id": "tobacco_frequency",
+          "label": "Tobacco Use Frequency",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only if tobacco_use = Yes. E.g., daily, several times a week, occasionally."
+        },
+        {
+          "id": "alcohol_use",
+          "label": "Current Alcohol Use",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "branch": "If Yes, collect alcohol_frequency. If No, skip."
+        },
+        {
+          "id": "alcohol_frequency",
+          "label": "Alcohol Use Frequency",
+          "type": "radio",
+          "required": false,
+          "options": ["Daily", "Weekly", "Occasionally"],
+          "ai_note": "Only if alcohol_use = Yes."
+        },
+        {
+          "id": "surgeries_any",
+          "label": "Any Prior Surgeries or Hospitalizations",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "No",
+            "skip_fields": ["surgeries_list"]
+          }
+        },
+        {
+          "id": "surgeries_list",
+          "label": "Surgeries / Hospitalizations List",
+          "type": "text",
+          "required": false,
+          "validate": "Each entry needs: reason/procedure and approximate age. Hospital name optional.",
+          "ai_note": "Collect as a repeating list. For each: what procedure or reason, at what age, and hospital name (optional). Continue prompting 'Any others?' until patient says no more."
+        },
+        {
+          "id": "medications_any",
+          "label": "Currently Taking Medications, Vitamins, or Supplements",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "No",
+            "skip_fields": ["medications_list"]
+          }
+        },
+        {
+          "id": "medications_list",
+          "label": "Medications / Vitamins / Supplements List",
+          "type": "text",
+          "required": false,
+          "validate": "Each entry must have a name AND dose/strength. If name provided without dose, ask: 'What is the dose or strength for that?' before moving on.",
+          "ai_note": "Collect as repeating list: medication name, strength/dose, and frequency. Validate each entry before proceeding."
+        },
+        {
+          "id": "allergies_any",
+          "label": "Known Allergies or Drug Intolerances",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "No",
+            "skip_fields": ["allergies_list"]
+          }
+        },
+        {
+          "id": "allergies_list",
+          "label": "Allergy List",
+          "type": "text",
+          "required": false,
+          "validate": "Each entry must have allergen name AND reaction type. If name provided without reaction, ask: 'What kind of reaction do you have to that?'",
+          "ai_note": "Collect as repeating list: allergen name and reaction type."
+        },
+        {
+          "id": "primary_care_provider",
+          "label": "Current or Most Recent Primary Care Provider",
+          "type": "text",
+          "required": false,
+          "flag_if": {
+            "if_blank": true,
+            "flag": "No PCP on file — may indicate uncoordinated care. Note in clinical output."
+          },
+          "ai_note": "Ask for name and phone number. Optional but important for care coordination."
+        },
+        {
+          "id": "preferred_pharmacy",
+          "label": "Preferred Pharmacy",
+          "type": "text",
+          "required": false,
+          "flag_if": {
+            "if_blank": true,
+            "flag": "No pharmacy on file — provider will need to capture before prescribing."
+          },
+          "ai_note": "Ask for name and phone number. Optional but needed for e-prescribing."
+        }
+      ]
     },
+
     {
-      "id": "policy_number",
-      "label": "Policy Number",
-      "type": "text",
-      "required": false
+      "id": "hipaa_consent",
+      "name": "Section 3: HIPAA Consent",
+      "intro": "HIPAA consent is never shown as a wall of text. The AI delivers a plain-language summary, explains rights, and collects explicit acknowledgment.",
+      "fields": [
+        {
+          "id": "hipaa_summary_delivered",
+          "label": "HIPAA Plain Language Summary",
+          "type": "static_label",
+          "required": false,
+          "ai_note": "Deliver verbatim: 'This clinic may share your health information with insurance companies, labs, and pharmacies to deliver your care. You have the right to request limits on how your information is used, and you can revoke this consent at any time in writing. Your treatment will not be affected either way.' Patient must actively acknowledge — not just scroll past. Do not reproduce the full HIPAA boilerplate."
+        },
+        {
+          "id": "hipaa_consent",
+          "label": "HIPAA Consent — PHI Use and Sharing",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes, I consent", "No"],
+          "flag_if": {
+            "if_value": "No",
+            "flag": "Patient declined PHI consent — needs in-person discussion before treatment. Do not block intake completion."
+          },
+          "ai_note": "Required for treatment, but if patient says No, do not block intake. Explain consequences and flag for staff: 'Our team will speak with you about this before your visit.'"
+        },
+        {
+          "id": "authorized_phi_contacts_any",
+          "label": "Authorize Additional PHI Contacts",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "skip_if": {
+            "if_value": "No",
+            "skip_fields": ["authorized_phi_contact_1_name", "authorized_phi_contact_1_relationship", "authorized_phi_contact_2_name", "authorized_phi_contact_2_relationship"]
+          }
+        },
+        {
+          "id": "authorized_phi_contact_1_name",
+          "label": "Authorized PHI Contact 1 — Name",
+          "type": "text",
+          "required": false,
+          "validate": "Both name and relationship required for each contact."
+        },
+        {
+          "id": "authorized_phi_contact_1_relationship",
+          "label": "Authorized PHI Contact 1 — Relationship",
+          "type": "text",
+          "required": false
+        },
+        {
+          "id": "authorized_phi_contact_2_name",
+          "label": "Authorized PHI Contact 2 — Name",
+          "type": "text",
+          "required": false
+        },
+        {
+          "id": "authorized_phi_contact_2_relationship",
+          "label": "Authorized PHI Contact 2 — Relationship",
+          "type": "text",
+          "required": false
+        },
+        {
+          "id": "name_confirmation",
+          "label": "Name and Address Confirmation",
+          "type": "radio",
+          "required": true,
+          "options": ["Confirmed — everything looks correct", "I need to make a correction"],
+          "ai_note": "Pre-populate with name and address collected in Section 1. Ask patient to confirm accuracy before signature block."
+        }
+      ]
     },
+
     {
-      "id": "group_number",
-      "label": "Group Number",
-      "type": "text",
-      "required": false
-    },
-    {
-      "id": "reason_for_visit",
-      "label": "Reason for Visit",
-      "type": "text",
-      "required": true
+      "id": "general_consents",
+      "name": "Section 4: General Consents",
+      "intro": "Most patients consent to everything. The AI delivers a plain-language summary and surfaces the two decisions that genuinely matter: Sliding Fee and GHHC data sharing.",
+      "fields": [
+        {
+          "id": "general_consents_summary_delivered",
+          "label": "General Consents Plain Language Summary",
+          "type": "static_label",
+          "required": false,
+          "ai_note": "Deliver: 'The following covers standard consents for: (1) treatment and testing including communicable diseases; (2) being seen by Physician Assistants or Nurse Practitioners; (3) financial responsibility — if you qualify for the Sliding Fee program, it is the last-resort payer; (4) e-prescribing; (5) appointment reminder communications. We will cover the two items that require your decision next.' Never read full legal text."
+        },
+        {
+          "id": "sliding_fee_acknowledgment",
+          "label": "Sliding Fee Disclosure Acknowledgment",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes, I understand", "I have questions"],
+          "flag_if": [
+            {
+              "condition": "has_insurance = No",
+              "flag": "Patient has no insurance — surface Sliding Fee disclosure with extra emphasis. Eligibility verification needed by clinic."
+            },
+            {
+              "if_value": "I have questions",
+              "flag": "Patient has questions about Sliding Fee — note in output for staff follow-up."
+            }
+          ],
+          "ai_note": "Explain: 'If you qualify for the Sliding Fee Discount Program, it is the payer of last resort, and you are required to report any changes in insurance coverage.' If patient has no insurance, emphasize this especially."
+        },
+        {
+          "id": "ghhc_data_sharing",
+          "label": "Greater Houston Healthconnect (GHHC) Data Sharing Authorization",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes, I authorize", "No, I opt out"],
+          "flag_if": {
+            "if_value": "No, I opt out",
+            "flag": "Patient opted out of GHHC data sharing — note in output for clinic records team. No impact on treatment."
+          },
+          "ai_note": "Explain: 'CGHC participates in Greater Houston Healthconnect, which shares your health records electronically with labs, pharmacies, hospitals, and insurers in the network. You can revoke this authorization within 3 days written notice. This does not affect your treatment or eligibility.' This is a genuine opt-in — ensure patient understands before answering."
+        },
+        {
+          "id": "photo_consent",
+          "label": "Photography Consent for Identity Verification",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes, I consent", "No"],
+          "ai_note": "Explain: 'CGHC may take a photograph for identity verification or medical care. Only CGHC-approved devices are used — never personal cell phones.'"
+        },
+        {
+          "id": "telehealth_notice_acknowledged",
+          "label": "Telehealth Limitations Acknowledgment",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes, I understand", "I have questions"],
+          "ai_note": "Only ask if visit type is telehealth. Skip entirely for in-person visits.",
+          "skip_if": {
+            "condition": "visit_type = in_person",
+            "skip_fields": ["telehealth_notice_acknowledged"]
+          }
+        },
+        {
+          "id": "final_signature",
+          "label": "Final Signature — All Consents Acknowledged",
+          "type": "signature",
+          "required": true,
+          "validate": "Signature required. Date auto-filled. If signing as personal representative, capture representative name and relationship.",
+          "ai_note": "Capture digital signature for entire consent package. If a guardian or representative is signing, collect their name and relationship to patient. Output includes signature confirmation and timestamp."
+        },
+        {
+          "id": "representative_name",
+          "label": "Personal Representative Name (if signing on behalf)",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only if filling_for_self = 'Someone else'. Capture name and relationship of guardian or personal representative signing."
+        },
+        {
+          "id": "representative_relationship",
+          "label": "Personal Representative Relationship",
+          "type": "text",
+          "required": false
+        }
+      ]
     }
   ]
 }
