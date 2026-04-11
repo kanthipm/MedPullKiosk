@@ -21,6 +21,7 @@ class FhirFieldTypeMapper @Inject constructor() {
             FieldType.RADIO -> QuestionnaireItemType.CHOICE
             FieldType.SIGNATURE -> QuestionnaireItemType.ATTACHMENT
             FieldType.DROPDOWN -> QuestionnaireItemType.CHOICE
+            FieldType.MULTI_SELECT -> QuestionnaireItemType.CHOICE
             FieldType.STATIC_LABEL -> QuestionnaireItemType.DISPLAY
             FieldType.UNKNOWN -> QuestionnaireItemType.STRING
         }

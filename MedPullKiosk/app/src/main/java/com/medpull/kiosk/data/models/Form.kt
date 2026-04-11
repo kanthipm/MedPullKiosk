@@ -48,7 +48,9 @@ data class FormField(
     val labelBoundingBox: BoundingBox? = null,
     val confidence: Float = 0f,
     val required: Boolean = false,
-    val page: Int = 1
+    val page: Int = 1,
+    val options: List<String> = emptyList(),   // For RADIO/DROPDOWN — rendered as choice chips
+    val description: String? = null             // From schema ai_note — shown below question text
 )
 
 /**
@@ -62,6 +64,7 @@ enum class FieldType {
     RADIO,
     SIGNATURE,
     DROPDOWN,
+    MULTI_SELECT,
     STATIC_LABEL,
     UNKNOWN
 }

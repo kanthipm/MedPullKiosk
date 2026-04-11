@@ -17,6 +17,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -252,6 +253,11 @@ fun GuidedIntakeScreen(
                                         }
                                     }
                                     currentQuestion != null -> {
+                                        val currentAskingField = state.currentAskingField
+                                        // Strip trailing parentheticals from question text
+                                        val displayText = currentQuestion.text
+                                            .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             modifier = Modifier.padding(horizontal = 48.dp, vertical = 24.dp)
@@ -265,7 +271,7 @@ fun GuidedIntakeScreen(
                                                         } else {
                                                             tts.stop()
                                                             tts.speak(
-                                                                currentQuestion.text,
+                                                                displayText,
                                                                 TextToSpeech.QUEUE_FLUSH, null,
                                                                 currentQuestion.timestamp.toString()
                                                             )
@@ -290,7 +296,7 @@ fun GuidedIntakeScreen(
                                             }
 
                                             Text(
-                                                text = currentQuestion.text,
+                                                text = displayText,
                                                 style = MaterialTheme.typography.headlineMedium.copy(
                                                     fontWeight = FontWeight.Normal,
                                                     fontSize = 28.sp,
@@ -299,6 +305,21 @@ fun GuidedIntakeScreen(
                                                 textAlign = TextAlign.Center,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
+
+                                            // Description / hint line from schema ai_note
+                                            val description = currentAskingField?.description
+                                            if (!description.isNullOrBlank()) {
+                                                Spacer(Modifier.height(12.dp))
+                                                Text(
+                                                    text = description,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                                        fontSize = 14.sp
+                                                    ),
+                                                    textAlign = TextAlign.Center,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                                )
+                                            }
                                         }
                                     }
                                     else -> {
@@ -321,6 +342,95 @@ fun GuidedIntakeScreen(
                                     onSwitchToKeyboard = { showHandwriting = false },
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                 )
+                            }
+
+                            // Option chips — RADIO/DROPDOWN: horizontal scroll row
+                            //                MULTI_SELECT:     vertical chip grid + confirm
+                            val optionField = state.currentAskingField
+                            if (optionField != null && optionField.options.isNotEmpty() && !state.isLoadingResponse) {
+                                if (optionField.fieldType == com.medpull.kiosk.data.models.FieldType.MULTI_SELECT) {
+                                    // Multi-select: vertical list of toggle chips + Confirm + None
+                                    val currentSelections = remember(optionField.id, optionField.value) {
+                                        mutableStateOf(
+                                            optionField.value
+                                                ?.split(",")
+                                                ?.map { it.trim() }
+                                                ?.filter { it.isNotBlank() }
+                                                ?.toMutableSet()
+                                                ?: mutableSetOf()
+                                        )
+                                    }
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                                            Text(
+                                                "Select all that apply:",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(Modifier.height(6.dp))
+                                            optionField.options.forEach { option ->
+                                                val selected = option in currentSelections.value
+                                                FilterChip(
+                                                    selected = selected,
+                                                    onClick = {
+                                                        val updated = currentSelections.value.toMutableSet()
+                                                        if (selected) updated.remove(option) else updated.add(option)
+                                                        currentSelections.value = updated
+                                                        viewModel.updateMultiSelectField(
+                                                            optionField.id,
+                                                            updated.joinToString(", ")
+                                                        )
+                                                    },
+                                                    label = { Text(option, style = MaterialTheme.typography.bodyMedium) },
+                                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                                                )
+                                            }
+                                            Spacer(Modifier.height(8.dp))
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                OutlinedButton(
+                                                    onClick = { viewModel.sendMessage("None") },
+                                                    modifier = Modifier.weight(1f)
+                                                ) { Text("None") }
+                                                if (currentSelections.value.isNotEmpty()) {
+                                                    Button(
+                                                        onClick = {
+                                                            viewModel.sendMessage(
+                                                                currentSelections.value.joinToString(", ")
+                                                            )
+                                                        },
+                                                        modifier = Modifier.weight(2f)
+                                                    ) {
+                                                        Text("Confirm (${currentSelections.value.size})")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // RADIO / DROPDOWN: single-tap horizontal chip row
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        LazyRow(
+                                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            items(optionField.options) { option ->
+                                                FilterChip(
+                                                    selected = false,
+                                                    onClick = { viewModel.sendMessage(option) },
+                                                    label = {
+                                                        Text(option, style = MaterialTheme.typography.bodyMedium)
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // Answer input bar
