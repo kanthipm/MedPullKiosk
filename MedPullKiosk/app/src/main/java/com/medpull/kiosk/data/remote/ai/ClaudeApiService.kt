@@ -107,7 +107,7 @@ class ClaudeApiService @Inject constructor(
     }
 
     /**
-     * Get field suggestion (used by AI assistant screen)
+     * Get field suggestion (used by AI assistant screen) — uses mini model, no PHI in prompt
      */
     suspend fun suggestFieldValue(
         fieldName: String,
@@ -118,18 +118,28 @@ class ClaudeApiService @Inject constructor(
             For a medical form field named "$fieldName" of type $fieldType,
             suggest an appropriate example value and explain what should go in this field.
         """.trimIndent()
-        return sendMessage(prompt, systemPrompt = buildSystemPrompt(language, null))
+        return sendMessage(
+            prompt,
+            systemPrompt = buildSystemPrompt(language, null),
+            model = Constants.AI.CHAT_ASSISTANT_MODEL,
+            maxTokens = Constants.AI.CHAT_MAX_TOKENS
+        )
     }
 
     /**
-     * Explain medical term (used by AI assistant screen)
+     * Explain medical term (used by AI assistant screen) — uses mini model, no PHI in prompt
      */
     suspend fun explainMedicalTerm(
         term: String,
         language: String = "en"
     ): AiResponse {
         val prompt = "What does the medical term '$term' mean? Explain in simple terms."
-        return sendMessage(prompt, systemPrompt = buildSystemPrompt(language, null))
+        return sendMessage(
+            prompt,
+            systemPrompt = buildSystemPrompt(language, null),
+            model = Constants.AI.CHAT_ASSISTANT_MODEL,
+            maxTokens = Constants.AI.CHAT_MAX_TOKENS
+        )
     }
 
     fun buildSystemPrompt(language: String, context: String?): String {

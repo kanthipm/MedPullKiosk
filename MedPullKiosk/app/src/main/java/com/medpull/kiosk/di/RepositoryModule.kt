@@ -5,6 +5,7 @@ import com.google.gson.Gson
 import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.dao.FormDao
 import com.medpull.kiosk.data.local.dao.FormFieldDao
+import com.medpull.kiosk.data.local.dao.PatientCacheDao
 import com.medpull.kiosk.data.local.dao.UserDao
 import com.medpull.kiosk.data.remote.ai.ClaudeApiService
 import com.medpull.kiosk.data.remote.ai.ClaudeVisionService
@@ -47,6 +48,7 @@ object RepositoryModule {
     fun provideFormRepository(
         formDao: FormDao,
         formFieldDao: FormFieldDao,
+        patientCacheDao: PatientCacheDao,
         s3Service: S3Service,
         textractService: TextractService,
         networkMonitor: NetworkMonitor,
@@ -56,7 +58,7 @@ object RepositoryModule {
         pdfPageRenderer: PdfPageRenderer,
         translationService: TranslationService
     ): FormRepository {
-        return FormRepository(formDao, formFieldDao, s3Service, textractService, networkMonitor, syncManager, authRepository, claudeVisionService, pdfPageRenderer, translationService)
+        return FormRepository(formDao, formFieldDao, patientCacheDao, s3Service, textractService, networkMonitor, syncManager, authRepository, claudeVisionService, pdfPageRenderer, translationService)
     }
 
     @Provides

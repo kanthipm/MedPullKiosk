@@ -7,6 +7,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.entities.AuditLogEntity
+import com.medpull.kiosk.data.models.FieldUpdate
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.data.models.IntakeAction
 import com.medpull.kiosk.data.remote.ai.AiResponse
@@ -180,6 +181,9 @@ RULES:
 - If an answer is unclear, ask ONE clarifying question — do not repeat the same question twice
 - Flag anything needing clinic staff attention
 - When ALL required fields are filled, use action "transition_to_review"
+- Do NOT include format hints or examples in parentheses in question_text — hints are shown separately in the UI
+- question_text must be plain natural language only — no parenthetical notes
+- For multi_select fields, the patient's answer is a comma-separated list of chosen options (e.g. "Diabetes, Hypertension"). Extract the full list as a single field_updates entry. If the patient says "None", set value = "None".
 
 RESPOND WITH VALID JSON ONLY — no other text:
 {
@@ -272,45 +276,78 @@ RESPOND WITH VALID JSON ONLY — no other text:
 
             when (action) {
                 "set_field" -> {
-                    val updates = obj.optJSONArray("field_updates")
-                    if (updates == null || updates.length() == 0) return null
+                    val updatesArr = obj.optJSONArray("field_updates")
+                    if (updatesArr == null || updatesArr.length() == 0) return null
 
-                    // Take the first field update (primary field being answered)
-                    val first = updates.getJSONObject(0)
-                    val fieldId = first.optString("field_id", "")
-                    val value = first.optString("value", "")
-                    val confidence = first.optDouble("confidence", 0.8).toFloat()
+                    // Collect ALL high-confidence updates from this response
+                    val highConfidenceUpdates = mutableListOf<FieldUpdate>()
+                    var primaryFieldId: String? = null
+                    var primaryConfidence = 0f
 
-                    if (fieldId.isBlank() || value.isBlank()) return null
+                    for (i in 0 until updatesArr.length()) {
+                        val entry = updatesArr.getJSONObject(i)
+                        val fId = entry.optString("field_id", "")
+                        val fVal = entry.optString("value", "")
+                        val fConf = entry.optDouble("confidence", 0.8).toFloat()
+                        if (fId.isBlank() || fVal.isBlank()) continue
 
-                    // Check staff escalation: 2+ clarifications and still low confidence
-                    if (checkEscalation(fieldId, confidence, clarificationCounts)) {
-                        logAudit("STAFF_ESCALATION", "Field $fieldId escalated after ${clarificationCounts[fieldId]} attempts")
+                        if (i == 0) {
+                            primaryFieldId = fId
+                            primaryConfidence = fConf
+                        }
+
+                        when {
+                            fConf >= CONFIDENCE_ACCEPT -> highConfidenceUpdates += FieldUpdate(fId, fVal, fConf)
+                            // Low confidence on secondary fields: skip silently (engine will ask later)
+                        }
+                    }
+
+                    if (primaryFieldId == null) return null
+
+                    // Check staff escalation on the primary field
+                    if (checkEscalation(primaryFieldId, primaryConfidence, clarificationCounts)) {
+                        logAudit("STAFF_ESCALATION", "Field $primaryFieldId escalated after ${clarificationCounts[primaryFieldId]} attempts")
                         return IntakeAction.FlagForClinic(
-                            fieldId = fieldId,
-                            reason = "Patient unable to provide clear answer after ${clarificationCounts[fieldId]} attempts",
+                            fieldId = primaryFieldId,
+                            reason = "Patient unable to provide clear answer after ${clarificationCounts[primaryFieldId]} attempts",
                             questionText = questionText.ifBlank { "A staff member will help with this. Let's move on." }
                         )
                     }
 
+                    // Route based on primary field confidence
                     when {
-                        confidence >= CONFIDENCE_ACCEPT -> IntakeAction.SetField(
-                            fieldId = fieldId,
-                            value = value,
-                            confidence = confidence,
-                            questionText = questionText,
-                            reasoning = reasoning
-                        )
-                        confidence >= CONFIDENCE_CONFIRM -> IntakeAction.AskClarification(
-                            questionText = questionText.ifBlank { "You said \"$value\" — is that correct?" },
-                            fieldId = fieldId,
-                            reasoning = "Confidence $confidence — requesting confirmation"
-                        )
-                        else -> IntakeAction.AskClarification(
+                        primaryConfidence < CONFIDENCE_CONFIRM -> IntakeAction.AskClarification(
                             questionText = questionText.ifBlank { "I didn't quite catch that. Could you say it again?" },
-                            fieldId = fieldId,
-                            reasoning = "Confidence $confidence — requesting clarification"
+                            fieldId = primaryFieldId,
+                            reasoning = "Confidence $primaryConfidence — requesting clarification"
                         )
+                        primaryConfidence < CONFIDENCE_ACCEPT -> IntakeAction.AskClarification(
+                            questionText = questionText.ifBlank {
+                                val fVal = highConfidenceUpdates.firstOrNull()?.value ?: ""
+                                "You said \"$fVal\" — is that correct?"
+                            },
+                            fieldId = primaryFieldId,
+                            reasoning = "Confidence $primaryConfidence — requesting confirmation"
+                        )
+                        highConfidenceUpdates.size > 1 -> {
+                            // Multiple fields extracted — return all at once
+                            IntakeAction.SetMultipleFields(
+                                updates = highConfidenceUpdates,
+                                questionText = questionText,
+                                reasoning = reasoning
+                            )
+                        }
+                        highConfidenceUpdates.size == 1 -> {
+                            val u = highConfidenceUpdates[0]
+                            IntakeAction.SetField(
+                                fieldId = u.fieldId,
+                                value = u.value,
+                                confidence = u.confidence,
+                                questionText = questionText,
+                                reasoning = reasoning
+                            )
+                        }
+                        else -> null
                     }
                 }
 
@@ -373,8 +410,8 @@ RESPOND WITH VALID JSON ONLY — no other text:
 
     // ─── Completion Check ─────────────────────────────────────────────────────
 
-    fun allRequiredFilled(fields: List<FormField>): Boolean =
-        fields.filter { it.required }.all { !it.value.isNullOrBlank() }
+    fun allRequiredFilled(fields: List<FormField>, skippedFieldIds: Set<String> = emptySet()): Boolean =
+        fields.filter { it.required && it.id !in skippedFieldIds }.all { !it.value.isNullOrBlank() }
 
     // ─── Schema Loading ───────────────────────────────────────────────────────
 

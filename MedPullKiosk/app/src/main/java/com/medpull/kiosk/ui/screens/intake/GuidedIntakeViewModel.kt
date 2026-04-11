@@ -13,6 +13,8 @@ import com.medpull.kiosk.data.models.FormIntakeFlow
 import com.medpull.kiosk.data.models.FormStatus
 import com.medpull.kiosk.data.models.IntakeAction
 import com.medpull.kiosk.data.models.IntakeQuestion
+import com.medpull.kiosk.data.local.entities.PatientCacheEntity
+import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
@@ -31,6 +33,7 @@ import javax.inject.Inject
 class GuidedIntakeViewModel @Inject constructor(
     private val formRepository: FormRepository,
     private val intakeRepository: GuidedIntakeRepository,
+    private val authRepository: AuthRepository,
     private val engine: IntakeConversationEngine,
     private val localeManager: LocaleManager,
     @ApplicationContext private val appContext: Context,
@@ -55,6 +58,9 @@ class GuidedIntakeViewModel @Inject constructor(
                 val sectionFields = section.optJSONArray("fields") ?: continue
                 for (f in 0 until sectionFields.length()) {
                     val field = sectionFields.getJSONObject(f)
+                    val fieldOptions = field.optJSONArray("options")
+                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                        ?: emptyList()
                     fields += FormField(
                         id = field.optString("id"),
                         formId = COASTAL_GATEWAY_ID,
@@ -66,10 +72,13 @@ class GuidedIntakeViewModel @Inject constructor(
                             "checkbox" -> FieldType.CHECKBOX
                             "radio" -> FieldType.RADIO
                             "dropdown" -> FieldType.DROPDOWN
+                            "multi_select" -> FieldType.MULTI_SELECT
                             "number", "phone", "zip" -> FieldType.NUMBER
                             else -> FieldType.TEXT
                         },
-                        required = field.optBoolean("required", false)
+                        required = field.optBoolean("required", false),
+                        options = fieldOptions,
+                        description = field.optString("ai_note", "").ifBlank { null }
                     )
                 }
             }
@@ -133,7 +142,7 @@ class GuidedIntakeViewModel @Inject constructor(
     private suspend fun initFormState(form: Form) {
         val flow = intakeRepository.getOrCreateFlow(form.id)
 
-        // Pre-fill language + self-filling fields from app state so Claude never asks them
+        // Pre-fill language from app locale so engine never re-asks it
         val language = localeManager.getCurrentLanguage(appContext)
         val languageLabel = when (language) {
             "es" -> "Español"
@@ -146,31 +155,54 @@ class GuidedIntakeViewModel @Inject constructor(
         val prefilled = form.fields.map { f ->
             when (f.id) {
                 "preferred_language" -> f.copy(value = languageLabel)
-                "filling_for_self"   -> f.copy(value = "Myself")
-                else                 -> f
+                // filling_for_self intentionally NOT pre-filled — patient must choose
+                // "Myself" or "Someone else" so guardian mode can activate
+                else -> f
             }
         }
-        // Persist pre-filled values to DB so engine sees them as already answered
-        prefilled.filter { it.value != null }.forEach { f ->
+        // Apply cross-form demographic prefill from patient cache
+        val userId = authRepository.getCurrentUserId() ?: ""
+        val cache = if (userId.isNotBlank()) formRepository.getPatientCache(userId) else null
+        val withCache = if (cache != null) {
+            prefilled.map { f ->
+                val cached = cache.valueForFieldId(f.id)
+                if (f.id in PatientCacheEntity.DEMOGRAPHIC_FIELD_IDS && !cached.isNullOrBlank())
+                    f.copy(value = cached)
+                else f
+            }
+        } else prefilled
+
+        // Persist pre-filled values (language + cached demographics) so engine sees them as answered
+        withCache.filter { it.value != null }.forEach { f ->
             formRepository.updateFieldValue(f.id, f.value)
         }
 
-        val allQuestions = intakeRepository.generateQuestionsFromFields(prefilled)
+        val welcomeMessages = if (cache != null) listOf(
+            ChatMessage(
+                text = "Welcome back! I've pre-filled your contact information from your previous visit. Let's confirm anything that may have changed and continue.",
+                isFromUser = false,
+                timestamp = System.currentTimeMillis()
+            )
+        ) else emptyList()
+
+        val allQuestions = intakeRepository.generateQuestionsFromFields(withCache)
         val activeQuestions = intakeRepository.getActiveQuestions(form.id, allQuestions, flow)
 
         _state.update {
             it.copy(
                 form = form,
-                fields = prefilled,
+                fields = withCache,
                 intakeFlow = flow,
                 allQuestions = allQuestions,
                 activeQuestions = activeQuestions,
+                chatMessages = welcomeMessages,
                 isLoading = false
             )
         }
 
         if (activeQuestions.isNotEmpty()) setCurrentQuestion(flow.currentQuestionIndex)
-        if (_state.value.chatMessages.isEmpty()) askNextQuestion()
+        if (_state.value.chatMessages.none { !it.isFromUser }) askNextQuestion()
+        else askNextQuestion()
     }
 
     /**
@@ -210,6 +242,7 @@ class GuidedIntakeViewModel @Inject constructor(
     private suspend fun handleAction(action: IntakeAction) {
         when (action) {
             is IntakeAction.SetField -> handleSetField(action)
+            is IntakeAction.SetMultipleFields -> handleSetMultipleFields(action)
             is IntakeAction.AskClarification -> handleAskClarification(action)
             is IntakeAction.SkipSection -> handleSkipSection(action)
             is IntakeAction.FlagForClinic -> handleFlagForClinic(action)
@@ -231,10 +264,15 @@ class GuidedIntakeViewModel @Inject constructor(
         // Reset clarification count for this field — it was answered
         clarificationCounts.remove(action.fieldId)
 
+        // Find next unfilled required field to set as currentAskingField
+        val nextField = updatedFields.firstOrNull { it.required && it.value.isNullOrBlank() }
+            ?: updatedFields.firstOrNull { it.value.isNullOrBlank() }
+
         _state.update {
             it.copy(
                 fields = updatedFields,
                 isLoadingResponse = false,
+                currentAskingField = nextField,
                 chatMessages = it.chatMessages + ChatMessage(
                     text = action.questionText,
                     isFromUser = false,
@@ -249,13 +287,52 @@ class GuidedIntakeViewModel @Inject constructor(
         Log.d(TAG, "SetField: ${action.fieldId} = ${action.value} (confidence ${action.confidence})")
     }
 
+    private suspend fun handleSetMultipleFields(action: IntakeAction.SetMultipleFields) {
+        // Write all values to Room DB
+        action.updates.forEach { update ->
+            formRepository.updateFieldValue(update.fieldId, update.value)
+            clarificationCounts.remove(update.fieldId)
+        }
+        intakeRepository.markFieldsInferred(formId, action.updates.map { it.fieldId })
+
+        // Update in-memory state in one pass
+        val updateMap = action.updates.associate { it.fieldId to it.value }
+        val updatedFields = _state.value.fields.map { f ->
+            val newVal = updateMap[f.id]
+            if (newVal != null) f.copy(value = newVal) else f
+        }
+
+        val nextField = updatedFields.firstOrNull { it.required && it.value.isNullOrBlank() }
+            ?: updatedFields.firstOrNull { it.value.isNullOrBlank() }
+
+        _state.update {
+            it.copy(
+                fields = updatedFields,
+                isLoadingResponse = false,
+                currentAskingField = nextField,
+                chatMessages = it.chatMessages + ChatMessage(
+                    text = action.questionText,
+                    isFromUser = false,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+
+        updateBranchingAndProgress(updatedFields)
+
+        Log.d(TAG, "SetMultipleFields: ${action.updates.map { "${it.fieldId}=${it.value}" }}")
+    }
+
     private fun handleAskClarification(action: IntakeAction.AskClarification) {
         // Increment clarification count for this field
         action.fieldId?.let { clarificationCounts[it] = (clarificationCounts[it] ?: 0) + 1 }
 
+        val askingField = action.fieldId?.let { id -> _state.value.fields.find { it.id == id } }
+
         _state.update {
             it.copy(
                 isLoadingResponse = false,
+                currentAskingField = askingField ?: it.currentAskingField,
                 chatMessages = it.chatMessages + ChatMessage(
                     text = action.questionText,
                     isFromUser = false,
@@ -308,9 +385,11 @@ class GuidedIntakeViewModel @Inject constructor(
 
     private fun handleFallback(action: IntakeAction.Fallback) {
         malformedResponseCount++
+        val askingField = action.fieldId?.let { id -> _state.value.fields.find { it.id == id } }
         _state.update {
             it.copy(
                 isLoadingResponse = false,
+                currentAskingField = askingField ?: it.currentAskingField,
                 chatMessages = it.chatMessages + ChatMessage(
                     text = action.questionText,
                     isFromUser = false,
@@ -357,11 +436,12 @@ class GuidedIntakeViewModel @Inject constructor(
         val fieldsToSkip = intakeRepository.getFieldsToSkip(formId, flow, updatedFields)
         if (fieldsToSkip.isNotEmpty()) intakeRepository.markFieldsSkipped(formId, fieldsToSkip)
 
-        val updatedFlow = flow.copy(skippedFieldIds = fieldsToSkip.toSet())
+        val updatedFlow = flow.copy(skippedFieldIds = flow.skippedFieldIds + fieldsToSkip)
         val activeQuestions = intakeRepository.getActiveQuestions(formId, _state.value.allQuestions, updatedFlow)
 
-        val filledRequired = updatedFields.count { it.required && !it.value.isNullOrBlank() }
-        val totalRequired = updatedFields.count { it.required }
+        val skipped = updatedFlow.skippedFieldIds
+        val filledRequired = updatedFields.count { it.required && it.id !in skipped && !it.value.isNullOrBlank() }
+        val totalRequired = updatedFields.count { it.required && it.id !in skipped }
 
         _state.update {
             it.copy(
@@ -372,7 +452,7 @@ class GuidedIntakeViewModel @Inject constructor(
             )
         }
 
-        if (engine.allRequiredFilled(updatedFields)) {
+        if (engine.allRequiredFilled(updatedFields, skipped)) {
             handleTransitionToReview()
         }
     }
@@ -401,6 +481,20 @@ class GuidedIntakeViewModel @Inject constructor(
                     Log.e(TAG, "Error confirming field", e)
                 }
             }
+        }
+    }
+
+    /** Updates in-memory selection state for a MULTI_SELECT field without sending to AI. */
+    fun updateMultiSelectField(fieldId: String, value: String) {
+        _state.update {
+            it.copy(
+                fields = it.fields.map { f ->
+                    if (f.id == fieldId) f.copy(value = value.ifBlank { null }) else f
+                },
+                currentAskingField = it.currentAskingField?.let { caf ->
+                    if (caf.id == fieldId) caf.copy(value = value.ifBlank { null }) else caf
+                }
+            )
         }
     }
 
@@ -440,6 +534,7 @@ data class GuidedIntakeState(
     val activeQuestions: List<IntakeQuestion> = emptyList(),
     val currentQuestionIndex: Int = 0,
     val currentQuestion: IntakeQuestion? = null,
+    val currentAskingField: FormField? = null, // The field the AI is currently asking about
     val chatMessages: List<ChatMessage> = emptyList(),
     val isLoading: Boolean = true,
     val isLoadingResponse: Boolean = false,

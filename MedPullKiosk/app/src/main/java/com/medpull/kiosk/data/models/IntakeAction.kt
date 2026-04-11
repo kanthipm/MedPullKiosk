@@ -15,7 +15,25 @@ package com.medpull.kiosk.data.models
  * All downstream code (ViewModel) works with typed actions, not raw JSON strings.
  * When upgrading to formal Claude tool-use API, only the parser in the engine changes.
  */
+/** A single field value extracted by the AI — used in SetMultipleFields. */
+data class FieldUpdate(
+    val fieldId: String,
+    val value: String,
+    val confidence: Float
+)
+
 sealed class IntakeAction {
+
+    /**
+     * The AI extracted values for multiple fields from a single patient reply.
+     * All updates have confidence >= CONFIDENCE_ACCEPT.
+     * The ViewModel writes all of them in one state update.
+     */
+    data class SetMultipleFields(
+        val updates: List<FieldUpdate>,
+        val questionText: String,
+        val reasoning: String = ""
+    ) : IntakeAction()
 
     /**
      * Claude extracted a field value with sufficient confidence (>= 0.8).
