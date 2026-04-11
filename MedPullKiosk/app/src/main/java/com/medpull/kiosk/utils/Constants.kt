@@ -97,18 +97,20 @@ object Constants {
         const val GROK_MODEL = "grok-3"
         const val MAX_TOKENS = 1024
 
-        // Conversational intake engine
+        // Conversational intake engine — Grok (BAA-covered, handles all PHI)
         const val CONVERSATION_MODEL = "grok-3"
-        const val CONVERSATION_MAX_TOKENS = 2048
+        const val CONVERSATION_MAX_TOKENS = 1024
 
-        // Legacy Claude constants (kept for ClaudeVisionService)
-        const val CLAUDE_MODEL = "claude-3-haiku-20240307"
+        // Mira chat assistant — grok-3-mini (same BAA, cheaper for simple Q&A)
+        const val CHAT_ASSISTANT_MODEL = "grok-3-mini"
+        const val CHAT_MAX_TOKENS = 512
+
+        // Vision: disabled — no BAA with Anthropic, Textract handles OCR
         const val CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
         const val CLAUDE_API_VERSION = "2023-06-01"
-        const val CLAUDE_VISION_MODEL = "claude-haiku-4-5-20251001"
         const val VISION_MAX_TOKENS = 8192
         const val VISION_TIMEOUT_SECONDS = 120L
-        const val VISION_ENABLED = true
+        const val VISION_ENABLED = false
     }
 
     // Audit Logging

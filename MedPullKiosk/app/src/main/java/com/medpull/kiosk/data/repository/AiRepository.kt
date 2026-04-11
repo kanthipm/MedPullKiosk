@@ -43,7 +43,9 @@ class AiRepository @Inject constructor(
             when (val response = claudeApiService.sendMessage(
                 userMessage = message,
                 conversationHistory = conversationHistory,
-                systemPrompt = systemPrompt
+                systemPrompt = systemPrompt,
+                model = Constants.AI.CHAT_ASSISTANT_MODEL,
+                maxTokens = Constants.AI.CHAT_MAX_TOKENS
             )) {
                 is AiResponse.Success -> {
                     Log.d(TAG, "AI response received")

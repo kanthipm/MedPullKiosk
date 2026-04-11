@@ -237,7 +237,7 @@ class ClaudeVisionService @Inject constructor(
             )
 
             val requestBody = mapOf(
-                "model" to Constants.AI.CLAUDE_VISION_MODEL,
+                "model" to "claude-haiku-4-5-20251001", // disabled — VISION_ENABLED = false
                 "max_tokens" to Constants.AI.VISION_MAX_TOKENS,
                 "system" to systemPrompt,
                 "messages" to listOf(
