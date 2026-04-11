@@ -10,6 +10,7 @@ import com.medpull.kiosk.data.local.dao.SyncQueueDao
 import com.medpull.kiosk.data.local.dao.UserDao
 import com.medpull.kiosk.data.local.dao.FormIntakeFlowDao
 import com.medpull.kiosk.data.local.dao.BranchingRuleDao
+import com.medpull.kiosk.data.local.dao.PatientCacheDao
 import com.medpull.kiosk.data.local.entities.AuditLogEntity
 import com.medpull.kiosk.data.local.entities.FhirMappingEntity
 import com.medpull.kiosk.data.local.entities.FormEntity
@@ -18,6 +19,7 @@ import com.medpull.kiosk.data.local.entities.SyncQueueEntity
 import com.medpull.kiosk.data.local.entities.UserEntity
 import com.medpull.kiosk.data.local.entities.FormIntakeFlowEntity
 import com.medpull.kiosk.data.local.entities.BranchingRuleEntity
+import com.medpull.kiosk.data.local.entities.PatientCacheEntity
 
 /**
  * Room database for MedPull Kiosk
@@ -32,9 +34,10 @@ import com.medpull.kiosk.data.local.entities.BranchingRuleEntity
         SyncQueueEntity::class,
         FhirMappingEntity::class,
         FormIntakeFlowEntity::class,
-        BranchingRuleEntity::class
+        BranchingRuleEntity::class,
+        PatientCacheEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -47,4 +50,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fhirMappingDao(): FhirMappingDao
     abstract fun formIntakeFlowDao(): FormIntakeFlowDao
     abstract fun branchingRuleDao(): BranchingRuleDao
+    abstract fun patientCacheDao(): PatientCacheDao
 }

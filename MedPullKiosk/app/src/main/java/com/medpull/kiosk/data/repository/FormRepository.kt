@@ -3,8 +3,10 @@ package com.medpull.kiosk.data.repository
 import android.util.Log
 import com.medpull.kiosk.data.local.dao.FormDao
 import com.medpull.kiosk.data.local.dao.FormFieldDao
+import com.medpull.kiosk.data.local.dao.PatientCacheDao
 import com.medpull.kiosk.data.local.entities.FormEntity
 import com.medpull.kiosk.data.local.entities.FormFieldEntity
+import com.medpull.kiosk.data.local.entities.PatientCacheEntity
 import com.medpull.kiosk.data.local.entities.SyncOperationType
 import com.medpull.kiosk.data.models.BoundingBox
 import com.medpull.kiosk.data.models.FieldType
@@ -45,6 +47,7 @@ import javax.inject.Singleton
 class FormRepository @Inject constructor(
     private val formDao: FormDao,
     private val formFieldDao: FormFieldDao,
+    private val patientCacheDao: PatientCacheDao,
     private val s3Service: S3Service,
     private val textractService: TextractService,
     private val networkMonitor: NetworkMonitor,
@@ -523,6 +526,31 @@ class FormRepository @Inject constructor(
             .filter { it.second > 0 }
             .maxByOrNull { it.second }
             ?.first
+    }
+
+    // ─── Patient cache (cross-form prefill) ──────────────────────────────────
+
+    suspend fun getPatientCache(userId: String): PatientCacheEntity? =
+        patientCacheDao.getByUserId(userId)
+
+    suspend fun savePatientCache(userId: String, fields: List<FormField>) {
+        val byId = fields.associateBy { it.id }
+        patientCacheDao.upsert(
+            PatientCacheEntity(
+                userId = userId,
+                patientFullName              = byId["patient_full_name"]?.value,
+                dateOfBirth                  = byId["date_of_birth"]?.value,
+                mailingStreet                = byId["mailing_address_street"]?.value,
+                mailingCity                  = byId["mailing_city"]?.value,
+                mailingState                 = byId["mailing_state"]?.value,
+                mailingZip                   = byId["mailing_zip"]?.value,
+                cellPhone                    = byId["cell_phone"]?.value,
+                email                        = byId["email"]?.value,
+                emergencyContactName         = byId["emergency_contact_name"]?.value,
+                emergencyContactPhone        = byId["emergency_contact_phone"]?.value,
+                emergencyContactRelationship = byId["emergency_contact_relationship"]?.value
+            )
+        )
     }
 }
 

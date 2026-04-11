@@ -6,6 +6,7 @@ import com.medpull.kiosk.data.local.AppDatabase
 import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.dao.BranchingRuleDao
 import com.medpull.kiosk.data.local.dao.FormDao
+import com.medpull.kiosk.data.local.dao.PatientCacheDao
 import com.medpull.kiosk.data.local.dao.FormFieldDao
 import com.medpull.kiosk.data.local.dao.FormIntakeFlowDao
 import com.medpull.kiosk.data.local.dao.SyncQueueDao
@@ -79,5 +80,11 @@ object DatabaseModule {
     @Singleton
     fun provideBranchingRuleDao(database: AppDatabase): BranchingRuleDao {
         return database.branchingRuleDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providePatientCacheDao(database: AppDatabase): PatientCacheDao {
+        return database.patientCacheDao()
     }
 }

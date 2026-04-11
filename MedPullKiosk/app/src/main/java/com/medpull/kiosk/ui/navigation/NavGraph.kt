@@ -23,6 +23,7 @@ import com.medpull.kiosk.ui.screens.export.ExportScreen
 import com.medpull.kiosk.ui.screens.formselection.FormSelectionScreen
 import com.medpull.kiosk.ui.screens.formfill.FormFillScreen
 import com.medpull.kiosk.ui.screens.intake.GuidedIntakeScreen
+import com.medpull.kiosk.ui.screens.intake.IntakeReviewScreen
 import com.medpull.kiosk.ui.screens.inventory.InventoryScreen
 import com.medpull.kiosk.ui.screens.language.LanguageSelectionScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeScreen
@@ -197,6 +198,21 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onComplete = {
+                    navController.navigate(Screen.IntakeReview.createRoute(formId)) {
+                        popUpTo(Screen.FormSelection.route)
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Screen.IntakeReview.route,
+            arguments = listOf(navArgument("formId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val formId = backStackEntry.arguments?.getString("formId") ?: ""
+            IntakeReviewScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSubmit = {
                     navController.navigate(Screen.Export.createRoute(formId)) {
                         popUpTo(Screen.FormSelection.route)
                     }
