@@ -211,6 +211,18 @@ fun GuidedIntakeScreen(
                                 .weight(1f)
                                 .fillMaxHeight()
                         ) {
+                            // Consent batch panel — shown instead of chat Q&A for consent fields
+                            val consentBatch = state.consentBatchFields
+                            if (consentBatch != null) {
+                                ConsentBatchPanel(
+                                    fields = consentBatch,
+                                    isLoading = state.isLoadingResponse,
+                                    onSubmit = { answers -> viewModel.submitConsentBatch(answers) },
+                                    modifier = Modifier.weight(1f).fillMaxWidth()
+                                )
+                                return@Column
+                            }
+
                             // Error banner
                             state.error?.let { error ->
                                 Surface(
@@ -704,6 +716,182 @@ private fun TypingIndicator() {
                     )
             )
             if (it < 2) Spacer(Modifier.width(4.dp))
+        }
+    }
+}
+
+/**
+ * Shows all consent fields together in a single batch UI.
+ * Each field gets its label, optional description, and radio chips.
+ * "Agree to All" pre-selects the first/affirmative option for every field.
+ * "Continue" is only enabled once every field has a selection.
+ */
+@Composable
+private fun ConsentBatchPanel(
+    fields: List<com.medpull.kiosk.data.models.FormField>,
+    isLoading: Boolean,
+    onSubmit: (Map<String, String>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val selections = remember(fields) {
+        mutableStateMapOf<String, String>()
+    }
+    val allAnswered = fields.all { it.id in selections }
+
+    Column(modifier = modifier) {
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text(
+                    text = "Consent & Authorizations",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Please review each item and select your preference.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                )
+            }
+        }
+
+        // "Agree to All" shortcut
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        fields.forEach { f ->
+                            val first = f.options.firstOrNull()
+                            if (first != null) selections[f.id] = first
+                        }
+                    },
+                    enabled = !isLoading
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("Agree to All")
+                }
+            }
+        }
+
+        HorizontalDivider()
+
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(fields) { field ->
+                ConsentFieldCard(
+                    field = field,
+                    selectedOption = selections[field.id],
+                    onOptionSelected = { option -> selections[field.id] = option },
+                    enabled = !isLoading
+                )
+            }
+        }
+
+        HorizontalDivider()
+
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!allAnswered) {
+                    Text(
+                        text = "${fields.count { it.id in selections }} of ${fields.size} answered",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                Button(
+                    onClick = { onSubmit(selections.toMap()) },
+                    enabled = allAnswered && !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text("Continue")
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ConsentFieldCard(
+    field: com.medpull.kiosk.data.models.FormField,
+    selectedOption: String?,
+    onOptionSelected: (String) -> Unit,
+    enabled: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selectedOption != null)
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+            else
+                MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = field.fieldName,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (!field.description.isNullOrBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = field.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                field.options.forEach { option ->
+                    FilterChip(
+                        selected = selectedOption == option,
+                        onClick = { if (enabled) onOptionSelected(option) },
+                        label = { Text(option, style = MaterialTheme.typography.bodySmall) }
+                    )
+                }
+            }
         }
     }
 }

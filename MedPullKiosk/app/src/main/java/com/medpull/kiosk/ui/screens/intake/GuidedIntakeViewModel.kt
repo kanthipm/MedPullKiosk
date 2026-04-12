@@ -74,6 +74,17 @@ class GuidedIntakeViewModel @Inject constructor(
         )
 
         /**
+         * Consent fields that are shown together in a single batch UI instead of
+         * one-by-one chat questions. All four must be answered before advancing.
+         */
+        val CONSENT_GROUP_FIELD_IDS = setOf(
+            "hipaa_consent",
+            "sliding_fee_acknowledgment",
+            "ghhc_data_sharing",
+            "photo_consent"
+        )
+
+        /**
          * Deterministic skip rules derived from schema skip_if blocks.
          * fieldId → triggerValue → list of fields to skip.
          *
@@ -312,6 +323,18 @@ class GuidedIntakeViewModel @Inject constructor(
 
         val next = state.fields.firstOrNull { f ->
             f.id !in allSkipped && f.value.isNullOrBlank()
+        }
+
+        // If the next unanswered field is a consent field, surface the entire consent
+        // group as a batch rather than asking them one-by-one.
+        if (next != null && next.id in CONSENT_GROUP_FIELD_IDS) {
+            val pendingConsentFields = state.fields.filter { f ->
+                f.id in CONSENT_GROUP_FIELD_IDS && f.value.isNullOrBlank() && f.id !in allSkipped
+            }
+            if (pendingConsentFields.isNotEmpty()) {
+                _state.update { it.copy(consentBatchFields = pendingConsentFields, isLoadingResponse = false) }
+                return
+            }
         }
 
         when {
@@ -588,6 +611,62 @@ class GuidedIntakeViewModel @Inject constructor(
         advanceToNextField()
     }
 
+    // ─── Consent Batch Submit ─────────────────────────────────────────────────
+
+    /**
+     * Save all consent field answers at once and advance past the consent section.
+     * [answers] maps fieldId → selected option string.
+     */
+    fun submitConsentBatch(answers: Map<String, String>) {
+        viewModelScope.launch {
+            _state.update { it.copy(consentBatchFields = null, isLoadingResponse = true) }
+
+            var updatedFields = _state.value.fields
+            val allNewSkips = mutableSetOf<String>()
+
+            answers.forEach { (fieldId, value) ->
+                try {
+                    formRepository.updateFieldValue(fieldId, value)
+                    intakeRepository.markFieldsInferred(formId, listOf(fieldId))
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not persist consent field $fieldId", e)
+                }
+                updatedFields = updatedFields.map { f -> if (f.id == fieldId) f.copy(value = value) else f }
+                allNewSkips += computeSkips(fieldId, value)
+            }
+
+            val updatedSkipped = _state.value.skippedFieldIds + allNewSkips
+            val skipSet = updatedSkipped + SKIP_DURING_INTAKE
+            val filledCount = updatedFields.count { f ->
+                f.id !in skipSet && f.fieldType != FieldType.STATIC_LABEL && !f.value.isNullOrBlank()
+            }
+            val totalCount = updatedFields.count { f ->
+                f.id !in skipSet && f.fieldType != FieldType.STATIC_LABEL
+            }
+
+            _state.update {
+                it.copy(
+                    fields = updatedFields,
+                    skippedFieldIds = updatedSkipped,
+                    filledCount = filledCount,
+                    totalCount = totalCount,
+                    chatMessages = it.chatMessages + ChatMessage(
+                        text = "Thank you — your consent selections have been recorded.",
+                        isFromUser = false,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            }
+
+            if (allNewSkips.isNotEmpty()) {
+                intakeRepository.markFieldsSkipped(formId, allNewSkips.toList())
+            }
+
+            Log.d(TAG, "Consent batch submitted: ${answers.size} fields. New skips: ${allNewSkips.size}")
+            advanceToNextField()
+        }
+    }
+
     // ─── Multi-Select Helper ──────────────────────────────────────────────────
 
     /** Updates in-memory multi-select state without triggering an AI parse call. */
@@ -638,5 +717,7 @@ data class GuidedIntakeState(
     val userLanguage: String = "en",
     val guardianMode: Boolean = false,
     val filledCount: Int = 0,
-    val totalCount: Int = 0
+    val totalCount: Int = 0,
+    /** Non-null when the consent batch UI should be shown instead of chat Q&A. */
+    val consentBatchFields: List<FormField>? = null
 )
