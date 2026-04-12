@@ -7,7 +7,7 @@ import com.medpull.kiosk.data.local.dao.FormDao
 import com.medpull.kiosk.data.local.dao.FormFieldDao
 import com.medpull.kiosk.data.local.dao.PatientCacheDao
 import com.medpull.kiosk.data.local.dao.UserDao
-import com.medpull.kiosk.data.remote.ai.ClaudeApiService
+import com.medpull.kiosk.data.remote.ai.GrokApiService
 import com.medpull.kiosk.data.remote.ai.ClaudeVisionService
 import com.medpull.kiosk.data.remote.ai.PdfPageRenderer
 import com.medpull.kiosk.data.remote.aws.CognitoAuthServiceV2
@@ -93,11 +93,11 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideAiRepository(
-        claudeApiService: ClaudeApiService,
+        grokApiService: GrokApiService,
         auditLogDao: AuditLogDao,
         authRepository: AuthRepository
     ): AiRepository {
-        return AiRepository(claudeApiService, auditLogDao, authRepository)
+        return AiRepository(grokApiService, auditLogDao, authRepository)
     }
 
     @Provides

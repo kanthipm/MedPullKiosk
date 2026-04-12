@@ -129,7 +129,7 @@ class GuidedIntakeRepository @Inject constructor(
     }
 
     /**
-     * Public fallback — used by IntakeConversationEngine when Claude fails
+     * Public fallback — used by IntakeConversationEngine when AI fails
      */
     fun generateFallbackQuestion(field: FormField): String = generateQuestionText(field)
 

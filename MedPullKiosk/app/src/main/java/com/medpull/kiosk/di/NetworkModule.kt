@@ -128,16 +128,16 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideClaudeApiService(
+    fun provideGrokApiService(
         okHttpClient: OkHttpClient,
         gson: Gson
-    ): com.medpull.kiosk.data.remote.ai.ClaudeApiService {
-        return com.medpull.kiosk.data.remote.ai.ClaudeApiService(okHttpClient, gson)
+    ): com.medpull.kiosk.data.remote.ai.GrokApiService {
+        return com.medpull.kiosk.data.remote.ai.GrokApiService(okHttpClient, gson)
     }
 
     @Provides
     @Singleton
-    fun provideClaudeVisionService(
+    fun provideVisionService(
         gson: Gson
     ): com.medpull.kiosk.data.remote.ai.ClaudeVisionService {
         return com.medpull.kiosk.data.remote.ai.ClaudeVisionService(gson)

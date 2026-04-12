@@ -1,9 +1,9 @@
 package com.medpull.kiosk.data.models
 
 /**
- * Typed actions returned by IntakeConversationEngine after parsing Claude's JSON response.
+ * Typed actions returned by IntakeConversationEngine after parsing the AI's JSON response.
  *
- * Claude is instructed to respond with:
+ * The AI is instructed to respond with:
  * {
  *   "action": "set_field" | "skip_section" | "flag_for_clinic" | "ask_clarification" | "transition_to_review",
  *   "question_text": "...",
@@ -13,13 +13,25 @@ package com.medpull.kiosk.data.models
  *
  * The engine parses that JSON and returns one of these sealed subclasses.
  * All downstream code (ViewModel) works with typed actions, not raw JSON strings.
- * When upgrading to formal Claude tool-use API, only the parser in the engine changes.
  */
-/** A single field value extracted by the AI — used in SetMultipleFields. */
+/** A single field value extracted by the AI — used in SetMultipleFields and FieldParseResult. */
 data class FieldUpdate(
     val fieldId: String,
     val value: String,
     val confidence: Float
+)
+
+/**
+ * Result of parsing a patient's answer for a specific field.
+ * Replaces the old free-form IntakeAction — the ViewModel now drives field progression,
+ * the engine only extracts values.
+ */
+data class FieldParseResult(
+    val value: String? = null,          // Extracted value, null = couldn't parse
+    val confidence: Float = 0f,
+    val alsoFills: List<FieldUpdate> = emptyList(), // Bonus fields the answer also filled
+    val needsClarification: Boolean = false,
+    val clarificationQuestion: String = ""
 )
 
 sealed class IntakeAction {
@@ -36,7 +48,7 @@ sealed class IntakeAction {
     ) : IntakeAction()
 
     /**
-     * Claude extracted a field value with sufficient confidence (>= 0.8).
+     * AI extracted a field value with sufficient confidence (>= 0.8).
      * The ViewModel writes this to Room DB and advances to the next question.
      */
     data class SetField(
@@ -48,7 +60,7 @@ sealed class IntakeAction {
     ) : IntakeAction()
 
     /**
-     * Claude needs the patient to confirm a value (confidence 0.5–0.79).
+     * AI needs the patient to confirm a value (confidence 0.5–0.79).
      * Also used when the patient's answer was unclear (confidence < 0.5).
      * The ViewModel does NOT write a field value — waits for patient confirmation.
      */
@@ -59,7 +71,7 @@ sealed class IntakeAction {
     ) : IntakeAction()
 
     /**
-     * Claude determined a set of fields don't apply based on prior answers.
+     * AI determined a set of fields don't apply based on prior answers.
      * The ViewModel marks these fields as skipped in the intake flow.
      */
     data class SkipSection(
@@ -69,7 +81,7 @@ sealed class IntakeAction {
     ) : IntakeAction()
 
     /**
-     * Claude flagged a field for clinic staff review.
+     * AI flagged a field for clinic staff review.
      * Triggered automatically when clarification count >= 2 and confidence < 0.5.
      * The ViewModel marks the field as flagged and advances to the next question.
      */
@@ -85,7 +97,7 @@ sealed class IntakeAction {
     object TransitionToReview : IntakeAction()
 
     /**
-     * Claude returned malformed JSON after retries, or the API failed.
+     * AI returned malformed JSON after retries, or the API failed.
      * The engine fell back to a template question via generateQuestionText().
      * The ViewModel displays the question without updating any field state.
      */
