@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,7 +31,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,7 +53,7 @@ import java.util.Locale
  * A "Need Help?" button on the right edge opens a collapsible chat sidebar showing the
  * full conversation history and an extra clarification input.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GuidedIntakeScreen(
     onNavigateBack: () -> Unit,
@@ -61,7 +66,12 @@ fun GuidedIntakeScreen(
     var chatPanelOpen by remember { mutableStateOf(false) }
     val chatListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    // Auto-show handwriting panel when on a signature field
+    val isSignatureField = state.currentAskingField?.fieldType == com.medpull.kiosk.data.models.FieldType.SIGNATURE
     var showHandwriting by remember { mutableStateOf(false) }
+    LaunchedEffect(state.currentAskingField?.id) {
+        showHandwriting = isSignatureField
+    }
 
     // Speech-to-text
     val speechAvailable = remember { SpeechRecognizer.isRecognitionAvailable(context) }
@@ -167,11 +177,6 @@ fun GuidedIntakeScreen(
                         )
                         if (state.totalCount > 0) {
                             val progress = state.filledCount.toFloat() / state.totalCount
-                            Text(
-                                text = "${state.filledCount} of ${state.totalCount} required",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
                             LinearProgressIndicator(
                                 progress = { progress },
                                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -410,16 +415,19 @@ fun GuidedIntakeScreen(
                                         }
                                     }
                                 } else {
-                                    // RADIO / DROPDOWN: single-tap horizontal chip row
+                                    // RADIO / DROPDOWN: wrapping chip grid (no scroll, all visible)
                                     Surface(
                                         color = MaterialTheme.colorScheme.surfaceVariant,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        LazyRow(
-                                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        FlowRow(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            items(optionField.options) { option ->
+                                            optionField.options.forEach { option ->
                                                 FilterChip(
                                                     selected = false,
                                                     onClick = { viewModel.sendMessage(option) },
@@ -456,7 +464,9 @@ fun GuidedIntakeScreen(
                                             },
                                             enabled = !state.isLoadingResponse,
                                             maxLines = 4,
-                                            textStyle = MaterialTheme.typography.bodyLarge
+                                            textStyle = MaterialTheme.typography.bodyLarge,
+                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                                            keyboardActions = KeyboardActions(onSend = { sendMessage() })
                                         )
                                         Spacer(Modifier.width(8.dp))
 
