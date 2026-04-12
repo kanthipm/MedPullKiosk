@@ -165,10 +165,10 @@ fun GuidedIntakeScreen(
                             text = state.form?.fileName ?: "Patient Intake",
                             style = MaterialTheme.typography.titleMedium
                         )
-                        if (state.totalRequiredCount > 0) {
-                            val progress = state.filledRequiredCount.toFloat() / state.totalRequiredCount
+                        if (state.totalCount > 0) {
+                            val progress = state.filledCount.toFloat() / state.totalCount
                             Text(
-                                text = "${state.filledRequiredCount} of ${state.totalRequiredCount} required",
+                                text = "${state.filledCount} of ${state.totalCount} required",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )

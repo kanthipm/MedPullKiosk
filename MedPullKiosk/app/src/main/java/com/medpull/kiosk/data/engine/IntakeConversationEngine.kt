@@ -1,20 +1,16 @@
 package com.medpull.kiosk.data.engine
 
-import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.JsonSyntaxException
 import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.entities.AuditLogEntity
+import com.medpull.kiosk.data.models.FieldParseResult
+import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FieldUpdate
 import com.medpull.kiosk.data.models.FormField
-import com.medpull.kiosk.data.models.IntakeAction
 import com.medpull.kiosk.data.remote.ai.AiResponse
-import com.medpull.kiosk.data.remote.ai.ClaudeApiService
+import com.medpull.kiosk.data.remote.ai.GrokApiService
 import com.medpull.kiosk.data.repository.AuthRepository
-import com.medpull.kiosk.data.repository.GuidedIntakeRepository
-import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.utils.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.json.JSONObject
@@ -22,429 +18,244 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Orchestrates the conversational intake session.
+ * Stateless intake conversation engine.
  *
- * Responsibilities (all as private methods — extract into separate classes when adding form #2):
- *   buildSystemPrompt()  — converts form schema + current state into Claude's system prompt
- *   processInput()       — calls Claude, parses JSON response into IntakeAction, handles retries
- *   parseResponse()      — JSON string → IntakeAction (confidence thresholds, action routing)
- *   validateField()      — checks type/required constraints
- *   checkEscalation()    — returns true if field should be auto-flagged for staff
+ * The ViewModel owns all progression logic — which field to ask, when to advance,
+ * which fields to skip. This engine has exactly two jobs:
  *
- * Data flow:
- *   ViewModel calls processInput(message, fields, history, language, clarificationCounts)
- *     → buildSystemPrompt(fields, language)
- *     → ClaudeApiService.sendMessage(message, history, systemPrompt)
- *     → parseResponse(json) → IntakeAction
- *     → if malformed: retry once, then Fallback
- *     → return IntakeAction to ViewModel
+ *   generateQuestion(field, context)  — produce a warm, natural question for one field
+ *   parseAnswer(field, answer, allFields) — extract the field value from free text
  *
- * The ViewModel owns all mutable state. The engine is stateless.
+ * Both methods are focused single-field calls with small token budgets. No free-form
+ * multi-field steering, no "decide what to ask next" logic. That was the root cause
+ * of the 29% completion problem.
  */
 @Singleton
 class IntakeConversationEngine @Inject constructor(
-    private val claudeApiService: ClaudeApiService,
-    private val intakeRepository: GuidedIntakeRepository,
+    private val apiService: GrokApiService,
     private val auditLogDao: AuditLogDao,
     private val authRepository: AuthRepository,
     private val gson: Gson,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: android.content.Context
 ) {
 
     companion object {
-        private const val TAG = "IntakeConversationEngine"
-        private const val SCHEMA_FILE = "schemas/coastal_gateway_intake.json"
-        private const val MAX_HISTORY_TURNS = 10
-        private const val CONFIDENCE_ACCEPT = 0.8f
-        private const val CONFIDENCE_CONFIRM = 0.5f
-        private const val ESCALATION_THRESHOLD = 2
+        private const val TAG = "IntakeEngine"
     }
 
-    // Cached schema JSON — loaded once per app session
-    private var cachedSchema: String? = null
+    // ─── Question Generation ──────────────────────────────────────────────────
 
     /**
-     * Main entry point. Call from ViewModel for every patient message.
-     *
-     * @param message         Raw patient input
-     * @param fields          All form fields with current values
-     * @param history         Full conversation history (engine trims to last 10)
-     * @param language        Patient's selected language code (e.g. "es")
-     * @param clarificationCounts  Per-field count of clarification attempts this session
-     * @param malformedCount  Number of malformed JSON responses so far this session
-     * @param formId          For fallback question generation
+     * Generate a single warm question for the given field.
+     * Falls back to a template question on API failure — callers always get a string.
      */
-    suspend fun processInput(
-        message: String,
-        fields: List<FormField>,
-        history: List<ChatMessage>,
+    suspend fun generateQuestion(
+        field: FormField,
+        filledFields: List<FormField>,
         language: String,
-        clarificationCounts: Map<String, Int>,
-        malformedCount: Int,
-        formId: String
-    ): IntakeAction {
-        val systemPrompt = buildSystemPrompt(fields, language, history)
-        val trimmedHistory = trimHistory(history, fields)
-
-        logAiQuery(message)
-
-        return when (val response = claudeApiService.sendMessage(
-            userMessage = message,
-            conversationHistory = trimmedHistory,
-            systemPrompt = systemPrompt,
-            model = Constants.AI.CONVERSATION_MODEL,
-            maxTokens = Constants.AI.CONVERSATION_MAX_TOKENS
-        )) {
-            is AiResponse.Success -> {
-                parseResponseWithRetry(
-                    responseText = response.message,
-                    message = message,
-                    trimmedHistory = trimmedHistory,
-                    systemPrompt = systemPrompt,
-                    fields = fields,
-                    clarificationCounts = clarificationCounts,
-                    malformedCount = malformedCount,
-                    formId = formId,
-                    language = language
-                )
-            }
-            is AiResponse.Error -> {
-                Log.e(TAG, "Claude API error: ${response.message}")
-                logAudit("AI_ERROR", response.message)
-                fallbackAction(fields, formId)
-            }
-        }
-    }
-
-    // ─── System Prompt ────────────────────────────────────────────────────────
-
-    private fun buildSystemPrompt(
-        fields: List<FormField>,
-        language: String,
-        history: List<ChatMessage>
+        guardianMode: Boolean
     ): String {
-        val languageName = when (language) {
-            "es" -> "Spanish"; "zh" -> "Chinese"; "fr" -> "French"
-            "hi" -> "Hindi"; "ar" -> "Arabic"; else -> "English"
+        val languageName = languageName(language)
+        val filledSummary = filledFields
+            .take(6)
+            .joinToString(", ") { "${it.id}=${it.value}" }
+            .ifBlank { "none yet" }
+
+        val prompt = buildString {
+            appendLine("Generate ONE warm, natural intake question in $languageName.")
+            appendLine("Field: ${field.id} (${field.fieldType.name.lowercase()})")
+            appendLine("Label: ${field.translatedText ?: field.fieldName}")
+            if (!field.description.isNullOrBlank()) {
+                appendLine("Schema instructions: ${field.description}")
+            }
+            if (field.options.isNotEmpty()) {
+                appendLine("Note: answer options shown as buttons in UI — do NOT list them in the question.")
+            }
+            if (guardianMode) {
+                appendLine("Use third-person framing — ask about 'the patient', not 'you'.")
+            }
+            appendLine("Already collected: $filledSummary")
+            appendLine()
+            append("Return JSON only: {\"question\": \"your question here\"}")
         }
 
-        val schema = loadSchema()
+        logAudit("AI_QUESTION_GEN", "Field: ${field.id}")
 
-        // Filled fields as summary — only IDs to save tokens
-        val filledIds = fields.filter { !it.value.isNullOrBlank() }.map { it.id }
-        val filledSummary = if (filledIds.isEmpty()) "None yet"
-        else filledIds.joinToString(", ")
-
-        // Unfilled required fields — send full info
-        val unfilledRequired = fields
-            .filter { it.required && it.value.isNullOrBlank() }
-            .joinToString("\n") { f ->
-                "  - ${f.id} (${f.fieldType.name.lowercase()}): ${f.translatedText ?: f.fieldName}"
-            }
-
-        // Unfilled optional fields
-        val unfilledOptional = fields
-            .filter { !it.required && it.value.isNullOrBlank() }
-            .joinToString("\n") { f ->
-                "  - ${f.id} (${f.fieldType.name.lowercase()}): ${f.translatedText ?: f.fieldName}"
-            }
-
-        // Conversation summary for older turns
-        val olderSummary = if (history.size > MAX_HISTORY_TURNS) {
-            val confirmed = fields.filter { !it.value.isNullOrBlank() }
-                .joinToString(", ") { "${it.id}=${it.value}" }
-            "Previously collected: $confirmed"
-        } else ""
-
-        return """
-You are a patient intake assistant at a community health center.
-Your job: ask the patient questions ONE AT A TIME to fill out their intake form.
-Always respond in $languageName. Be warm, clear, and simple — patients may have low literacy.
-
-FORM SCHEMA:
-$schema
-
-CURRENT STATE:
-Already filled (do not ask again): $filledSummary
-
-Still needed (required):
-$unfilledRequired
-
-Still needed (optional — ask only if natural):
-$unfilledOptional
-
-${if (olderSummary.isNotEmpty()) "CONVERSATION SUMMARY:\n$olderSummary\n" else ""}
-RULES:
-- Ask one question at a time in $languageName
-- If the patient's answer fills multiple fields, extract ALL of them in field_updates
-- Skip fields that clearly don't apply based on prior answers (e.g. insurance fields if uninsured)
-- If an answer is unclear, ask ONE clarifying question — do not repeat the same question twice
-- Flag anything needing clinic staff attention
-- When ALL required fields are filled, use action "transition_to_review"
-- Do NOT include format hints or examples in parentheses in question_text — hints are shown separately in the UI
-- question_text must be plain natural language only — no parenthetical notes
-- For multi_select fields, the patient's answer is a comma-separated list of chosen options (e.g. "Diabetes, Hypertension"). Extract the full list as a single field_updates entry. If the patient says "None", set value = "None".
-
-RESPOND WITH VALID JSON ONLY — no other text:
-{
-  "action": "set_field" | "skip_section" | "flag_for_clinic" | "ask_clarification" | "transition_to_review",
-  "question_text": "your next question or message to the patient in $languageName",
-  "field_updates": [{"field_id": "...", "value": "...", "confidence": 0.0-1.0}],
-  "skip_field_ids": ["field_id_1", "field_id_2"],
-  "flag_field_id": "field_id",
-  "flag_reason": "reason for flagging",
-  "reasoning": "brief explanation for audit trail"
-}
-        """.trimIndent()
-    }
-
-    // ─── History Trimming ─────────────────────────────────────────────────────
-
-    private fun trimHistory(history: List<ChatMessage>, fields: List<FormField>): List<ChatMessage> {
-        return if (history.size <= MAX_HISTORY_TURNS) {
-            history
-        } else {
-            // Keep last MAX_HISTORY_TURNS turns; older context is in the system prompt's CURRENT STATE
-            history.takeLast(MAX_HISTORY_TURNS)
-        }
-    }
-
-    // ─── Response Parsing ─────────────────────────────────────────────────────
-
-    private suspend fun parseResponseWithRetry(
-        responseText: String,
-        message: String,
-        trimmedHistory: List<ChatMessage>,
-        systemPrompt: String,
-        fields: List<FormField>,
-        clarificationCounts: Map<String, Int>,
-        malformedCount: Int,
-        formId: String,
-        language: String
-    ): IntakeAction {
-        val action = parseResponse(responseText, clarificationCounts, fields, formId)
-        if (action != null) return action
-
-        // Malformed JSON — retry once with explicit JSON instruction
-        Log.w(TAG, "Malformed response, retrying with JSON instruction")
-        logAudit("MALFORMED_RESPONSE", responseText.take(200))
-
-        val retryHistory = trimmedHistory + ChatMessage(
-            text = message, isFromUser = true, timestamp = System.currentTimeMillis()
-        )
-        val retryResponse = claudeApiService.sendMessage(
-            userMessage = "You must respond with valid JSON matching the schema in the system prompt. No other text.",
-            conversationHistory = retryHistory,
-            systemPrompt = systemPrompt,
+        return when (val resp = apiService.sendMessage(
+            userMessage = prompt,
+            conversationHistory = emptyList(),
+            systemPrompt = "You generate intake form questions. Respond with valid JSON only.",
             model = Constants.AI.CONVERSATION_MODEL,
-            maxTokens = Constants.AI.CONVERSATION_MAX_TOKENS
-        )
-
-        if (retryResponse is AiResponse.Success) {
-            val retryAction = parseResponse(retryResponse.message, clarificationCounts, fields, formId)
-            if (retryAction != null) return retryAction
+            maxTokens = 150
+        )) {
+            is AiResponse.Success -> parseQuestionJson(resp.message) ?: fallbackQuestion(field, guardianMode)
+            is AiResponse.Error -> {
+                Log.w(TAG, "Question gen failed for ${field.id}: ${resp.message}")
+                fallbackQuestion(field, guardianMode)
+            }
         }
-
-        // Both attempts failed
-        val newMalformedCount = malformedCount + 1
-        Log.e(TAG, "Both parse attempts failed. Session malformed count: $newMalformedCount")
-        logAudit("MALFORMED_RESPONSE_FINAL", "Falling back to template question")
-
-        if (newMalformedCount >= 3) {
-            logAudit("ESCALATE_MALFORMED", "3+ malformed responses in session")
-        }
-
-        return fallbackAction(fields, formId)
     }
 
-    private suspend fun parseResponse(
-        json: String,
-        clarificationCounts: Map<String, Int>,
-        fields: List<FormField>,
-        formId: String
-    ): IntakeAction? {
+    private fun parseQuestionJson(raw: String): String? {
         return try {
-            // Strip markdown code fences if Claude wrapped the JSON
-            val cleaned = json.trim()
+            val cleaned = raw.trim()
                 .removePrefix("```json").removePrefix("```")
                 .removeSuffix("```").trim()
-
-            val obj = JSONObject(cleaned)
-            val action = obj.optString("action", "")
-            val questionText = obj.optString("question_text", "")
-            val reasoning = obj.optString("reasoning", "")
-
-            when (action) {
-                "set_field" -> {
-                    val updatesArr = obj.optJSONArray("field_updates")
-                    if (updatesArr == null || updatesArr.length() == 0) return null
-
-                    // Collect ALL high-confidence updates from this response
-                    val highConfidenceUpdates = mutableListOf<FieldUpdate>()
-                    var primaryFieldId: String? = null
-                    var primaryConfidence = 0f
-
-                    for (i in 0 until updatesArr.length()) {
-                        val entry = updatesArr.getJSONObject(i)
-                        val fId = entry.optString("field_id", "")
-                        val fVal = entry.optString("value", "")
-                        val fConf = entry.optDouble("confidence", 0.8).toFloat()
-                        if (fId.isBlank() || fVal.isBlank()) continue
-
-                        if (i == 0) {
-                            primaryFieldId = fId
-                            primaryConfidence = fConf
-                        }
-
-                        when {
-                            fConf >= CONFIDENCE_ACCEPT -> highConfidenceUpdates += FieldUpdate(fId, fVal, fConf)
-                            // Low confidence on secondary fields: skip silently (engine will ask later)
-                        }
-                    }
-
-                    if (primaryFieldId == null) return null
-
-                    // Check staff escalation on the primary field
-                    if (checkEscalation(primaryFieldId, primaryConfidence, clarificationCounts)) {
-                        logAudit("STAFF_ESCALATION", "Field $primaryFieldId escalated after ${clarificationCounts[primaryFieldId]} attempts")
-                        return IntakeAction.FlagForClinic(
-                            fieldId = primaryFieldId,
-                            reason = "Patient unable to provide clear answer after ${clarificationCounts[primaryFieldId]} attempts",
-                            questionText = questionText.ifBlank { "A staff member will help with this. Let's move on." }
-                        )
-                    }
-
-                    // Route based on primary field confidence
-                    when {
-                        primaryConfidence < CONFIDENCE_CONFIRM -> IntakeAction.AskClarification(
-                            questionText = questionText.ifBlank { "I didn't quite catch that. Could you say it again?" },
-                            fieldId = primaryFieldId,
-                            reasoning = "Confidence $primaryConfidence — requesting clarification"
-                        )
-                        primaryConfidence < CONFIDENCE_ACCEPT -> IntakeAction.AskClarification(
-                            questionText = questionText.ifBlank {
-                                val fVal = highConfidenceUpdates.firstOrNull()?.value ?: ""
-                                "You said \"$fVal\" — is that correct?"
-                            },
-                            fieldId = primaryFieldId,
-                            reasoning = "Confidence $primaryConfidence — requesting confirmation"
-                        )
-                        highConfidenceUpdates.size > 1 -> {
-                            // Multiple fields extracted — return all at once
-                            IntakeAction.SetMultipleFields(
-                                updates = highConfidenceUpdates,
-                                questionText = questionText,
-                                reasoning = reasoning
-                            )
-                        }
-                        highConfidenceUpdates.size == 1 -> {
-                            val u = highConfidenceUpdates[0]
-                            IntakeAction.SetField(
-                                fieldId = u.fieldId,
-                                value = u.value,
-                                confidence = u.confidence,
-                                questionText = questionText,
-                                reasoning = reasoning
-                            )
-                        }
-                        else -> null
-                    }
-                }
-
-                "ask_clarification" -> IntakeAction.AskClarification(
-                    questionText = questionText,
-                    reasoning = reasoning
-                )
-
-                "skip_section" -> {
-                    val skipIds = obj.optJSONArray("skip_field_ids")
-                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
-                        ?: emptyList()
-                    IntakeAction.SkipSection(
-                        fieldIds = skipIds,
-                        questionText = questionText,
-                        reasoning = reasoning
-                    )
-                }
-
-                "flag_for_clinic" -> IntakeAction.FlagForClinic(
-                    fieldId = obj.optString("flag_field_id", ""),
-                    reason = obj.optString("flag_reason", reasoning),
-                    questionText = questionText
-                )
-
-                "transition_to_review" -> IntakeAction.TransitionToReview
-
-                else -> {
-                    Log.w(TAG, "Unknown action type: $action")
-                    null
-                }
-            }
+            JSONObject(cleaned).optString("question", "").ifBlank { null }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse response JSON", e)
-            null
+            // If it's plain text (not JSON), use it directly if reasonable length
+            raw.trim().takeIf { it.isNotBlank() && it.length < 400 && !it.startsWith("{") }
         }
     }
 
-    // ─── Staff Escalation ─────────────────────────────────────────────────────
+    private fun fallbackQuestion(field: FormField, guardianMode: Boolean = false): String {
+        val label = field.translatedText ?: field.fieldName
+        val ref = if (guardianMode) "the patient's" else "your"
+        return when (field.fieldType) {
+            FieldType.SIGNATURE -> "Please provide your signature below."
+            FieldType.MULTI_SELECT -> "Which of the following apply to $ref $label? Select all that apply."
+            FieldType.DATE -> "What is $ref $label?"
+            else -> "What is $ref $label?"
+        }
+    }
+
+    // ─── Answer Parsing ───────────────────────────────────────────────────────
 
     /**
-     * Returns true if this field has been clarified enough times at low confidence
-     * that it should be escalated to clinic staff rather than asking again.
+     * Parse a patient's free-text answer for [field].
+     *
+     * For RADIO/DROPDOWN where the answer exactly matches an option, short-circuits
+     * without an API call. For everything else, calls the model with a tightly scoped
+     * prompt asking only for the target field value (plus any obvious bonus fields).
      */
-    private fun checkEscalation(
-        fieldId: String,
-        confidence: Float,
-        clarificationCounts: Map<String, Int>
-    ): Boolean {
-        val count = clarificationCounts[fieldId] ?: 0
-        return count >= ESCALATION_THRESHOLD && confidence < CONFIDENCE_CONFIRM
+    suspend fun parseAnswer(
+        field: FormField,
+        userAnswer: String,
+        allFields: List<FormField>,
+        language: String
+    ): FieldParseResult {
+        // Fast path: exact option match for radio/dropdown
+        if (field.fieldType in listOf(FieldType.RADIO, FieldType.DROPDOWN)) {
+            val match = field.options.find { it.equals(userAnswer.trim(), ignoreCase = true) }
+            if (match != null) return FieldParseResult(value = match, confidence = 1.0f)
+        }
+
+        // Fast path: multi-select value comes in pre-formatted from chip UI
+        if (field.fieldType == FieldType.MULTI_SELECT) {
+            val trimmed = userAnswer.trim()
+            if (trimmed.isNotBlank()) {
+                return FieldParseResult(value = trimmed, confidence = 1.0f)
+            }
+        }
+
+        // Other unfilled fields — offer them as bonus fill candidates (limit to 8 for token budget)
+        val bonusCandidates = allFields
+            .filter { f ->
+                f.id != field.id &&
+                f.value.isNullOrBlank() &&
+                f.fieldType !in listOf(FieldType.STATIC_LABEL, FieldType.SIGNATURE, FieldType.MULTI_SELECT)
+            }
+            .take(8)
+            .joinToString("\n") { "  ${it.id}: ${it.translatedText ?: it.fieldName}" }
+
+        val prompt = buildString {
+            appendLine("Extract the value for this intake field from the patient's answer.")
+            appendLine()
+            appendLine("Target field: ${field.id} (${field.fieldType.name.lowercase()})")
+            appendLine("Label: ${field.translatedText ?: field.fieldName}")
+            if (field.options.isNotEmpty()) appendLine("Valid options: ${field.options.joinToString(", ")}")
+            if (!field.description.isNullOrBlank()) appendLine("Format hint: ${field.description}")
+            appendLine()
+            appendLine("Patient said: \"$userAnswer\"")
+            if (bonusCandidates.isNotBlank()) {
+                appendLine()
+                appendLine("If the answer also clearly fills these other unfilled fields, include them in also_fills:")
+                appendLine(bonusCandidates)
+            }
+            appendLine()
+            appendLine("""Return JSON only:
+{
+  "value": "extracted value, or null if unclear",
+  "confidence": 0.0-1.0,
+  "also_fills": [{"field_id": "...", "value": "..."}],
+  "needs_clarification": false,
+  "clarification_question": "follow-up question if value is null"
+}""")
+        }
+
+        logAudit("AI_PARSE_ANSWER", "Field: ${field.id}")
+
+        return when (val resp = apiService.sendMessage(
+            userMessage = prompt,
+            conversationHistory = emptyList(),
+            systemPrompt = "You extract field values from patient answers. Return valid JSON only.",
+            model = Constants.AI.CONVERSATION_MODEL,
+            maxTokens = 400
+        )) {
+            is AiResponse.Success -> parseFieldResult(resp.message)
+            is AiResponse.Error -> {
+                Log.e(TAG, "Parse answer failed for ${field.id}: ${resp.message}")
+                FieldParseResult(
+                    needsClarification = true,
+                    clarificationQuestion = "I'm having trouble connecting. Could you try again?"
+                )
+            }
+        }
     }
 
-    // ─── Field Validation ─────────────────────────────────────────────────────
+    private fun parseFieldResult(raw: String): FieldParseResult {
+        return try {
+            val cleaned = raw.trim()
+                .removePrefix("```json").removePrefix("```")
+                .removeSuffix("```").trim()
+            val obj = JSONObject(cleaned)
 
-    fun validateField(field: FormField, value: String): Boolean {
-        if (field.required && value.isBlank()) return false
-        return true  // Type validation added when schema has range/format constraints
+            val rawValue = obj.optString("value", "null")
+            val value = if (rawValue == "null" || rawValue.isBlank()) null else rawValue
+            val confidence = obj.optDouble("confidence", 0.0).toFloat()
+            val needsClarification = obj.optBoolean("needs_clarification", false) || value == null
+            val clarificationQuestion = obj.optString("clarification_question", "")
+
+            val alsoFills = mutableListOf<FieldUpdate>()
+            val arr = obj.optJSONArray("also_fills")
+            if (arr != null) {
+                for (i in 0 until arr.length()) {
+                    val entry = arr.getJSONObject(i)
+                    val fId = entry.optString("field_id", "")
+                    val fVal = entry.optString("value", "")
+                    if (fId.isNotBlank() && fVal.isNotBlank() && fVal != "null") {
+                        alsoFills += FieldUpdate(fId, fVal, 0.9f)
+                    }
+                }
+            }
+
+            FieldParseResult(
+                value = value,
+                confidence = confidence,
+                alsoFills = alsoFills,
+                needsClarification = needsClarification,
+                clarificationQuestion = clarificationQuestion.ifBlank { "Could you clarify that?" }
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse FieldParseResult: ${e.message}")
+            FieldParseResult(
+                needsClarification = true,
+                clarificationQuestion = "I didn't quite catch that. Could you try again?"
+            )
+        }
     }
 
-    // ─── Completion Check ─────────────────────────────────────────────────────
+    // ─── Utility ──────────────────────────────────────────────────────────────
 
     fun allRequiredFilled(fields: List<FormField>, skippedFieldIds: Set<String> = emptySet()): Boolean =
         fields.filter { it.required && it.id !in skippedFieldIds }.all { !it.value.isNullOrBlank() }
 
-    // ─── Schema Loading ───────────────────────────────────────────────────────
-
-    private fun loadSchema(): String {
-        cachedSchema?.let { return it }
-        return try {
-            val json = context.assets.open(SCHEMA_FILE).bufferedReader().readText()
-            cachedSchema = json
-            json
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load schema from assets/$SCHEMA_FILE", e)
-            "{\"error\": \"Schema not found — Phase 0 required\"}"
-        }
-    }
-
-    // ─── Fallback ─────────────────────────────────────────────────────────────
-
-    private fun fallbackAction(fields: List<FormField>, formId: String): IntakeAction {
-        val nextUnfilled = fields.firstOrNull { it.required && it.value.isNullOrBlank() }
-            ?: fields.firstOrNull { it.value.isNullOrBlank() }
-        return IntakeAction.Fallback(
-            questionText = nextUnfilled?.let {
-                intakeRepository.generateFallbackQuestion(it)
-            } ?: "Is there anything else you'd like to add?",
-            fieldId = nextUnfilled?.id
-        )
+    private fun languageName(code: String) = when (code) {
+        "es" -> "Spanish"; "zh" -> "Chinese"; "fr" -> "French"
+        "hi" -> "Hindi"; "ar" -> "Arabic"; else -> "English"
     }
 
     // ─── Audit Logging ────────────────────────────────────────────────────────
-
-    private suspend fun logAiQuery(query: String) {
-        logAudit(Constants.Audit.ACTION_AI_QUERY, "Intake query: ${query.take(100)}")
-    }
 
     private suspend fun logAudit(action: String, description: String) {
         try {

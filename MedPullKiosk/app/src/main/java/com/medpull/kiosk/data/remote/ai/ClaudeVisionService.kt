@@ -252,9 +252,9 @@ class ClaudeVisionService @Inject constructor(
             Log.d(TAG, "Request body size: ${bodyJson.length / 1024}KB")
 
             val request = Request.Builder()
-                .url(Constants.AI.CLAUDE_API_URL)
+                .url(Constants.AI.ANTHROPIC_API_URL)
                 .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY)
-                .addHeader("anthropic-version", Constants.AI.CLAUDE_API_VERSION)
+                .addHeader("anthropic-version", Constants.AI.ANTHROPIC_API_VERSION)
                 .addHeader("content-type", "application/json")
                 .post(bodyJson.toRequestBody("application/json".toMediaType()))
                 .build()

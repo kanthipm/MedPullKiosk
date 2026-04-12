@@ -5,7 +5,7 @@ import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.entities.AuditLogEntity
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.data.remote.ai.AiResponse
-import com.medpull.kiosk.data.remote.ai.ClaudeApiService
+import com.medpull.kiosk.data.remote.ai.GrokApiService
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.utils.Constants
 import javax.inject.Inject
@@ -13,11 +13,11 @@ import javax.inject.Singleton
 
 /**
  * Repository for AI assistance operations.
- * Uses Anthropic Claude API directly.
+ * Uses Grok API (xAI) for AI assistance.
  */
 @Singleton
 class AiRepository @Inject constructor(
-    private val claudeApiService: ClaudeApiService,
+    private val grokApiService: GrokApiService,
     private val auditLogDao: AuditLogDao,
     private val authRepository: AuthRepository
 ) {
@@ -38,9 +38,9 @@ class AiRepository @Inject constructor(
         return try {
             logAiQuery(message)
 
-            val systemPrompt = claudeApiService.buildSystemPrompt(language, formContext)
+            val systemPrompt = grokApiService.buildSystemPrompt(language, formContext)
 
-            when (val response = claudeApiService.sendMessage(
+            when (val response = grokApiService.sendMessage(
                 userMessage = message,
                 conversationHistory = conversationHistory,
                 systemPrompt = systemPrompt,
@@ -72,7 +72,7 @@ class AiRepository @Inject constructor(
         return try {
             logAiQuery("Field suggestion: ${field.fieldName}")
 
-            when (val response = claudeApiService.suggestFieldValue(
+            when (val response = grokApiService.suggestFieldValue(
                 fieldName = field.translatedText ?: field.fieldName,
                 fieldType = field.fieldType.name,
                 language = language
@@ -96,7 +96,7 @@ class AiRepository @Inject constructor(
         return try {
             logAiQuery("Explain term: $term")
 
-            when (val response = claudeApiService.explainMedicalTerm(term, language)) {
+            when (val response = grokApiService.explainMedicalTerm(term, language)) {
                 is AiResponse.Success -> AiChatResult.Success(response.message)
                 is AiResponse.Error -> AiChatResult.Error(response.message)
             }

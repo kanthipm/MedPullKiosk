@@ -106,8 +106,8 @@ object Constants {
         const val CHAT_MAX_TOKENS = 512
 
         // Vision: disabled — no BAA with Anthropic, Textract handles OCR
-        const val CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-        const val CLAUDE_API_VERSION = "2023-06-01"
+        const val ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+        const val ANTHROPIC_API_VERSION = "2023-06-01"
         const val VISION_MAX_TOKENS = 8192
         const val VISION_TIMEOUT_SECONDS = 120L
         const val VISION_ENABLED = false

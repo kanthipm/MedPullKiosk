@@ -16,11 +16,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * AI chat service — now backed by Grok (xAI) which exposes an OpenAI-compatible API.
- * Keeps the same public interface so IntakeConversationEngine needs no changes.
+ * AI chat service backed by Grok (xAI) — OpenAI-compatible API.
  */
 @Singleton
-class ClaudeApiService @Inject constructor(
+class GrokApiService @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val gson: Gson
 ) {
