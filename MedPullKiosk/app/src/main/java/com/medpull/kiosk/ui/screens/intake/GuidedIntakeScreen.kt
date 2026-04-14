@@ -11,28 +11,37 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -40,18 +49,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.ui.screens.ai.HandwritingInput
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
- * Guided intake screen.
+ * Typeform-style guided intake screen.
  *
- * Layout: the current AI question is displayed large and centered on the left/main area.
- * The patient types (or speaks) their answer in the input bar at the bottom.
- * A "Need Help?" button on the right edge opens a collapsible chat sidebar showing the
- * full conversation history and an extra clarification input.
+ * One question at a time, vertically centered. The answer input lives directly
+ * below the question text — not in a separate bottom bar. Slide-up animation
+ * between questions. "press Enter ↵" affordance. Thin progress line at top.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -63,17 +72,33 @@ fun GuidedIntakeScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     var messageText by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
     var chatPanelOpen by remember { mutableStateOf(false) }
     val chatListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    // Auto-show handwriting panel when on a signature field
-    val isSignatureField = state.currentAskingField?.fieldType == com.medpull.kiosk.data.models.FieldType.SIGNATURE
-    var showHandwriting by remember { mutableStateOf(false) }
-    LaunchedEffect(state.currentAskingField?.id) {
-        showHandwriting = isSignatureField
+
+    // Auto-scroll chat sidebar to latest message
+    LaunchedEffect(state.chatMessages.size) {
+        if (state.chatMessages.isNotEmpty() && chatPanelOpen) {
+            coroutineScope.launch {
+                chatListState.animateScrollToItem(state.chatMessages.size - 1)
+            }
+        }
     }
 
-    // Speech-to-text
+    val isSignatureField = state.currentAskingField?.fieldType == FieldType.SIGNATURE
+    var showHandwriting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.currentAskingField?.id) {
+        showHandwriting = isSignatureField
+        // Auto-focus text input when question changes (non-chip, non-signature fields)
+        val f = state.currentAskingField
+        if (f != null && f.options.isEmpty() && !isSignatureField) {
+            try { focusRequester.requestFocus() } catch (_: Exception) {}
+        }
+    }
+
+    // ── Speech-to-text ────────────────────────────────────────────────────────
     val speechAvailable = remember { SpeechRecognizer.isRecognitionAvailable(context) }
     var isListening by remember { mutableStateOf(false) }
     val speechRecognizer = remember {
@@ -119,14 +144,13 @@ fun GuidedIntakeScreen(
         onDispose { speechRecognizer?.destroy() }
     }
 
-    // Text-to-speech
+    // ── Text-to-speech ────────────────────────────────────────────────────────
     var ttsReady by remember { mutableStateOf(false) }
-    var speakingMessageId by remember { mutableStateOf(-1L) }
+    var isSpeaking by remember { mutableStateOf(false) }
     val tts = remember {
         TextToSpeech(context) { status -> ttsReady = status == TextToSpeech.SUCCESS }
     }
     DisposableEffect(Unit) { onDispose { tts.shutdown() } }
-
     LaunchedEffect(state.userLanguage, ttsReady) {
         if (ttsReady) {
             val locale = when (state.userLanguage) {
@@ -136,25 +160,17 @@ fun GuidedIntakeScreen(
             }
             tts.language = locale
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?) { speakingMessageId = -1L }
+                override fun onStart(utteranceId: String?) { isSpeaking = true }
+                override fun onDone(utteranceId: String?) { isSpeaking = false }
                 @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) { speakingMessageId = -1L }
+                override fun onError(utteranceId: String?) { isSpeaking = false }
             })
-        }
-    }
-
-    // Auto-scroll sidebar to bottom when messages arrive
-    LaunchedEffect(state.chatMessages.size) {
-        if (state.chatMessages.isNotEmpty()) {
-            coroutineScope.launch { chatListState.animateScrollToItem(state.chatMessages.size - 1) }
         }
     }
 
     LaunchedEffect(state.isComplete) { if (state.isComplete) onComplete() }
 
-    // The last AI message is the current question to display
-    val currentQuestion = remember(state.chatMessages) {
+    val currentQuestion: ChatMessage? = remember(state.chatMessages) {
         state.chatMessages.lastOrNull { !it.isFromUser }
     }
 
@@ -166,497 +182,458 @@ fun GuidedIntakeScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = state.form?.fileName ?: "Patient Intake",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        if (state.totalCount > 0) {
-                            val progress = state.filledCount.toFloat() / state.totalCount
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+    // ── Full-screen Typeform layout ────────────────────────────────────────────
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Thin progress line — replaces the chunky AppBar
+        if (state.totalCount > 0) {
+            LinearProgressIndicator(
+                progress = { state.filledCount.toFloat() / state.totalCount },
+                modifier = Modifier.fillMaxWidth().height(3.dp).align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        }
+
+        // Subtle back button + form name (top-left)
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 4.dp, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    Icons.Default.ArrowBack, "Back",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                )
+            }
+            Text(
+                text = state.form?.fileName ?: "",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+            )
+        }
+
+        when {
+            state.isLoading -> LoadingState()
+            state.form == null -> ErrorState(state.error ?: "Form not found")
+            else -> {
+                // Consent batch takes over the whole screen
+                val consentBatch = state.consentBatchFields
+                if (consentBatch != null) {
+                    ConsentBatchPanel(
+                        fields = consentBatch,
+                        isLoading = state.isLoadingResponse,
+                        onSubmit = { answers -> viewModel.submitConsentBatch(answers) },
+                        modifier = Modifier.fillMaxSize().padding(top = 52.dp)
+                    )
+                    return@Box
+                }
+
+                // Error banner
+                state.error?.let { error ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .padding(top = 52.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Error, null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = error,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { viewModel.clearError() }) {
+                                Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+
+                // Center: animated question + inline answer
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 52.dp, bottom = 88.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        state.isLoadingResponse -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(28.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        }
+
+                        currentQuestion != null -> {
+                            AnimatedContent(
+                                targetState = currentQuestion,
+                                transitionSpec = {
+                                    (slideInVertically { it / 3 } + fadeIn()) togetherWith
+                                    (slideOutVertically { -it / 3 } + fadeOut())
+                                },
+                                label = "question"
+                            ) { question ->
+                                val field = state.currentAskingField
+                                val displayText = question.text
+                                    .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 48.dp),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    // Question text
+                                    Text(
+                                        text = displayText,
+                                        style = MaterialTheme.typography.headlineMedium.copy(
+                                            fontWeight = FontWeight.Normal,
+                                            fontSize = 28.sp,
+                                            lineHeight = 38.sp
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+
+                                    // Description hint (ai_note from schema)
+                                    val description = field?.description
+                                    if (!description.isNullOrBlank()) {
+                                        Spacer(Modifier.height(10.dp))
+                                        Text(
+                                            text = description,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(36.dp))
+
+                                    // Inline answer area — type varies by field
+                                    when {
+                                        showHandwriting -> {
+                                            HandwritingInput(
+                                                language = state.userLanguage,
+                                                onTextRecognized = { text ->
+                                                    messageText = if (messageText.isBlank()) text else "$messageText $text"
+                                                },
+                                                onSwitchToKeyboard = { showHandwriting = false },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+
+                                        field != null &&
+                                        field.fieldType == FieldType.MULTI_SELECT &&
+                                        field.options.isNotEmpty() -> {
+                                            MultiSelectInline(field = field, viewModel = viewModel)
+                                        }
+
+                                        field != null && field.options.isNotEmpty() -> {
+                                            RadioChipsInline(
+                                                field = field,
+                                                onSelect = { viewModel.sendMessage(it) }
+                                            )
+                                        }
+
+                                        else -> {
+                                            // Typeform underline text input
+                                            TypeformTextInput(
+                                                value = messageText,
+                                                onValueChange = { messageText = it },
+                                                onSend = sendMessage,
+                                                enabled = !state.isLoadingResponse,
+                                                focusRequester = focusRequester,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        else -> {
+                            Text(
+                                "Starting your intake...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                             )
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when {
-                state.isLoading -> LoadingState()
-                state.form == null -> ErrorState(message = state.error ?: "Form not found")
-                else -> {
-                    Row(modifier = Modifier.fillMaxSize()) {
+                }
 
-                        // ── Main question area ────────────────────────────────────
-                        Column(
+                // Bottom bar: OK + "press Enter ↵" + mic / draw / TTS
+                if (!state.isLoadingResponse && currentQuestion != null && state.consentBatchFields == null) {
+                    val field = state.currentAskingField
+                    val isTextInput = field == null ||
+                        (field.options.isEmpty() && field.fieldType != FieldType.MULTI_SELECT)
+
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.background,
+                        tonalElevation = 0.dp
+                    ) {
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
+                                .fillMaxWidth()
+                                .padding(horizontal = 48.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Consent batch panel — shown instead of chat Q&A for consent fields
-                            val consentBatch = state.consentBatchFields
-                            if (consentBatch != null) {
-                                ConsentBatchPanel(
-                                    fields = consentBatch,
-                                    isLoading = state.isLoadingResponse,
-                                    onSubmit = { answers -> viewModel.submitConsentBatch(answers) },
-                                    modifier = Modifier.weight(1f).fillMaxWidth()
-                                )
-                                return@Column
-                            }
-
-                            // Error banner
-                            state.error?.let { error ->
-                                Surface(
-                                    color = MaterialTheme.colorScheme.errorContainer,
-                                    modifier = Modifier.fillMaxWidth()
+                            if (isTextInput && !showHandwriting) {
+                                Button(
+                                    onClick = sendMessage,
+                                    enabled = messageText.isNotBlank(),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Error, null,
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            text = error,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onErrorContainer,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        IconButton(onClick = { viewModel.clearError() }) {
-                                            Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(16.dp))
-                                        }
-                                    }
+                                    Text("OK", fontWeight = FontWeight.SemiBold)
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(14.dp))
                                 }
+                                Text(
+                                    text = "press Enter ↵",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                )
                             }
 
-                            // Center: big question
-                            Box(
-                                modifier = Modifier.weight(1f).fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                when {
-                                    state.isLoadingResponse -> {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            CircularProgressIndicator(modifier = Modifier.size(40.dp))
-                                            Spacer(Modifier.height(16.dp))
-                                            Text(
-                                                "Processing your answer...",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                            )
-                                        }
-                                    }
-                                    currentQuestion != null -> {
-                                        val currentAskingField = state.currentAskingField
-                                        // Strip trailing parentheticals from question text
-                                        val displayText = currentQuestion.text
-                                            .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+                            Spacer(Modifier.weight(1f))
 
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.padding(horizontal = 48.dp, vertical = 24.dp)
+                            // Handwriting toggle
+                            IconButton(onClick = { showHandwriting = !showHandwriting }) {
+                                Icon(
+                                    if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
+                                    contentDescription = if (showHandwriting) "Keyboard" else "Write",
+                                    tint = if (showHandwriting)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                )
+                            }
+
+                            // Microphone
+                            if (speechAvailable) {
+                                IconButton(
+                                    onClick = {
+                                        if (isListening) {
+                                            speechRecognizer?.stopListening()
+                                            isListening = false
+                                        } else if (ContextCompat.checkSelfPermission(
+                                                context, Manifest.permission.RECORD_AUDIO
+                                            ) == PackageManager.PERMISSION_GRANTED
                                         ) {
-                                            // Speak button
-                                            if (ttsReady) {
-                                                IconButton(
-                                                    onClick = {
-                                                        if (speakingMessageId == currentQuestion.timestamp) {
-                                                            tts.stop(); speakingMessageId = -1L
-                                                        } else {
-                                                            tts.stop()
-                                                            tts.speak(
-                                                                displayText,
-                                                                TextToSpeech.QUEUE_FLUSH, null,
-                                                                currentQuestion.timestamp.toString()
-                                                            )
-                                                            speakingMessageId = currentQuestion.timestamp
-                                                        }
-                                                    },
-                                                    modifier = Modifier
-                                                        .size(48.dp)
-                                                        .background(
-                                                            MaterialTheme.colorScheme.primaryContainer,
-                                                            shape = CircleShape
-                                                        )
-                                                ) {
-                                                    Icon(
-                                                        imageVector = if (speakingMessageId == currentQuestion.timestamp)
-                                                            Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                                                        contentDescription = "Read aloud",
-                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                                    )
-                                                }
-                                                Spacer(Modifier.height(24.dp))
-                                            }
-
-                                            Text(
-                                                text = displayText,
-                                                style = MaterialTheme.typography.headlineMedium.copy(
-                                                    fontWeight = FontWeight.Normal,
-                                                    fontSize = 28.sp,
-                                                    lineHeight = 40.sp
-                                                ),
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-
-                                            // Description / hint line from schema ai_note
-                                            val description = currentAskingField?.description
-                                            if (!description.isNullOrBlank()) {
-                                                Spacer(Modifier.height(12.dp))
-                                                Text(
-                                                    text = description,
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        fontSize = 14.sp
-                                                    ),
-                                                    textAlign = TextAlign.Center,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                                )
-                                            }
+                                            startListening()
+                                        } else {
+                                            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                         }
-                                    }
-                                    else -> {
-                                        Text(
-                                            "Starting your intake...",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Handwriting panel (above input)
-                            if (showHandwriting) {
-                                HandwritingInput(
-                                    language = state.userLanguage,
-                                    onTextRecognized = { text ->
-                                        messageText = if (messageText.isBlank()) text else "$messageText $text"
                                     },
-                                    onSwitchToKeyboard = { showHandwriting = false },
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    enabled = !state.isLoadingResponse
+                                ) {
+                                    Icon(
+                                        if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
+                                        contentDescription = if (isListening) "Stop" else "Speak",
+                                        tint = if (isListening)
+                                            MaterialTheme.colorScheme.error
+                                        else
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                    )
+                                }
+                            }
+
+                            // TTS read-aloud
+                            if (ttsReady) {
+                                IconButton(
+                                    onClick = {
+                                        if (isSpeaking) {
+                                            tts.stop()
+                                            isSpeaking = false
+                                        } else {
+                                            val text = currentQuestion.text
+                                                .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+                                            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "q")
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        if (isSpeaking) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                        contentDescription = if (isSpeaking) "Stop reading" else "Read aloud",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Floating chat FAB (bottom-right, always visible) ─────────────────
+        if (!chatPanelOpen && state.form != null && !state.isLoading) {
+            val unreadCount = state.chatMessages.size
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 24.dp, bottom = 24.dp)
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        chatPanelOpen = true
+                        coroutineScope.launch {
+                            if (state.chatMessages.isNotEmpty()) {
+                                chatListState.animateScrollToItem(state.chatMessages.size - 1)
+                            }
+                        }
+                    },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(Icons.Default.Chat, contentDescription = "Open conversation history")
+                }
+                // Badge showing message count
+                if (unreadCount > 0) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .align(Alignment.TopEnd)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Chat sidebar (slides in from right) ──────────────────────────────
+        AnimatedVisibility(
+            visible = chatPanelOpen,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.CenterEnd)
+        ) {
+            Surface(
+                modifier = Modifier.width(360.dp).fillMaxHeight(),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                tonalElevation = 8.dp,
+                shadowElevation = 16.dp,
+                shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Header
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Chat, null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Conversation",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = { chatPanelOpen = false },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close, "Close",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
-
-                            // Option chips — RADIO/DROPDOWN: horizontal scroll row
-                            //                MULTI_SELECT:     vertical chip grid + confirm
-                            val optionField = state.currentAskingField
-                            if (optionField != null && optionField.options.isNotEmpty() && !state.isLoadingResponse) {
-                                if (optionField.fieldType == com.medpull.kiosk.data.models.FieldType.MULTI_SELECT) {
-                                    // Multi-select: vertical list of toggle chips + Confirm + None
-                                    val currentSelections = remember(optionField.id, optionField.value) {
-                                        mutableStateOf(
-                                            optionField.value
-                                                ?.split(",")
-                                                ?.map { it.trim() }
-                                                ?.filter { it.isNotBlank() }
-                                                ?.toMutableSet()
-                                                ?: mutableSetOf()
-                                        )
-                                    }
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceVariant,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                                            Text(
-                                                "Select all that apply:",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Spacer(Modifier.height(6.dp))
-                                            optionField.options.forEach { option ->
-                                                val selected = option in currentSelections.value
-                                                FilterChip(
-                                                    selected = selected,
-                                                    onClick = {
-                                                        val updated = currentSelections.value.toMutableSet()
-                                                        if (selected) updated.remove(option) else updated.add(option)
-                                                        currentSelections.value = updated
-                                                        viewModel.updateMultiSelectField(
-                                                            optionField.id,
-                                                            updated.joinToString(", ")
-                                                        )
-                                                    },
-                                                    label = { Text(option, style = MaterialTheme.typography.bodyMedium) },
-                                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
-                                                )
-                                            }
-                                            Spacer(Modifier.height(8.dp))
-                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                OutlinedButton(
-                                                    onClick = { viewModel.sendMessage("None") },
-                                                    modifier = Modifier.weight(1f)
-                                                ) { Text("None") }
-                                                if (currentSelections.value.isNotEmpty()) {
-                                                    Button(
-                                                        onClick = {
-                                                            viewModel.sendMessage(
-                                                                currentSelections.value.joinToString(", ")
-                                                            )
-                                                        },
-                                                        modifier = Modifier.weight(2f)
-                                                    ) {
-                                                        Text("Confirm (${currentSelections.value.size})")
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    // RADIO / DROPDOWN: wrapping chip grid (no scroll, all visible)
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceVariant,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        FlowRow(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            optionField.options.forEach { option ->
-                                                FilterChip(
-                                                    selected = false,
-                                                    onClick = { viewModel.sendMessage(option) },
-                                                    label = {
-                                                        Text(option, style = MaterialTheme.typography.bodyMedium)
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Answer input bar
-                            Surface(
-                                color = MaterialTheme.colorScheme.surface,
-                                tonalElevation = 4.dp,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.Bottom
-                                    ) {
-                                        OutlinedTextField(
-                                            value = messageText,
-                                            onValueChange = { messageText = it },
-                                            modifier = Modifier.weight(1f),
-                                            placeholder = {
-                                                Text(
-                                                    "Type your answer here...",
-                                                    style = MaterialTheme.typography.bodyLarge
-                                                )
-                                            },
-                                            enabled = !state.isLoadingResponse,
-                                            maxLines = 4,
-                                            textStyle = MaterialTheme.typography.bodyLarge,
-                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                                            keyboardActions = KeyboardActions(onSend = { sendMessage() })
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-
-                                        // Handwriting
-                                        IconButton(onClick = { showHandwriting = !showHandwriting }) {
-                                            Icon(
-                                                if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
-                                                contentDescription = if (showHandwriting) "Keyboard" else "Write",
-                                                tint = if (showHandwriting) MaterialTheme.colorScheme.primary
-                                                       else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        // Mic
-                                        if (speechAvailable) {
-                                            IconButton(
-                                                onClick = {
-                                                    if (isListening) {
-                                                        speechRecognizer?.stopListening(); isListening = false
-                                                    } else if (ContextCompat.checkSelfPermission(
-                                                            context, Manifest.permission.RECORD_AUDIO
-                                                        ) == PackageManager.PERMISSION_GRANTED
-                                                    ) {
-                                                        startListening()
-                                                    } else {
-                                                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                                    }
-                                                },
-                                                enabled = !state.isLoadingResponse
-                                            ) {
-                                                Icon(
-                                                    if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                                                    contentDescription = if (isListening) "Stop" else "Speak",
-                                                    tint = if (isListening) MaterialTheme.colorScheme.error
-                                                           else MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-
-                                        // Send
-                                        FilledIconButton(
-                                            onClick = sendMessage,
-                                            enabled = messageText.isNotBlank() && !state.isLoadingResponse
-                                        ) {
-                                            Icon(Icons.Default.Send, contentDescription = "Send")
-                                        }
-                                    }
-                                }
-                            }
                         }
+                    }
 
-                        // ── Chat panel toggle tab ─────────────────────────────────
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .width(if (chatPanelOpen) 0.dp else 48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!chatPanelOpen) {
-                                FilledTonalButton(
-                                    onClick = { chatPanelOpen = true },
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
-                                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(
-                                            Icons.Default.Chat,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            text = "Help",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
-                                }
-                            }
+                    HorizontalDivider()
+
+                    // Message history
+                    LazyColumn(
+                        state = chatListState,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.chatMessages) { message ->
+                            ChatBubble(message = message)
                         }
+                        if (state.isLoadingResponse) {
+                            item { TypingIndicator() }
+                        }
+                    }
 
-                        // ── Chat sidebar ──────────────────────────────────────────
-                        AnimatedVisibility(
-                            visible = chatPanelOpen,
-                            enter = slideInHorizontally(initialOffsetX = { it }),
-                            exit = slideOutHorizontally(targetOffsetX = { it })
+                    HorizontalDivider()
+
+                    // Clarification input inside sidebar
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            verticalAlignment = Alignment.Bottom
                         ) {
-                            Surface(
-                                modifier = Modifier.width(360.dp).fillMaxHeight(),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                tonalElevation = 2.dp
+                            OutlinedTextField(
+                                value = messageText,
+                                onValueChange = { messageText = it },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("Ask for clarification...") },
+                                enabled = !state.isLoadingResponse,
+                                maxLines = 3,
+                                textStyle = MaterialTheme.typography.bodyMedium,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                                keyboardActions = KeyboardActions(onSend = {
+                                    if (messageText.isNotBlank() && !state.isLoadingResponse) {
+                                        viewModel.sendMessage(messageText)
+                                        messageText = ""
+                                    }
+                                })
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            FilledIconButton(
+                                onClick = {
+                                    if (messageText.isNotBlank() && !state.isLoadingResponse) {
+                                        viewModel.sendMessage(messageText)
+                                        messageText = ""
+                                    }
+                                },
+                                enabled = messageText.isNotBlank() && !state.isLoadingResponse
                             ) {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    // Header
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.secondaryContainer,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Chat,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                text = "Conversation",
-                                                style = MaterialTheme.typography.titleSmall,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                            IconButton(
-                                                onClick = { chatPanelOpen = false },
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Close,
-                                                    contentDescription = "Close",
-                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    HorizontalDivider()
-
-                                    // Message history
-                                    LazyColumn(
-                                        state = chatListState,
-                                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                                        contentPadding = PaddingValues(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        items(state.chatMessages) { message ->
-                                            ChatBubble(message = message)
-                                        }
-                                        if (state.isLoadingResponse) {
-                                            item { TypingIndicator() }
-                                        }
-                                    }
-
-                                    HorizontalDivider()
-
-                                    // Clarification input in sidebar
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surface,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(8.dp),
-                                            verticalAlignment = Alignment.Bottom
-                                        ) {
-                                            OutlinedTextField(
-                                                value = messageText,
-                                                onValueChange = { messageText = it },
-                                                modifier = Modifier.weight(1f),
-                                                placeholder = { Text("Ask for clarification...") },
-                                                enabled = !state.isLoadingResponse,
-                                                maxLines = 3,
-                                                textStyle = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            FilledIconButton(
-                                                onClick = sendMessage,
-                                                enabled = messageText.isNotBlank() && !state.isLoadingResponse
-                                            ) {
-                                                Icon(Icons.Default.Send, contentDescription = "Send")
-                                            }
-                                        }
-                                    }
-                                }
+                                Icon(Icons.Default.Send, "Send")
                             }
                         }
                     }
@@ -665,6 +642,8 @@ fun GuidedIntakeScreen(
         }
     }
 }
+
+// ─── Chat bubble + typing indicator ──────────────────────────────────────────
 
 @Composable
 private fun ChatBubble(message: ChatMessage) {
@@ -720,6 +699,156 @@ private fun TypingIndicator() {
     }
 }
 
+// ─── Typeform underline text input ────────────────────────────────────────────
+
+@Composable
+private fun TypeformTextInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit,
+    enabled: Boolean,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.focusRequester(focusRequester),
+        enabled = enabled,
+        textStyle = MaterialTheme.typography.headlineSmall.copy(
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Light,
+            fontSize = 24.sp
+        ),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+        keyboardActions = KeyboardActions(onSend = { onSend() }),
+        maxLines = 4,
+        decorationBox = { innerTextField ->
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp)
+                ) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = "Type your answer...",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Light,
+                                fontSize = 24.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+                            )
+                        )
+                    }
+                    innerTextField()
+                }
+                // Typeform signature underline
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                    thickness = 2.dp
+                )
+            }
+        }
+    )
+}
+
+// ─── Radio / dropdown chips (inline, Typeform letter-keyed) ───────────────────
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RadioChipsInline(
+    field: com.medpull.kiosk.data.models.FormField,
+    onSelect: (String) -> Unit
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        field.options.forEachIndexed { index, option ->
+            val letter = ('A' + index).toString()
+            FilterChip(
+                selected = false,
+                onClick = { onSelect(option) },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = letter,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.padding(end = 6.dp)
+                        )
+                        Text(option, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            )
+        }
+    }
+}
+
+// ─── Multi-select chips (inline, toggleable) ──────────────────────────────────
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MultiSelectInline(
+    field: com.medpull.kiosk.data.models.FormField,
+    viewModel: GuidedIntakeViewModel
+) {
+    val currentSelections = remember(field.id, field.value) {
+        mutableStateOf(
+            field.value
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() }
+                ?.toMutableSet()
+                ?: mutableSetOf()
+        )
+    }
+
+    Column {
+        Text(
+            text = "Select all that apply:",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+        )
+        Spacer(Modifier.height(12.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            field.options.forEach { option ->
+                val selected = option in currentSelections.value
+                FilterChip(
+                    selected = selected,
+                    onClick = {
+                        val updated = currentSelections.value.toMutableSet()
+                        if (selected) updated.remove(option) else updated.add(option)
+                        currentSelections.value = updated
+                        viewModel.updateMultiSelectField(field.id, updated.joinToString(", "))
+                    },
+                    label = { Text(option, style = MaterialTheme.typography.bodyMedium) }
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { viewModel.sendMessage("None") }) { Text("None") }
+            if (currentSelections.value.isNotEmpty()) {
+                Button(
+                    onClick = { viewModel.sendMessage(currentSelections.value.joinToString(", ")) },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text("Confirm (${currentSelections.value.size})")
+                }
+            }
+        }
+    }
+}
+
+// ─── Consent batch panel ──────────────────────────────────────────────────────
+
 /**
  * Shows all consent fields together in a single batch UI.
  * Each field gets its label, optional description, and radio chips.
@@ -733,9 +862,7 @@ private fun ConsentBatchPanel(
     onSubmit: (Map<String, String>) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val selections = remember(fields) {
-        mutableStateMapOf<String, String>()
-    }
+    val selections = remember(fields) { mutableStateMapOf<String, String>() }
     val allAnswered = fields.all { it.id in selections }
 
     Column(modifier = modifier) {
@@ -776,11 +903,7 @@ private fun ConsentBatchPanel(
                     },
                     enabled = !isLoading
                 ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Agree to All")
                 }
@@ -828,7 +951,8 @@ private fun ConsentBatchPanel(
                 }
                 Button(
                     onClick = { onSubmit(selections.toMap()) },
-                    enabled = allAnswered && !isLoading
+                    enabled = allAnswered && !isLoading,
+                    shape = RoundedCornerShape(6.dp)
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -836,11 +960,7 @@ private fun ConsentBatchPanel(
                     }
                     Text("Continue")
                     Spacer(Modifier.width(4.dp))
-                    Icon(
-                        Icons.Default.ArrowForward,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -895,6 +1015,8 @@ private fun ConsentFieldCard(
         }
     }
 }
+
+// ─── Utility composables ──────────────────────────────────────────────────────
 
 @Composable
 private fun LoadingState() {
