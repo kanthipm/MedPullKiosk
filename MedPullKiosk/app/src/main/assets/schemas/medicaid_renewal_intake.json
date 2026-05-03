@@ -1,0 +1,114 @@
+{
+  "form_id": "medicaid_renewal_intake",
+  "form_name": "Medicaid Coverage Renewal",
+  "version": "2.0-demo",
+  "ai_instructions": "You are helping a patient complete their Medicaid renewal. Ask one question at a time. Be warm and reassuring — many patients are anxious about losing coverage.",
+
+  "sections": [
+    {
+      "id": "personal_info",
+      "name": "Personal Information",
+      "fields": [
+        {
+          "id": "renewal_full_name",
+          "label": "Full Legal Name (Last, First)",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "renewal_date_of_birth",
+          "label": "Date of Birth",
+          "type": "date",
+          "required": true,
+          "hint": "MM/DD/YYYY"
+        },
+        {
+          "id": "renewal_ssn_last4",
+          "label": "Last 4 digits of Social Security Number",
+          "type": "text",
+          "required": true,
+          "hint": "####"
+        },
+        {
+          "id": "renewal_phone",
+          "label": "Best Phone Number",
+          "type": "text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "household_income",
+      "name": "Household & Income",
+      "fields": [
+        {
+          "id": "household_size",
+          "label": "How many people live in your household?",
+          "type": "radio",
+          "required": true,
+          "options": ["1 (just me)", "2", "3", "4", "5 or more"]
+        },
+        {
+          "id": "employment_status",
+          "label": "Current Employment Status",
+          "type": "radio",
+          "required": true,
+          "options": ["Employed", "Self-employed", "Unemployed", "Retired", "Unable to work"]
+        },
+        {
+          "id": "total_household_monthly_income",
+          "label": "Estimated Total Monthly Household Income",
+          "type": "text",
+          "required": true,
+          "hint": "e.g. $1,500"
+        }
+      ]
+    },
+    {
+      "id": "coverage",
+      "name": "Current Coverage",
+      "fields": [
+        {
+          "id": "medicaid_id",
+          "label": "Medicaid ID Number",
+          "type": "text",
+          "required": true,
+          "hint": "Found on your Medicaid card"
+        },
+        {
+          "id": "has_other_insurance",
+          "label": "Do you have any other health insurance besides Medicaid?",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes", "No"]
+        },
+        {
+          "id": "other_insurance_type",
+          "label": "What other insurance?",
+          "type": "radio",
+          "required": false,
+          "options": ["Employer-sponsored", "Medicare", "Marketplace / ACA", "Other"]
+        }
+      ]
+    },
+    {
+      "id": "declaration",
+      "name": "Declaration",
+      "fields": [
+        {
+          "id": "renewal_attestation",
+          "label": "Attestation",
+          "type": "static_label",
+          "required": false,
+          "ai_note": "Tell the patient: 'By signing below you certify that the information you provided is true and accurate to the best of your knowledge.'"
+        },
+        {
+          "id": "renewal_signature",
+          "label": "Signature",
+          "type": "signature",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

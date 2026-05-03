@@ -245,6 +245,55 @@ class IntakeConversationEngine @Inject constructor(
         }
     }
 
+    // ─── Clarification Q&A ───────────────────────────────────────────────────
+
+    /**
+     * Answer a patient's clarifying question about the current field.
+     * Called when the patient asks something rather than providing an answer.
+     */
+    suspend fun answerClarification(
+        question: String,
+        field: FormField,
+        language: String
+    ): String {
+        val languageName = languageName(language)
+        val prompt = buildString {
+            appendLine("A patient at a medical kiosk is asking a clarifying question about an intake form field.")
+            appendLine("Answer their question clearly and reassuringly in $languageName.")
+            appendLine("Keep the answer brief (2-3 sentences max). Use plain language, no jargon.")
+            appendLine()
+            appendLine("Current form field: ${field.fieldName}")
+            if (!field.description.isNullOrBlank()) appendLine("Field context: ${field.description}")
+            appendLine()
+            appendLine("Patient's question: \"$question\"")
+            appendLine()
+            append("Return JSON only: {\"answer\": \"your brief answer here\"}")
+        }
+
+        logAudit("AI_CLARIFICATION", "Field: ${field.id}, Q: $question")
+
+        return when (val resp = apiService.sendMessage(
+            userMessage = prompt,
+            conversationHistory = emptyList(),
+            systemPrompt = "You are a helpful medical assistant. Answer patient questions briefly and kindly. Return valid JSON only.",
+            model = Constants.AI.CONVERSATION_MODEL,
+            maxTokens = 200
+        )) {
+            is AiResponse.Success -> {
+                try {
+                    val cleaned = resp.message.trim()
+                        .removePrefix("```json").removePrefix("```")
+                        .removeSuffix("```").trim()
+                    JSONObject(cleaned).optString("answer", "").ifBlank { resp.message.trim() }
+                } catch (e: Exception) {
+                    resp.message.trim().takeIf { it.isNotBlank() }
+                        ?: "Happy to help! This field just needs your ${field.fieldName.lowercase()}."
+                }
+            }
+            is AiResponse.Error -> "Happy to help! This field is asking for your ${field.fieldName.lowercase()}. Please fill it in when you're ready."
+        }
+    }
+
     // ─── Utility ──────────────────────────────────────────────────────────────
 
     fun allRequiredFilled(fields: List<FormField>, skippedFieldIds: Set<String> = emptySet()): Boolean =

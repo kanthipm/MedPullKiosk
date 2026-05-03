@@ -1,5 +1,6 @@
 package com.medpull.kiosk.ui.screens.intake
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,10 +11,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
@@ -32,9 +35,32 @@ fun IntakeReviewScreen(
     viewModel: IntakeReviewViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(state.isSubmitted) {
         if (state.isSubmitted) onSubmit()
+    }
+
+    // Launch share sheet when PDF is ready
+    LaunchedEffect(state.pdfFile) {
+        val file = state.pdfFile ?: return@LaunchedEffect
+        try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, state.formName)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Share or Print Form"))
+        } catch (e: Exception) {
+            android.util.Log.e("IntakeReviewScreen", "Error sharing PDF", e)
+        }
+        viewModel.clearPdfFile()
     }
 
     Scaffold(
@@ -93,17 +119,44 @@ fun IntakeReviewScreen(
                             )
                         }
                     }
-                    Button(
-                        onClick = { viewModel.submit() },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        enabled = !state.isLoading
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Looks good — submit",
-                            style = MaterialTheme.typography.titleSmall
-                        )
+                        OutlinedButton(
+                            onClick = {
+                                val dir = java.io.File(context.filesDir, "pdf_exports")
+                                viewModel.generatePdf(dir)
+                            },
+                            modifier = Modifier.weight(1f).height(52.dp),
+                            enabled = !state.isLoading && !state.isGeneratingPdf
+                        ) {
+                            if (state.isGeneratingPdf) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (state.isGeneratingPdf) "Generating…" else "Export PDF",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.submit() },
+                            modifier = Modifier.weight(1f).height(52.dp),
+                            enabled = !state.isLoading
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Submit",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
                     }
                 }
             }
