@@ -77,34 +77,67 @@ class GuidedIntakeViewModel @Inject constructor(
         )
 
         /**
-         * Consent fields that are shown together in a single batch UI instead of
-         * one-by-one chat questions. All four must be answered before advancing.
+         * Consent fields batched into a single panel UI instead of one-by-one questions.
          */
         val CONSENT_GROUP_FIELD_IDS = setOf(
-            "hipaa_consent"
+            "hipaa_consent",
+            "sliding_fee_acknowledgment",
+            "ghhc_data_sharing",
+            "photo_consent"
         )
 
         /**
          * Deterministic skip rules derived from schema skip_if blocks.
          * fieldId → triggerValue → list of fields to skip.
-         *
-         * The ViewModel applies these the moment a field value is saved, so the AI
-         * never needs to decide whether to ask insurance questions to an uninsured patient.
          */
         val SKIP_RULES: Map<String, Map<String, List<String>>> = mapOf(
-            // Coastal Gateway
+            // ── Coastal Gateway ─────────────────────────────────────────────────
+            "physical_same_as_mailing" to mapOf(
+                "Yes" to listOf("physical_address_street", "physical_city", "physical_state", "physical_zip")
+            ),
             "has_insurance" to mapOf(
-                "No" to listOf("primary_insurance_provider")
+                "No" to listOf(
+                    "primary_insurance_provider", "primary_insurance_id", "primary_insurance_group",
+                    "policyholder_is_self", "policyholder_name", "policyholder_dob", "policyholder_relationship",
+                    "has_secondary_insurance", "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"
+                )
+            ),
+            "policyholder_is_self" to mapOf(
+                "Yes" to listOf("policyholder_name", "policyholder_dob", "policyholder_relationship")
+            ),
+            "has_secondary_insurance" to mapOf(
+                "No" to listOf("secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group")
+            ),
+            "family_history_any" to mapOf(
+                "No" to listOf("family_history_conditions", "family_history_members")
+            ),
+            "tobacco_use" to mapOf(
+                "No" to listOf("tobacco_type", "tobacco_frequency")
+            ),
+            "alcohol_use" to mapOf(
+                "No" to listOf("alcohol_frequency")
+            ),
+            "surgeries_any" to mapOf(
+                "No" to listOf("surgeries_list")
+            ),
+            "medications_any" to mapOf(
+                "No" to listOf("medications_list")
             ),
             "allergies_any" to mapOf(
                 "No" to listOf("allergies_list")
             ),
-            // Medicaid Renewal
+            "authorized_phi_contacts_any" to mapOf(
+                "No" to listOf(
+                    "authorized_phi_contact_1_name", "authorized_phi_contact_1_relationship",
+                    "authorized_phi_contact_2_name", "authorized_phi_contact_2_relationship"
+                )
+            ),
+            "filling_for_self" to mapOf(
+                "Myself" to listOf("representative_name", "representative_relationship")
+            ),
+            // ── Medicaid Renewal ─────────────────────────────────────────────────
             "has_other_insurance" to mapOf(
                 "No" to listOf("other_insurance_type")
-            ),
-            "authorized_representative" to mapOf(
-                "No, I am completing this myself" to listOf("representative_name", "representative_relationship")
             )
         )
 
