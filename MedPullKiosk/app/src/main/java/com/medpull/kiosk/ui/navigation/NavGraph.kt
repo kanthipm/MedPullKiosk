@@ -23,6 +23,7 @@ import com.medpull.kiosk.ui.screens.export.ExportScreen
 import com.medpull.kiosk.ui.screens.formselection.FormSelectionScreen
 import com.medpull.kiosk.ui.screens.formfill.FormFillScreen
 import com.medpull.kiosk.ui.screens.intake.GuidedIntakeScreen
+import com.medpull.kiosk.ui.screens.intake.FilledFormPreviewScreen
 import com.medpull.kiosk.ui.screens.intake.IntakeReviewScreen
 import com.medpull.kiosk.ui.screens.inventory.InventoryScreen
 import com.medpull.kiosk.ui.screens.language.LanguageSelectionScreen
@@ -218,8 +219,21 @@ fun NavGraph(
             IntakeReviewScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onSubmit = {
-                    navController.navigate(Screen.Export.createRoute(formId)) {
+                    navController.navigate(Screen.FilledFormPreview.createRoute(formId)) {
                         popUpTo(Screen.FormSelection.route)
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Screen.FilledFormPreview.route,
+            arguments = listOf(navArgument("formId") { type = NavType.StringType })
+        ) {
+            FilledFormPreviewScreen(
+                onDone = {
+                    navController.navigate(Screen.FormSelection.route) {
+                        popUpTo(Screen.FormSelection.route) { inclusive = true }
                     }
                 }
             )
