@@ -59,7 +59,12 @@ class GuidedIntakeViewModel @Inject constructor(
     companion object {
         private const val TAG = "GuidedIntakeViewModel"
         const val COASTAL_GATEWAY_ID = "coastal_gateway_intake"
+        const val MEDICAID_RENEWAL_ID = "medicaid_renewal_intake"
+        const val SLIDING_FEE_ID = "sliding_fee_intake"
         private const val SCHEMA_FILE = "schemas/coastal_gateway_intake.json"
+        private const val SCHEMA_FILE_MEDICAID = "schemas/medicaid_renewal_intake.json"
+        private const val SCHEMA_FILE_SLIDING_FEE = "schemas/sliding_fee_intake.json"
+        const val DEMO_USER_ID = "demo_user"
         private const val CONFIDENCE_THRESHOLD = 0.75f
         private const val MAX_CLARIFICATIONS = 2
 
@@ -74,8 +79,7 @@ class GuidedIntakeViewModel @Inject constructor(
         )
 
         /**
-         * Consent fields that are shown together in a single batch UI instead of
-         * one-by-one chat questions. All four must be answered before advancing.
+         * Consent fields batched into a single panel UI instead of one-by-one questions.
          */
         val CONSENT_GROUP_FIELD_IDS = setOf(
             "hipaa_consent",
@@ -87,37 +91,27 @@ class GuidedIntakeViewModel @Inject constructor(
         /**
          * Deterministic skip rules derived from schema skip_if blocks.
          * fieldId → triggerValue → list of fields to skip.
-         *
-         * The ViewModel applies these the moment a field value is saved, so the AI
-         * never needs to decide whether to ask insurance questions to an uninsured patient.
          */
         val SKIP_RULES: Map<String, Map<String, List<String>>> = mapOf(
+            // ── Coastal Gateway ─────────────────────────────────────────────────
             "physical_same_as_mailing" to mapOf(
-                "Yes" to listOf(
-                    "physical_address_street", "physical_city", "physical_state", "physical_zip"
-                )
+                "Yes" to listOf("physical_address_street", "physical_city", "physical_state", "physical_zip")
             ),
             "has_insurance" to mapOf(
                 "No" to listOf(
                     "primary_insurance_provider", "primary_insurance_id", "primary_insurance_group",
-                    "policyholder_is_self", "policyholder_name", "policyholder_dob",
-                    "policyholder_relationship", "has_secondary_insurance",
-                    "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"
+                    "policyholder_is_self", "policyholder_name", "policyholder_dob", "policyholder_relationship",
+                    "has_secondary_insurance", "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"
                 )
             ),
             "policyholder_is_self" to mapOf(
                 "Yes" to listOf("policyholder_name", "policyholder_dob", "policyholder_relationship")
             ),
             "has_secondary_insurance" to mapOf(
-                "No" to listOf(
-                    "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"
-                )
+                "No" to listOf("secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group")
             ),
             "family_history_any" to mapOf(
                 "No" to listOf("family_history_conditions", "family_history_members")
-            ),
-            "medical_conditions" to mapOf(
-                "None" to listOf("other_health_concerns")
             ),
             "tobacco_use" to mapOf(
                 "No" to listOf("tobacco_type", "tobacco_frequency")
@@ -142,6 +136,10 @@ class GuidedIntakeViewModel @Inject constructor(
             ),
             "filling_for_self" to mapOf(
                 "Myself" to listOf("representative_name", "representative_relationship")
+            ),
+            // ── Medicaid Renewal ─────────────────────────────────────────────────
+            "has_other_insurance" to mapOf(
+                "No" to listOf("other_insurance_type")
             )
         )
 
@@ -200,6 +198,114 @@ class GuidedIntakeViewModel @Inject constructor(
             fileName = name, originalFileUri = "",
             status = FormStatus.READY, fields = emptyList()
         )
+
+        /** Parse the Medicaid Renewal JSON schema into a Form + field list. */
+        fun loadMedicaidRenewalForm(context: Context): Form {
+            val json = context.assets.open(SCHEMA_FILE_MEDICAID).bufferedReader().readText()
+            val root = JSONObject(json)
+            val formName = root.optString("form_name", "Medicaid Coverage Renewal")
+            val sections = root.optJSONArray("sections") ?: return Form(
+                id = MEDICAID_RENEWAL_ID, userId = "builtin",
+                fileName = formName, originalFileUri = "",
+                status = FormStatus.READY, fields = emptyList()
+            )
+
+            val fields = mutableListOf<FormField>()
+            for (s in 0 until sections.length()) {
+                val section = sections.getJSONObject(s)
+                val sectionFields = section.optJSONArray("fields") ?: continue
+                for (f in 0 until sectionFields.length()) {
+                    val field = sectionFields.getJSONObject(f)
+                    val opts = field.optJSONArray("options")
+                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                        ?: emptyList()
+                    fields += FormField(
+                        id = field.optString("id"),
+                        formId = MEDICAID_RENEWAL_ID,
+                        fieldName = field.optString("label"),
+                        originalText = field.optString("label"),
+                        translatedText = field.optString("label"),
+                        fieldType = when (field.optString("type")) {
+                            "date" -> FieldType.DATE
+                            "checkbox" -> FieldType.CHECKBOX
+                            "radio" -> FieldType.RADIO
+                            "dropdown" -> FieldType.DROPDOWN
+                            "multi_select" -> FieldType.MULTI_SELECT
+                            "signature" -> FieldType.SIGNATURE
+                            "static_label" -> FieldType.STATIC_LABEL
+                            "number", "phone", "zip", "email" -> FieldType.NUMBER
+                            else -> FieldType.TEXT
+                        },
+                        required = field.optBoolean("required", false),
+                        options = opts,
+                        description = field.optString("ai_note", "").ifBlank { null }
+                    )
+                }
+            }
+
+            return Form(
+                id = MEDICAID_RENEWAL_ID,
+                userId = "builtin",
+                fileName = formName,
+                originalFileUri = "",
+                status = FormStatus.READY,
+                fields = fields
+            )
+        }
+
+        /** Parse the Sliding Fee Eligibility JSON schema into a Form + field list. */
+        fun loadSlidingFeeForm(context: Context): Form {
+            val json = context.assets.open(SCHEMA_FILE_SLIDING_FEE).bufferedReader().readText()
+            val root = JSONObject(json)
+            val formName = root.optString("form_name", "Sliding Fee Eligibility Application")
+            val sections = root.optJSONArray("sections") ?: return Form(
+                id = SLIDING_FEE_ID, userId = "builtin",
+                fileName = formName, originalFileUri = "",
+                status = FormStatus.READY, fields = emptyList()
+            )
+
+            val fields = mutableListOf<FormField>()
+            for (s in 0 until sections.length()) {
+                val section = sections.getJSONObject(s)
+                val sectionFields = section.optJSONArray("fields") ?: continue
+                for (f in 0 until sectionFields.length()) {
+                    val field = sectionFields.getJSONObject(f)
+                    val opts = field.optJSONArray("options")
+                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                        ?: emptyList()
+                    fields += FormField(
+                        id = field.optString("id"),
+                        formId = SLIDING_FEE_ID,
+                        fieldName = field.optString("label"),
+                        originalText = field.optString("label"),
+                        translatedText = field.optString("label"),
+                        fieldType = when (field.optString("type")) {
+                            "date" -> FieldType.DATE
+                            "checkbox" -> FieldType.CHECKBOX
+                            "radio" -> FieldType.RADIO
+                            "dropdown" -> FieldType.DROPDOWN
+                            "multi_select" -> FieldType.MULTI_SELECT
+                            "signature" -> FieldType.SIGNATURE
+                            "static_label" -> FieldType.STATIC_LABEL
+                            "number", "phone", "zip", "email" -> FieldType.NUMBER
+                            else -> FieldType.TEXT
+                        },
+                        required = field.optBoolean("required", false),
+                        options = opts,
+                        description = field.optString("ai_note", "").ifBlank { null }
+                    )
+                }
+            }
+
+            return Form(
+                id = SLIDING_FEE_ID,
+                userId = "builtin",
+                fileName = formName,
+                originalFileUri = "",
+                status = FormStatus.READY,
+                fields = fields
+            )
+        }
     }
 
     private val formId: String = savedStateHandle.get<String>("formId") ?: ""
@@ -213,6 +319,24 @@ class GuidedIntakeViewModel @Inject constructor(
 
     // ─── Form Loading ─────────────────────────────────────────────────────────
 
+    /**
+     * Overlay previously-saved field values from the DB onto a freshly-parsed schema form.
+     * Prevents saveForm(REPLACE) from wiping mid-session progress on reload.
+     */
+    private suspend fun mergeWithSavedValues(schema: Form): Form {
+        val saved = try {
+            formRepository.getFormById(schema.id)?.fields
+                ?.filter { !it.value.isNullOrBlank() }
+                ?.associateBy { it.id }
+        } catch (e: Exception) { null }
+        if (saved.isNullOrEmpty()) return schema
+        return schema.copy(
+            fields = schema.fields.map { f ->
+                saved[f.id]?.let { s -> f.copy(value = s.value) } ?: f
+            }
+        )
+    }
+
     private fun loadForm() {
         viewModelScope.launch {
             try {
@@ -224,9 +348,20 @@ class GuidedIntakeViewModel @Inject constructor(
                 }
 
                 if (formId == COASTAL_GATEWAY_ID) {
-                    val form = loadCoastalGatewayForm(appContext)
-                    formRepository.saveForm(form)
-                    initFormState(form)
+                    val schema = loadCoastalGatewayForm(appContext)
+                    val merged = mergeWithSavedValues(schema)
+                    formRepository.saveForm(merged)
+                    initFormState(merged)
+                } else if (formId == MEDICAID_RENEWAL_ID) {
+                    val schema = loadMedicaidRenewalForm(appContext)
+                    val merged = mergeWithSavedValues(schema)
+                    formRepository.saveForm(merged)
+                    initFormState(merged)
+                } else if (formId == SLIDING_FEE_ID) {
+                    val schema = loadSlidingFeeForm(appContext)
+                    val merged = mergeWithSavedValues(schema)
+                    formRepository.saveForm(merged)
+                    initFormState(merged)
                 } else {
                     formRepository.getFormByIdFlow(formId).collect { form ->
                         if (form != null) initFormState(form)
@@ -253,9 +388,23 @@ class GuidedIntakeViewModel @Inject constructor(
             if (f.id == "preferred_language") f.copy(value = languageLabel) else f
         }
 
-        // Apply cross-form demographic prefill from patient cache
-        val userId = authRepository.getCurrentUserId() ?: ""
-        val cache = if (userId.isNotBlank()) formRepository.getPatientCache(userId) else null
+        // Apply cross-form demographic prefill from patient cache.
+        // Use "demo_user" when no authenticated user (demo mode bypass).
+        val userId = authRepository.getCurrentUserId()?.takeIf { it.isNotBlank() } ?: DEMO_USER_ID
+        val cache = formRepository.getPatientCache(userId)
+
+        // Identify which blank fields (not restored from DB) get values from the cache.
+        // These are the ones that need patient confirmation.
+        val newlyCacheFilledFields: List<FormField> = if (cache != null) {
+            withLanguage.mapNotNull { f ->
+                val cachedValue = cache.valueForFieldId(f.id)
+                if (f.id in PatientCacheEntity.DEMOGRAPHIC_FIELD_IDS &&
+                    !cachedValue.isNullOrBlank() &&
+                    f.value.isNullOrBlank() // was blank before cache — not from a restored session
+                ) f.copy(value = cachedValue) else null
+            }
+        } else emptyList()
+
         val withCache = if (cache != null) {
             withLanguage.map { f ->
                 val cached = cache.valueForFieldId(f.id)
@@ -283,30 +432,26 @@ class GuidedIntakeViewModel @Inject constructor(
             f.id !in allSkipped && f.fieldType != FieldType.STATIC_LABEL
         }
 
-        val welcomeMessages: List<ChatMessage> = if (cache != null) listOf(
-            ChatMessage(
-                text = "Welcome back! I've pre-filled your contact information from your previous visit. Let's confirm anything that may have changed and continue.",
-                isFromUser = false,
-                timestamp = System.currentTimeMillis()
-            )
-        ) else emptyList()
-
         _state.update {
             it.copy(
                 form = form,
                 fields = withCache,
                 intakeFlow = flow,
                 skippedFieldIds = restoredSkips,
-                chatMessages = welcomeMessages,
+                chatMessages = emptyList(),
                 userLanguage = language,
                 isLoading = false,
                 filledCount = filledCount,
-                totalCount = totalCount
+                totalCount = totalCount,
+                pendingConfirmFields = newlyCacheFilledFields.takeIf { it.isNotEmpty() }
             )
         }
 
-        // Begin deterministic field-by-field progression
-        advanceToNextField()
+        // If there are pre-filled fields to confirm, pause and wait for user confirmation.
+        // Otherwise begin the intake immediately.
+        if (newlyCacheFilledFields.isEmpty()) {
+            advanceToNextField()
+        }
     }
 
     // ─── Field Progression State Machine ─────────────────────────────────────
@@ -339,8 +484,9 @@ class GuidedIntakeViewModel @Inject constructor(
 
         when {
             next == null -> {
-                // All fields addressed — go to review
+                // All fields addressed — save cache then go to review
                 Log.d(TAG, "All fields addressed — transitioning to review")
+                persistPatientCache()
                 _state.update { it.copy(isComplete = true, isLoadingResponse = false) }
             }
             next.fieldType == FieldType.STATIC_LABEL -> {
@@ -446,7 +592,8 @@ class GuidedIntakeViewModel @Inject constructor(
                     chatMessages = it.chatMessages + ChatMessage(
                         text = message,
                         isFromUser = true,
-                        timestamp = System.currentTimeMillis()
+                        timestamp = System.currentTimeMillis(),
+                        isClarification = looksLikeQuestion(message)
                     ),
                     isLoadingResponse = true,
                     error = null
@@ -454,6 +601,28 @@ class GuidedIntakeViewModel @Inject constructor(
             }
 
             try {
+                // If the patient is asking a question rather than providing an answer,
+                // route to the clarification handler instead of answer parsing.
+                if (looksLikeQuestion(message)) {
+                    val answer = engine.answerClarification(
+                        question = message,
+                        field = targetField,
+                        language = state.userLanguage
+                    )
+                    _state.update {
+                        it.copy(
+                            isLoadingResponse = false,
+                            chatMessages = it.chatMessages + ChatMessage(
+                                text = answer,
+                                isFromUser = false,
+                                timestamp = System.currentTimeMillis(),
+                                isClarification = true  // stays in sidebar only
+                            )
+                        )
+                    }
+                    return@launch
+                }
+
                 val result = engine.parseAnswer(
                     field = targetField,
                     userAnswer = message,
@@ -509,6 +678,133 @@ class GuidedIntakeViewModel @Inject constructor(
                         error = "Could not process your answer. Please try again."
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Send a message from the chat sidebar.
+     * Chat is ALWAYS treated as a clarifying question — it never fills a form field.
+     * This keeps the chat panel as a pure help/guidance channel.
+     */
+    fun sendChatMessage(message: String) {
+        if (message.isBlank()) return
+        val field = _state.value.currentAskingField ?: return
+        val lang = _state.value.userLanguage
+
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    chatMessages = it.chatMessages + ChatMessage(
+                        text = message,
+                        isFromUser = true,
+                        timestamp = System.currentTimeMillis(),
+                        isClarification = true
+                    ),
+                    isLoadingResponse = true
+                )
+            }
+            val answer = engine.answerClarification(question = message, field = field, language = lang)
+            _state.update {
+                it.copy(
+                    isLoadingResponse = false,
+                    chatMessages = it.chatMessages + ChatMessage(
+                        text = answer,
+                        isFromUser = false,
+                        timestamp = System.currentTimeMillis(),
+                        isClarification = true
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Submit a handwritten signature bitmap for the current signature field.
+     * Saves the bitmap to internal storage and advances past the field —
+     * no AI parsing needed for signatures.
+     */
+    fun submitSignature(bitmap: android.graphics.Bitmap) {
+        val field = _state.value.currentAskingField ?: return
+        viewModelScope.launch {
+            try {
+                val dir = java.io.File(appContext.filesDir, "signatures").apply { mkdirs() }
+                val file = java.io.File(dir, "sig_${field.id}_${System.currentTimeMillis()}.png")
+                file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                saveFieldAndAdvance(field, "signature:${file.absolutePath}", emptyList())
+            } catch (e: Exception) {
+                Log.w(TAG, "Signature save failed", e)
+                // Fall back: mark field as signed with a text marker
+                saveFieldAndAdvance(field, "✓ Signed", emptyList())
+            }
+        }
+    }
+
+    /** Heuristic: does this look like a question rather than an answer? */
+    private fun looksLikeQuestion(text: String): Boolean {
+        val trimmed = text.trim().lowercase()
+        if (trimmed.endsWith("?")) return true
+        val questionStarters = listOf("what", "why", "how", "when", "where", "who", "which",
+            "do i", "do you", "can i", "can you", "should i", "is this", "what does",
+            "what is", "why do", "why does", "i don't understand", "i dont understand",
+            "what do you mean", "explain", "help me understand", "not sure what")
+        return questionStarters.any { trimmed.startsWith(it) }
+    }
+
+    /** Mark the form complete immediately so the patient can review what they've filled so far. */
+    fun skipToReview() {
+        persistPatientCache()
+        _state.update { it.copy(isComplete = true) }
+    }
+
+    /**
+     * Patient confirmed pre-filled demographic info — accept all cached values,
+     * dismiss the confirm panel, and start the intake at the first unanswered field.
+     */
+    fun confirmPrefill() {
+        _state.update { it.copy(pendingConfirmFields = null) }
+        advanceToNextField()
+    }
+
+    /**
+     * Patient wants to re-enter their info from scratch — clear the pre-filled values
+     * for demographic fields and start the intake from the beginning.
+     */
+    fun dismissPrefillAndStartFresh() {
+        val clearedFields = _state.value.fields.map { f ->
+            if (f.id in PatientCacheEntity.DEMOGRAPHIC_FIELD_IDS) f.copy(value = null) else f
+        }
+        _state.update { it.copy(pendingConfirmFields = null, fields = clearedFields) }
+        viewModelScope.launch {
+            clearedFields.filter { it.id in PatientCacheEntity.DEMOGRAPHIC_FIELD_IDS }.forEach { f ->
+                formRepository.updateFieldValue(f.id, null)
+            }
+            advanceToNextField()
+        }
+    }
+
+    /** Update a single field's value while the patient is editing in the confirm panel. */
+    fun updateConfirmField(fieldId: String, newValue: String) {
+        _state.update { s ->
+            s.copy(
+                pendingConfirmFields = s.pendingConfirmFields?.map { f ->
+                    if (f.id == fieldId) f.copy(value = newValue) else f
+                },
+                fields = s.fields.map { f ->
+                    if (f.id == fieldId) f.copy(value = newValue.takeIf { it.isNotBlank() }) else f
+                }
+            )
+        }
+    }
+
+    /** Save key demographics to the patient cache so the next form can pre-fill. */
+    private fun persistPatientCache() {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUserId()?.takeIf { it.isNotBlank() } ?: DEMO_USER_ID
+                formRepository.savePatientCache(userId, _state.value.fields)
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not save patient cache", e)
             }
         }
     }
@@ -719,5 +1015,7 @@ data class GuidedIntakeState(
     val filledCount: Int = 0,
     val totalCount: Int = 0,
     /** Non-null when the consent batch UI should be shown instead of chat Q&A. */
-    val consentBatchFields: List<FormField>? = null
+    val consentBatchFields: List<FormField>? = null,
+    /** Non-null when pre-filled fields from a previous visit need patient confirmation. */
+    val pendingConfirmFields: List<FormField>? = null
 )

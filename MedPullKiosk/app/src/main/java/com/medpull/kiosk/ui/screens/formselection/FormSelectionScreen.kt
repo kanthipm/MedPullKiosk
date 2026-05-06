@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 private const val COASTAL_GATEWAY_FORM_ID = "coastal_gateway_intake"
+private const val MEDICAID_RENEWAL_FORM_ID = "medicaid_renewal_intake"
 
 /**
  * Form selection screen with upload functionality
@@ -143,9 +144,20 @@ fun FormSelectionScreen(
                         contentPadding = PaddingValues(vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Always show the built-in Coastal Gateway form at the top
+                        // Built-in forms
+                        item {
+                            Text(
+                                text = "Available Forms",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
+                            )
+                        }
                         item {
                             CoastalGatewayCard(onClick = { onFormSelected(COASTAL_GATEWAY_FORM_ID) })
+                        }
+                        item {
+                            MedicaidRenewalCard(onClick = { onFormSelected(MEDICAID_RENEWAL_FORM_ID) })
                         }
 
                         // Uploaded forms below
@@ -314,6 +326,76 @@ private fun CoastalGatewayCard(onClick: () -> Unit) {
                 imageVector = Icons.Default.ArrowForwardIos,
                 contentDescription = "Start intake",
                 tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MedicaidRenewalCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondary,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.AssignmentTurnedIn,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(20.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Medicaid Coverage Renewal",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Household, Income & Coverage Verification",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = "Ready",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.Default.ArrowForwardIos,
+                contentDescription = "Start renewal",
+                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                 modifier = Modifier.size(20.dp)
             )
         }

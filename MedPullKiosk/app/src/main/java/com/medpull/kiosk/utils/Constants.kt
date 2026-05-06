@@ -105,6 +105,10 @@ object Constants {
         const val CHAT_ASSISTANT_MODEL = "grok-3-mini"
         const val CHAT_MAX_TOKENS = 512
 
+        // Groq (groq.com) — free-tier fallback, OpenAI-compatible, used when Grok is unavailable
+        const val GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+        const val GROQ_MODEL = "llama-3.3-70b-versatile"
+
         // Vision: disabled — no BAA with Anthropic, Textract handles OCR
         const val ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
         const val ANTHROPIC_API_VERSION = "2023-06-01"

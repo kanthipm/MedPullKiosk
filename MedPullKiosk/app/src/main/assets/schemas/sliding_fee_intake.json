@@ -1,0 +1,142 @@
+{
+  "form_name": "Sliding Fee Eligibility Application",
+  "sections": [
+    {
+      "name": "Personal Information",
+      "fields": [
+        {
+          "id": "full_name",
+          "label": "Full Name",
+          "type": "text",
+          "required": true,
+          "ai_note": "Patient's full legal name (first, middle, last)"
+        },
+        {
+          "id": "date_of_birth",
+          "label": "Date of Birth",
+          "type": "date",
+          "required": true,
+          "ai_note": "Patient's date of birth in MM/DD/YYYY format"
+        }
+      ]
+    },
+    {
+      "name": "Address",
+      "fields": [
+        {
+          "id": "address_street",
+          "label": "Street Address",
+          "type": "text",
+          "required": true,
+          "ai_note": "Street number and name. If the patient types a full address, extract and fill city, state, and zip automatically."
+        },
+        {
+          "id": "address_city",
+          "label": "City",
+          "type": "text",
+          "required": true,
+          "ai_note": "City of residence"
+        },
+        {
+          "id": "address_state",
+          "label": "State",
+          "type": "text",
+          "required": true,
+          "ai_note": "Two-letter US state abbreviation (e.g. TX, CA)"
+        },
+        {
+          "id": "address_zip",
+          "label": "ZIP Code",
+          "type": "zip",
+          "required": true,
+          "ai_note": "5-digit ZIP code"
+        }
+      ]
+    },
+    {
+      "name": "Household",
+      "fields": [
+        {
+          "id": "household_size",
+          "label": "Household Size",
+          "type": "number",
+          "required": true,
+          "ai_note": "Total number of people living in the household, including the patient"
+        },
+        {
+          "id": "number_of_dependents",
+          "label": "Number of Dependents",
+          "type": "number",
+          "required": true,
+          "ai_note": "Number of people the patient financially supports (children, elderly relatives, etc.)"
+        }
+      ]
+    },
+    {
+      "name": "Income",
+      "fields": [
+        {
+          "id": "income_sources",
+          "label": "Income Sources",
+          "type": "multi_select",
+          "required": true,
+          "options": [
+            "Employment / Wages",
+            "Self-Employment",
+            "Social Security / SSI",
+            "Disability (SSDI)",
+            "Unemployment Benefits",
+            "Child Support / Alimony",
+            "Retirement / Pension",
+            "Other",
+            "No Income"
+          ],
+          "ai_note": "All sources from which the patient receives money. Select all that apply."
+        },
+        {
+          "id": "monthly_income",
+          "label": "Total Monthly Income",
+          "type": "text",
+          "required": true,
+          "ai_note": "Patient's total gross monthly income from all sources combined. Accept natural language like 'about two thousand dollars' or '$2,400/month' and normalize to a dollar amount."
+        }
+      ]
+    },
+    {
+      "name": "Employment & Insurance",
+      "fields": [
+        {
+          "id": "employment_status",
+          "label": "Employment Status",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Full-Time",
+            "Part-Time",
+            "Self-Employed",
+            "Unemployed",
+            "Retired",
+            "Student",
+            "Unable to Work"
+          ],
+          "ai_note": "Patient's current employment status"
+        },
+        {
+          "id": "insurance_status",
+          "label": "Insurance Status",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "No Insurance",
+            "Medicaid",
+            "Medicare",
+            "Private / Employer Insurance",
+            "CHIP",
+            "Other"
+          ],
+          "ai_note": "Patient's current health insurance coverage, if any"
+        }
+      ]
+    }
+  ]
+}

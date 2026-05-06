@@ -122,5 +122,6 @@ fun WelcomeScreen(
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
         )
+
     }
 }

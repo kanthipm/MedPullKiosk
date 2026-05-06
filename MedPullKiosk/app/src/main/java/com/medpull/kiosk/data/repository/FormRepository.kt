@@ -535,20 +535,22 @@ class FormRepository @Inject constructor(
 
     suspend fun savePatientCache(userId: String, fields: List<FormField>) {
         val byId = fields.associateBy { it.id }
+        // Prefer non-null across both Coastal Gateway and Medicaid Renewal field IDs
+        fun pick(vararg ids: String) = ids.firstNotNullOfOrNull { byId[it]?.value?.takeIf { v -> v.isNotBlank() } }
         patientCacheDao.upsert(
             PatientCacheEntity(
                 userId = userId,
-                patientFullName              = byId["patient_full_name"]?.value,
-                dateOfBirth                  = byId["date_of_birth"]?.value,
-                mailingStreet                = byId["mailing_address_street"]?.value,
-                mailingCity                  = byId["mailing_city"]?.value,
-                mailingState                 = byId["mailing_state"]?.value,
-                mailingZip                   = byId["mailing_zip"]?.value,
-                cellPhone                    = byId["cell_phone"]?.value,
-                email                        = byId["email"]?.value,
-                emergencyContactName         = byId["emergency_contact_name"]?.value,
-                emergencyContactPhone        = byId["emergency_contact_phone"]?.value,
-                emergencyContactRelationship = byId["emergency_contact_relationship"]?.value
+                patientFullName              = pick("patient_full_name", "renewal_full_name"),
+                dateOfBirth                  = pick("date_of_birth", "renewal_date_of_birth"),
+                mailingStreet                = pick("mailing_address_street", "renewal_address_street"),
+                mailingCity                  = pick("mailing_city", "renewal_address_city"),
+                mailingState                 = pick("mailing_state", "renewal_address_state"),
+                mailingZip                   = pick("mailing_zip", "renewal_address_zip"),
+                cellPhone                    = pick("cell_phone", "renewal_phone"),
+                email                        = pick("email", "renewal_email"),
+                emergencyContactName         = pick("emergency_contact_name"),
+                emergencyContactPhone        = pick("emergency_contact_phone"),
+                emergencyContactRelationship = pick("emergency_contact_relationship")
             )
         )
     }

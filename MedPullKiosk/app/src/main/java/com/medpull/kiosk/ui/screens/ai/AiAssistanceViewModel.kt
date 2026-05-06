@@ -287,5 +287,6 @@ data class AiAssistanceState(
 data class ChatMessage(
     val text: String,
     val isFromUser: Boolean,
-    val timestamp: Long
+    val timestamp: Long,
+    val isClarification: Boolean = false  // true = sidebar Q&A, never shown as main question
 )

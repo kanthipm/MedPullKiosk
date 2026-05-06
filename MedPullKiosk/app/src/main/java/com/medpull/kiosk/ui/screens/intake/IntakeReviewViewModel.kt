@@ -9,13 +9,17 @@ import com.medpull.kiosk.data.models.FormStatus
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
+import com.medpull.kiosk.utils.PdfUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,6 +27,7 @@ class IntakeReviewViewModel @Inject constructor(
     private val formRepository: FormRepository,
     private val intakeRepository: GuidedIntakeRepository,
     private val authRepository: AuthRepository,
+    private val pdfUtils: PdfUtils,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -104,6 +109,31 @@ class IntakeReviewViewModel @Inject constructor(
         }
     }
 
+    fun generatePdf(outputDir: File) {
+        viewModelScope.launch {
+            try {
+                _state.update { it.copy(isGeneratingPdf = true, pdfFile = null) }
+                val file = withContext(Dispatchers.IO) {
+                    outputDir.mkdirs()
+                    pdfUtils.createSimpleFilledPdf(
+                        fields = _state.value.fields,
+                        outputDir = outputDir,
+                        formName = _state.value.formName
+                    )
+                }
+                _state.update { it.copy(isGeneratingPdf = false, pdfFile = file) }
+                if (file == null) Log.e(TAG, "PDF generation returned null")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error generating PDF", e)
+                _state.update { it.copy(isGeneratingPdf = false, error = "Failed to generate PDF: ${e.message}") }
+            }
+        }
+    }
+
+    fun clearPdfFile() {
+        _state.update { it.copy(pdfFile = null) }
+    }
+
     fun clearError() {
         _state.update { it.copy(error = null) }
     }
@@ -115,5 +145,7 @@ data class IntakeReviewState(
     val fields: List<FormField> = emptyList(),
     val skippedFieldIds: Set<String> = emptySet(),
     val error: String? = null,
-    val isSubmitted: Boolean = false
+    val isSubmitted: Boolean = false,
+    val isGeneratingPdf: Boolean = false,
+    val pdfFile: File? = null
 )
