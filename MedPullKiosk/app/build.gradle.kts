@@ -40,6 +40,7 @@ android {
         }
         buildConfigField("String", "CLAUDE_API_KEY", "\"${localProperties.getProperty("CLAUDE_API_KEY", "")}\"")
         buildConfigField("String", "GROK_API_KEY", "\"${localProperties.getProperty("GROK_API_KEY", "")}\"")
+        buildConfigField("String", "GROQ_API_KEY", "\"${localProperties.getProperty("GROQ_API_KEY", "")}\"")
 
         // Google Sheets Inventory
         buildConfigField("String", "GOOGLE_SHEETS_API_KEY", "\"AIzaSyDh1tQGyxM9zEYO56sKVtu9AYYnf_eM8Yw\"")

@@ -90,9 +90,6 @@ fun NavGraph(
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onContinue = {
-                    navController.navigate(Screen.Language.route)
-                },
-                onDemoMode = {
                     navController.navigate(Screen.FormSelection.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }

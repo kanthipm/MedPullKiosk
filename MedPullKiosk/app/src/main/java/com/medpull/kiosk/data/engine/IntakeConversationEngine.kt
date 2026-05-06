@@ -109,13 +109,21 @@ class IntakeConversationEngine @Inject constructor(
     }
 
     private fun fallbackQuestion(field: FormField, guardianMode: Boolean = false): String {
-        val label = field.translatedText ?: field.fieldName
+        // Strip trailing punctuation so we can append our own cleanly
+        val label = (field.translatedText ?: field.fieldName).trimEnd('?', '.', ' ')
         val ref = if (guardianMode) "the patient's" else "your"
         return when (field.fieldType) {
-            FieldType.SIGNATURE -> "Please provide your signature below."
+            FieldType.SIGNATURE -> "Please sign below."
             FieldType.MULTI_SELECT -> "Which of the following apply to $ref $label? Select all that apply."
-            FieldType.DATE -> "What is $ref $label?"
-            else -> "What is $ref $label?"
+            else -> {
+                // Labels that already start with a question word should be used as-is
+                val lowerLabel = label.lowercase()
+                val startsAsQuestion = listOf(
+                    "has ", "have ", "is ", "are ", "do ", "does ", "did ",
+                    "can ", "will ", "was ", "were ", "should "
+                ).any { lowerLabel.startsWith(it) }
+                if (startsAsQuestion) "$label?" else "What is $ref $label?"
+            }
         }
     }
 
@@ -194,13 +202,131 @@ class IntakeConversationEngine @Inject constructor(
         )) {
             is AiResponse.Success -> parseFieldResult(resp.message)
             is AiResponse.Error -> {
-                Log.e(TAG, "Parse answer failed for ${field.id}: ${resp.message}")
-                FieldParseResult(
-                    needsClarification = true,
-                    clarificationQuestion = "I'm having trouble connecting. Could you try again?"
-                )
+                Log.w(TAG, "Parse answer offline fallback for ${field.id}: ${resp.message}")
+                offlineParse(field, userAnswer, allFields)
             }
         }
+    }
+
+    /**
+     * Offline fallback: accept the answer as typed when the AI API is unavailable.
+     *
+     * Special handling:
+     *  - Blank → ask for clarification
+     *  - Address street field + full address typed → split city/state/zip into alsoFills
+     *  - Everything else → pass value through at 0.9 confidence
+     */
+    private fun offlineParse(
+        field: FormField,
+        answer: String,
+        allFields: List<FormField> = emptyList()
+    ): FieldParseResult {
+        val trimmed = answer.trim()
+        if (trimmed.isBlank()) {
+            return FieldParseResult(
+                needsClarification = true,
+                clarificationQuestion = "Could you provide your ${field.fieldName.lowercase()}?"
+            )
+        }
+
+        // Address street field: try to extract city/state/zip from a full address answer
+        val isStreetField = field.id.endsWith("_street") ||
+            field.fieldName.lowercase().let { it.contains("street") || it.contains("address line") }
+        if (isStreetField && trimmed.contains(",")) {
+            val extracted = tryExtractAddressParts(trimmed, field, allFields)
+            if (extracted != null) return extracted
+        }
+
+        return FieldParseResult(value = trimmed, confidence = 0.9f)
+    }
+
+    /**
+     * If the patient typed a full address (e.g. "123 Main St, Houston, TX 77001") into a street
+     * field, parse out the components and return them as alsoFills so we can skip the follow-up
+     * city/state/zip questions automatically.
+     */
+    private fun tryExtractAddressParts(
+        address: String,
+        streetField: FormField,
+        allFields: List<FormField>
+    ): FieldParseResult? {
+        val parts = address.split(",").map { it.trim() }.filter { it.isNotBlank() }
+        if (parts.size < 2) return null
+
+        val street = parts[0]
+
+        // Determine the field-id prefix (mailing_, physical_, or empty)
+        val prefix = when {
+            streetField.id.startsWith("mailing_") -> "mailing_"
+            streetField.id.startsWith("physical_") -> "physical_"
+            else -> ""
+        }
+        val cityId = "${prefix}city"
+        val stateId = "${prefix}state"
+        val zipId = "${prefix}zip"
+
+        // Only populate a field if it exists in this form and is currently blank
+        fun candidate(id: String) = allFields.find { it.id == id && it.value.isNullOrBlank() }
+        val cityField = candidate(cityId)
+        val stateField = candidate(stateId)
+        val zipField = candidate(zipId)
+        if (cityField == null && stateField == null && zipField == null) return null
+
+        // "TX 77001" or "TX" or "77001"
+        val stateZipRx = Regex("""^([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$""")
+        val stateOnlyRx = Regex("""^([A-Za-z]{2})$""")
+        val zipOnlyRx = Regex("""^\d{5}(?:-\d{4})?$""")
+
+        var city: String? = null
+        var state: String? = null
+        var zip: String? = null
+
+        when {
+            parts.size >= 3 -> {
+                // "123 Main St, Houston, TX 77001"
+                city = parts[1]
+                val last = parts.last()
+                val m = stateZipRx.find(last)
+                if (m != null) {
+                    state = m.groupValues[1].uppercase()
+                    zip = m.groupValues[2]
+                } else if (stateOnlyRx.matches(last)) {
+                    state = last.uppercase()
+                } else if (zipOnlyRx.matches(last)) {
+                    zip = last
+                    if (parts.size >= 4) state = parts[parts.size - 2].uppercase()
+                } else {
+                    state = last
+                }
+            }
+            parts.size == 2 -> {
+                // "123 Main St, Houston TX 77001"  or  "123 Main St, Houston"
+                val last = parts[1]
+                val cityStateZipRx = Regex("""^(.*?)\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$""")
+                val m = cityStateZipRx.find(last)
+                if (m != null) {
+                    city = m.groupValues[1]
+                    state = m.groupValues[2].uppercase()
+                    zip = m.groupValues[3]
+                } else {
+                    val mStateZip = stateZipRx.find(last)
+                    if (mStateZip != null) {
+                        state = mStateZip.groupValues[1].uppercase()
+                        zip = mStateZip.groupValues[2]
+                    } else {
+                        city = last   // just a city was appended
+                    }
+                }
+            }
+        }
+
+        val alsoFills = mutableListOf<FieldUpdate>()
+        if (city != null && cityField != null) alsoFills += FieldUpdate(cityId, city, 0.9f)
+        if (state != null && stateField != null) alsoFills += FieldUpdate(stateId, state, 0.9f)
+        if (zip != null && zipField != null) alsoFills += FieldUpdate(zipId, zip, 0.9f)
+        if (alsoFills.isEmpty()) return null
+
+        return FieldParseResult(value = street, confidence = 0.9f, alsoFills = alsoFills)
     }
 
     private fun parseFieldResult(raw: String): FieldParseResult {
@@ -290,7 +416,96 @@ class IntakeConversationEngine @Inject constructor(
                         ?: "Happy to help! This field just needs your ${field.fieldName.lowercase()}."
                 }
             }
-            is AiResponse.Error -> "Happy to help! This field is asking for your ${field.fieldName.lowercase()}. Please fill it in when you're ready."
+            is AiResponse.Error -> buildOfflineClarification(question, field)
+        }
+    }
+
+    /**
+     * Offline clarification: builds a useful, contextual answer from field metadata
+     * so patients aren't left with a generic "please fill it in" message when the
+     * AI API is unavailable.
+     */
+    private fun buildOfflineClarification(question: String, field: FormField): String {
+        val label = field.fieldName.trimEnd('?', ':').trim()
+        val desc = field.description?.takeIf { it.isNotBlank() && !it.startsWith("ai_note") }
+
+        // If the schema description is informative, lead with it
+        val descLine = if (desc != null) "$desc " else ""
+
+        return when {
+            // Insurance fields
+            field.id.contains("insurance") && field.id.contains("id") ->
+                "${descLine}This is your member ID or subscriber ID — you'll find it on your insurance card, usually labeled \"ID\" or \"Member ID\"."
+            field.id.contains("insurance") && field.id.contains("group") ->
+                "${descLine}The group number is on your insurance card, often labeled \"Group\" or \"Grp #\". If you don't have it handy you can leave it blank and we can look it up."
+            field.id.contains("insurance_provider") || field.id.contains("insurance") && field.id.contains("provider") ->
+                "${descLine}Write the name of your insurance company — for example, Blue Cross Blue Shield, Aetna, UnitedHealthcare, Medicaid, or Medicare."
+            field.id == "policyholder_is_self" ->
+                "This asks whether the person whose name is on the insurance policy is you, or someone else (like a parent or spouse). If the card has your name, select Yes."
+            field.id.contains("policyholder") ->
+                "${descLine}The policyholder is the person whose name is listed as the primary member on the insurance card — sometimes that's a parent or spouse rather than the patient."
+            field.id.contains("has_secondary_insurance") ->
+                "Secondary insurance is a second health plan that can cover costs the primary insurance doesn't. If you only have one insurance plan, select No."
+
+            // Address fields
+            field.id.contains("mailing") && field.id.contains("address") ->
+                "This is the address where you receive mail — it's okay if it's a P.O. box. Just type your street number and name, like \"123 Main St\"."
+            field.id.contains("physical") && field.id.contains("address") ->
+                "This is where you actually live or stay, even if you get mail somewhere else. If your home address is the same as your mailing address, you can skip this."
+            field.id.contains("zip") ->
+                "Your ZIP code is the 5-digit number at the end of your address, like 77001."
+            field.id.contains("state") && field.fieldType == FieldType.RADIO ->
+                "Select the U.S. state you live in. The options are shown as buttons below the question."
+
+            // Contact fields
+            field.id.contains("emergency_contact") ->
+                "${descLine}This is someone we should call if we can't reach you or if there's a medical emergency — a family member or close friend."
+            field.id == "phone_primary" ->
+                "Please enter your best phone number including area code, like (713) 555-1234 or 7135551234."
+
+            // Date fields
+            field.fieldType == FieldType.DATE ->
+                "${descLine}Please enter the date in MM/DD/YYYY format — for example, 01/15/1990."
+
+            // Yes/No fields
+            field.fieldType == FieldType.RADIO && field.options.map { it.lowercase() }.containsAll(listOf("yes", "no")) ->
+                "${descLine}Just say Yes or No, or tap the button. ${if (field.options.isNotEmpty()) "Your choices are: ${field.options.joinToString(", ")}." else ""}"
+
+            // Medical history
+            field.id.contains("medications") ->
+                "List any prescription or over-the-counter medicines you take regularly, including vitamins and supplements. If you take none, just say No."
+            field.id.contains("allergies") ->
+                "Tell us about any allergies to medicines, foods, or other substances. If you have no known allergies, say No."
+            field.id.contains("medical_conditions") ->
+                "List any ongoing health conditions or diagnoses you've been given by a doctor — like diabetes, asthma, high blood pressure, etc. If none, leave it blank."
+            field.id.contains("family_history") ->
+                "We're asking about health conditions that run in your family — things like heart disease, cancer, or diabetes in parents, siblings, or grandparents."
+            field.id.contains("surgeries") ->
+                "List any operations or surgical procedures you've had, including the approximate year if you remember. If you've had none, say No."
+
+            // Consent fields
+            field.id.contains("hipaa") ->
+                "HIPAA is a federal law that protects your health information. This acknowledges that you've received our privacy notice explaining your rights and how we use your data."
+            field.id.contains("sliding_fee") ->
+                "Our sliding fee scale means the cost of your care may be adjusted based on your household income so it's affordable. This just asks you to acknowledge that option exists."
+            field.id.contains("photo_consent") ->
+                "This asks if you give us permission to take or use photos for your care — for example, photographing a skin condition for your medical record."
+
+            // Signature
+            field.fieldType == FieldType.SIGNATURE ->
+                "Please sign your name in the box using your finger. This confirms that the information you've provided is accurate to the best of your knowledge."
+
+            // Representative / guardian
+            field.id.contains("representative") ->
+                "${descLine}If you're filling this out for someone else (a child, parent, or patient you're caring for), enter your name and relationship here."
+            field.id == "filling_for_self" ->
+                "Select 'Myself' if you are the patient filling this out for yourself. Select 'Someone else' if you're a guardian or caregiver completing it on behalf of another person."
+
+            // Generic with description
+            desc != null -> desc
+
+            // Last resort
+            else -> "This field is asking for your $label. ${if (field.options.isNotEmpty()) "You can choose from: ${field.options.joinToString(", ")}." else "Type your answer in the box below and tap OK."}"
         }
     }
 

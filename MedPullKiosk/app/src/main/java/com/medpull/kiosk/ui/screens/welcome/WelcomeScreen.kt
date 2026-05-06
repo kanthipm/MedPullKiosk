@@ -31,8 +31,7 @@ private val welcomeTranslations = listOf(
 @Composable
 fun WelcomeScreen(
     viewModel: WelcomeViewModel = hiltViewModel(),
-    onContinue: () -> Unit,
-    onDemoMode: () -> Unit = {}
+    onContinue: () -> Unit
 ) {
     var languageIndex by remember { mutableIntStateOf(0) }
 
@@ -124,22 +123,5 @@ fun WelcomeScreen(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Demo mode entry — for presentations and partner demos
-        OutlinedButton(
-            onClick = {
-                viewModel.startSession()
-                onDemoMode()
-            },
-            modifier = Modifier
-                .width(200.dp)
-                .height(48.dp)
-        ) {
-            Text(
-                text = "Demo Mode",
-                style = MaterialTheme.typography.labelLarge
-            )
-        }
     }
 }

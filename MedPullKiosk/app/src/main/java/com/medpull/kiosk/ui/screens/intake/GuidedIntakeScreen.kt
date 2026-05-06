@@ -53,6 +53,7 @@ import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.ui.screens.ai.HandwritingInput
+import com.medpull.kiosk.ui.screens.ai.SignatureCapture
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -359,6 +360,17 @@ fun GuidedIntakeScreen(
 
                                     // Inline answer area — type varies by field
                                     when {
+                                        // Signature: dedicated drawing canvas, bitmap capture
+                                        field != null && field.fieldType == FieldType.SIGNATURE -> {
+                                            SignatureCapture(
+                                                onSignatureCaptured = { bitmap ->
+                                                    viewModel.submitSignature(bitmap)
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+
+                                        // Handwriting mode for non-signature text fields
                                         showHandwriting -> {
                                             HandwritingInput(
                                                 language = state.userLanguage,
@@ -410,7 +422,11 @@ fun GuidedIntakeScreen(
                 }
 
                 // Bottom bar: OK + "press Enter ↵" + mic / draw / TTS
-                if (!state.isLoadingResponse && currentQuestion != null && state.consentBatchFields == null) {
+                // Hidden for signature fields — SignatureCapture has its own Done button
+                if (!state.isLoadingResponse && currentQuestion != null &&
+                    state.consentBatchFields == null &&
+                    state.currentAskingField?.fieldType != FieldType.SIGNATURE
+                ) {
                     val field = state.currentAskingField
                     val isTextInput = field == null ||
                         (field.options.isEmpty() && field.fieldType != FieldType.MULTI_SELECT)
@@ -643,14 +659,14 @@ fun GuidedIntakeScreen(
                                 value = chatText,
                                 onValueChange = { chatText = it },
                                 modifier = Modifier.weight(1f),
-                                placeholder = { Text("Ask for clarification...") },
+                                placeholder = { Text("Ask a question...") },
                                 enabled = !state.isLoadingResponse,
                                 maxLines = 3,
                                 textStyle = MaterialTheme.typography.bodyMedium,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                                 keyboardActions = KeyboardActions(onSend = {
                                     if (chatText.isNotBlank() && !state.isLoadingResponse) {
-                                        viewModel.sendMessage(chatText)
+                                        viewModel.sendChatMessage(chatText)
                                         chatText = ""
                                     }
                                 })
@@ -659,7 +675,7 @@ fun GuidedIntakeScreen(
                             FilledIconButton(
                                 onClick = {
                                     if (chatText.isNotBlank() && !state.isLoadingResponse) {
-                                        viewModel.sendMessage(chatText)
+                                        viewModel.sendChatMessage(chatText)
                                         chatText = ""
                                     }
                                 },

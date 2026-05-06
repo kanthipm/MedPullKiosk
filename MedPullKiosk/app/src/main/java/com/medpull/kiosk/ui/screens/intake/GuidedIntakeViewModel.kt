@@ -60,8 +60,10 @@ class GuidedIntakeViewModel @Inject constructor(
         private const val TAG = "GuidedIntakeViewModel"
         const val COASTAL_GATEWAY_ID = "coastal_gateway_intake"
         const val MEDICAID_RENEWAL_ID = "medicaid_renewal_intake"
+        const val SLIDING_FEE_ID = "sliding_fee_intake"
         private const val SCHEMA_FILE = "schemas/coastal_gateway_intake.json"
         private const val SCHEMA_FILE_MEDICAID = "schemas/medicaid_renewal_intake.json"
+        private const val SCHEMA_FILE_SLIDING_FEE = "schemas/sliding_fee_intake.json"
         const val DEMO_USER_ID = "demo_user"
         private const val CONFIDENCE_THRESHOLD = 0.75f
         private const val MAX_CLARIFICATIONS = 2
@@ -250,6 +252,60 @@ class GuidedIntakeViewModel @Inject constructor(
                 fields = fields
             )
         }
+
+        /** Parse the Sliding Fee Eligibility JSON schema into a Form + field list. */
+        fun loadSlidingFeeForm(context: Context): Form {
+            val json = context.assets.open(SCHEMA_FILE_SLIDING_FEE).bufferedReader().readText()
+            val root = JSONObject(json)
+            val formName = root.optString("form_name", "Sliding Fee Eligibility Application")
+            val sections = root.optJSONArray("sections") ?: return Form(
+                id = SLIDING_FEE_ID, userId = "builtin",
+                fileName = formName, originalFileUri = "",
+                status = FormStatus.READY, fields = emptyList()
+            )
+
+            val fields = mutableListOf<FormField>()
+            for (s in 0 until sections.length()) {
+                val section = sections.getJSONObject(s)
+                val sectionFields = section.optJSONArray("fields") ?: continue
+                for (f in 0 until sectionFields.length()) {
+                    val field = sectionFields.getJSONObject(f)
+                    val opts = field.optJSONArray("options")
+                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                        ?: emptyList()
+                    fields += FormField(
+                        id = field.optString("id"),
+                        formId = SLIDING_FEE_ID,
+                        fieldName = field.optString("label"),
+                        originalText = field.optString("label"),
+                        translatedText = field.optString("label"),
+                        fieldType = when (field.optString("type")) {
+                            "date" -> FieldType.DATE
+                            "checkbox" -> FieldType.CHECKBOX
+                            "radio" -> FieldType.RADIO
+                            "dropdown" -> FieldType.DROPDOWN
+                            "multi_select" -> FieldType.MULTI_SELECT
+                            "signature" -> FieldType.SIGNATURE
+                            "static_label" -> FieldType.STATIC_LABEL
+                            "number", "phone", "zip", "email" -> FieldType.NUMBER
+                            else -> FieldType.TEXT
+                        },
+                        required = field.optBoolean("required", false),
+                        options = opts,
+                        description = field.optString("ai_note", "").ifBlank { null }
+                    )
+                }
+            }
+
+            return Form(
+                id = SLIDING_FEE_ID,
+                userId = "builtin",
+                fileName = formName,
+                originalFileUri = "",
+                status = FormStatus.READY,
+                fields = fields
+            )
+        }
     }
 
     private val formId: String = savedStateHandle.get<String>("formId") ?: ""
@@ -298,6 +354,11 @@ class GuidedIntakeViewModel @Inject constructor(
                     initFormState(merged)
                 } else if (formId == MEDICAID_RENEWAL_ID) {
                     val schema = loadMedicaidRenewalForm(appContext)
+                    val merged = mergeWithSavedValues(schema)
+                    formRepository.saveForm(merged)
+                    initFormState(merged)
+                } else if (formId == SLIDING_FEE_ID) {
+                    val schema = loadSlidingFeeForm(appContext)
                     val merged = mergeWithSavedValues(schema)
                     formRepository.saveForm(merged)
                     initFormState(merged)
@@ -617,6 +678,64 @@ class GuidedIntakeViewModel @Inject constructor(
                         error = "Could not process your answer. Please try again."
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Send a message from the chat sidebar.
+     * Chat is ALWAYS treated as a clarifying question — it never fills a form field.
+     * This keeps the chat panel as a pure help/guidance channel.
+     */
+    fun sendChatMessage(message: String) {
+        if (message.isBlank()) return
+        val field = _state.value.currentAskingField ?: return
+        val lang = _state.value.userLanguage
+
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    chatMessages = it.chatMessages + ChatMessage(
+                        text = message,
+                        isFromUser = true,
+                        timestamp = System.currentTimeMillis(),
+                        isClarification = true
+                    ),
+                    isLoadingResponse = true
+                )
+            }
+            val answer = engine.answerClarification(question = message, field = field, language = lang)
+            _state.update {
+                it.copy(
+                    isLoadingResponse = false,
+                    chatMessages = it.chatMessages + ChatMessage(
+                        text = answer,
+                        isFromUser = false,
+                        timestamp = System.currentTimeMillis(),
+                        isClarification = true
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Submit a handwritten signature bitmap for the current signature field.
+     * Saves the bitmap to internal storage and advances past the field —
+     * no AI parsing needed for signatures.
+     */
+    fun submitSignature(bitmap: android.graphics.Bitmap) {
+        val field = _state.value.currentAskingField ?: return
+        viewModelScope.launch {
+            try {
+                val dir = java.io.File(appContext.filesDir, "signatures").apply { mkdirs() }
+                val file = java.io.File(dir, "sig_${field.id}_${System.currentTimeMillis()}.png")
+                file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                saveFieldAndAdvance(field, "signature:${file.absolutePath}", emptyList())
+            } catch (e: Exception) {
+                Log.w(TAG, "Signature save failed", e)
+                // Fall back: mark field as signed with a text marker
+                saveFieldAndAdvance(field, "✓ Signed", emptyList())
             }
         }
     }
