@@ -94,8 +94,11 @@ fun GuidedIntakeScreen(
 
     LaunchedEffect(state.currentAskingField?.id) {
         showHandwriting = isSignatureField
-        // Auto-focus text input when question changes (non-chip, non-signature fields)
         val f = state.currentAskingField
+        // Pre-fill the input with the existing answer when navigating back to a field
+        val existingValue = f?.value?.takeIf { it.isNotBlank() && it != "delivered" }
+        messageText = existingValue ?: ""
+        // Auto-focus text input when question changes (non-chip, non-signature fields)
         if (f != null && f.options.isEmpty() && !isSignatureField) {
             try { focusRequester.requestFocus() } catch (_: Exception) {}
         }
@@ -219,7 +222,10 @@ fun GuidedIntakeScreen(
                 .padding(start = 4.dp, end = 12.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onNavigateBack) {
+            IconButton(onClick = {
+                if (viewModel.hasPreviousField()) viewModel.goToPreviousField()
+                else onNavigateBack()
+            }) {
                 Icon(
                     Icons.Default.ArrowBack, "Back",
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
