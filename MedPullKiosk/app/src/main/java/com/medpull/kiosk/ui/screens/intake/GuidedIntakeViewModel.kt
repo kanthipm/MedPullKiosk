@@ -309,6 +309,9 @@ class GuidedIntakeViewModel @Inject constructor(
     }
 
     private val formId: String = savedStateHandle.get<String>("formId") ?: ""
+    // True when navigating back from the review screen — open last answered field instead of going to review.
+    private val editLast: Boolean = savedStateHandle.get<Boolean>("editLast") ?: false
+    private var editLastConsumed = false
 
     private val _state = MutableStateFlow(GuidedIntakeState())
     val state: StateFlow<GuidedIntakeState> = _state.asStateFlow()
@@ -484,10 +487,16 @@ class GuidedIntakeViewModel @Inject constructor(
 
         when {
             next == null -> {
-                // All fields addressed — save cache then go to review
-                Log.d(TAG, "All fields addressed — transitioning to review")
-                persistPatientCache()
-                _state.update { it.copy(isComplete = true, isLoadingResponse = false) }
+                if (editLast && !editLastConsumed) {
+                    // Returning from review screen — re-open last answered field for editing
+                    editLastConsumed = true
+                    goToPreviousField()
+                } else {
+                    // All fields addressed — save cache then go to review
+                    Log.d(TAG, "All fields addressed — transitioning to review")
+                    persistPatientCache()
+                    _state.update { it.copy(isComplete = true, isLoadingResponse = false) }
+                }
             }
             next.fieldType == FieldType.STATIC_LABEL -> {
                 // Deliver framing text and auto-advance (no user input needed)
@@ -529,6 +538,51 @@ class GuidedIntakeViewModel @Inject constructor(
     private fun startAskingField(field: FormField) {
         _state.update { it.copy(currentAskingField = field, clarificationCount = 0) }
         askCurrentField()
+    }
+
+    // ─── Back Navigation ─────────────────────────────────────────────────────
+
+    /**
+     * Returns true if there is a previous answered field to navigate back to.
+     * Used by the screen to decide whether the back button exits or goes to prev question.
+     */
+    fun hasPreviousField(): Boolean {
+        val s = _state.value
+        val allSkipped = s.skippedFieldIds + SKIP_DURING_INTAKE
+        val answered = s.fields.filter { f ->
+            f.id !in allSkipped && f.fieldType != FieldType.STATIC_LABEL &&
+            !f.value.isNullOrBlank() && f.value != "delivered"
+        }
+        return if (s.currentAskingField != null) {
+            val idx = s.fields.indexOfFirst { it.id == s.currentAskingField.id }
+            answered.any { f -> s.fields.indexOfFirst { it.id == f.id } < idx }
+        } else {
+            answered.isNotEmpty()
+        }
+    }
+
+    /**
+     * Navigate back to the previous answered field without erasing its value.
+     * The existing answer is pre-filled in the input so the user can keep or change it.
+     * If the user submits a new answer, it overwrites; if they submit the same, it's a no-op.
+     */
+    fun goToPreviousField() {
+        val s = _state.value
+        val allSkipped = s.skippedFieldIds + SKIP_DURING_INTAKE
+        val answered = s.fields.filter { f ->
+            f.id !in allSkipped && f.fieldType != FieldType.STATIC_LABEL &&
+            !f.value.isNullOrBlank() && f.value != "delivered"
+        }
+        val target = if (s.currentAskingField != null) {
+            val idx = s.fields.indexOfFirst { it.id == s.currentAskingField.id }
+            answered.lastOrNull { f -> s.fields.indexOfFirst { it.id == f.id } < idx }
+        } else {
+            answered.lastOrNull()
+        } ?: return
+
+        // Keep the existing value — just re-ask the question with a fresh chat thread.
+        _state.update { it.copy(isComplete = false, chatMessages = emptyList()) }
+        startAskingField(target)
     }
 
     /** Call engine.generateQuestion and post the result as an AI message. */

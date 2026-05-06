@@ -15,8 +15,9 @@ sealed class Screen(val route: String) {
     object FormFill : Screen("form_fill/{formId}") {
         fun createRoute(formId: String) = "form_fill/$formId"
     }
-    object GuidedIntake : Screen("guided_intake/{formId}") {
-        fun createRoute(formId: String) = "guided_intake/$formId"
+    object GuidedIntake : Screen("guided_intake/{formId}?editLast={editLast}") {
+        fun createRoute(formId: String, editLast: Boolean = false) =
+            "guided_intake/$formId?editLast=$editLast"
     }
     object IntakeReview : Screen("intake_review/{formId}") {
         fun createRoute(formId: String) = "intake_review/$formId"

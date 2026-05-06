@@ -41,6 +41,23 @@ class IntakeConversationEngine @Inject constructor(
 
     companion object {
         private const val TAG = "IntakeEngine"
+        val STATE_ABBREVIATIONS = mapOf(
+            "ALABAMA" to "AL", "ALASKA" to "AK", "ARIZONA" to "AZ", "ARKANSAS" to "AR",
+            "CALIFORNIA" to "CA", "COLORADO" to "CO", "CONNECTICUT" to "CT", "DELAWARE" to "DE",
+            "FLORIDA" to "FL", "GEORGIA" to "GA", "HAWAII" to "HI", "IDAHO" to "ID",
+            "ILLINOIS" to "IL", "INDIANA" to "IN", "IOWA" to "IA", "KANSAS" to "KS",
+            "KENTUCKY" to "KY", "LOUISIANA" to "LA", "MAINE" to "ME", "MARYLAND" to "MD",
+            "MASSACHUSETTS" to "MA", "MICHIGAN" to "MI", "MINNESOTA" to "MN",
+            "MISSISSIPPI" to "MS", "MISSOURI" to "MO", "MONTANA" to "MT",
+            "NEBRASKA" to "NE", "NEVADA" to "NV", "NEW HAMPSHIRE" to "NH",
+            "NEW JERSEY" to "NJ", "NEW MEXICO" to "NM", "NEW YORK" to "NY",
+            "NORTH CAROLINA" to "NC", "NORTH DAKOTA" to "ND", "OHIO" to "OH",
+            "OKLAHOMA" to "OK", "OREGON" to "OR", "PENNSYLVANIA" to "PA",
+            "RHODE ISLAND" to "RI", "SOUTH CAROLINA" to "SC", "SOUTH DAKOTA" to "SD",
+            "TENNESSEE" to "TN", "TEXAS" to "TX", "UTAH" to "UT", "VERMONT" to "VT",
+            "VIRGINIA" to "VA", "WASHINGTON" to "WA", "WEST VIRGINIA" to "WV",
+            "WISCONSIN" to "WI", "WYOMING" to "WY", "DISTRICT OF COLUMBIA" to "DC"
+        )
     }
 
     // ─── Question Generation ──────────────────────────────────────────────────
@@ -166,6 +183,9 @@ class IntakeConversationEngine @Inject constructor(
             .take(8)
             .joinToString("\n") { "  ${it.id}: ${it.translatedText ?: it.fieldName}" }
 
+        val isStreetField = field.id.endsWith("_street") ||
+            field.fieldName.lowercase().let { it.contains("street") || it.contains("address line") }
+
         val prompt = buildString {
             appendLine("Extract the value for this intake field from the patient's answer.")
             appendLine()
@@ -173,6 +193,10 @@ class IntakeConversationEngine @Inject constructor(
             appendLine("Label: ${field.translatedText ?: field.fieldName}")
             if (field.options.isNotEmpty()) appendLine("Valid options: ${field.options.joinToString(", ")}")
             if (!field.description.isNullOrBlank()) appendLine("Format hint: ${field.description}")
+            if (isStreetField) {
+                appendLine()
+                appendLine("IMPORTANT: If the patient typed a full address (e.g. '123 Main St, Houston, TX 77001'), extract ONLY the street number and name as the value for this field, and put city, state, and ZIP into also_fills using the exact field IDs listed below.")
+            }
             appendLine()
             appendLine("Patient said: \"$userAnswer\"")
             if (bonusCandidates.isNotBlank()) {
@@ -181,11 +205,22 @@ class IntakeConversationEngine @Inject constructor(
                 appendLine(bonusCandidates)
             }
             appendLine()
+            appendLine()
+            appendLine("""Normalize the extracted value to a standard format:
+- Date of birth / any date → MM/DD/YYYY (e.g. "01/15/1990")
+- Phone number → (XXX) XXX-XXXX
+- US State → 2-letter abbreviation (e.g. "TX", "CA")
+- ZIP code → 5 digits only
+- Full name / any name → Title Case
+- Dollar amount / income → digits only, no $ or commas (e.g. "2400")
+- Household size / number of dependents → digits only (e.g. "3")
+- Yes/No fields → "Yes" or "No" exactly""")
+            appendLine()
             appendLine("""Return JSON only:
 {
-  "value": "extracted value, or null if unclear",
+  "value": "normalized extracted value, or null if unclear",
   "confidence": 0.0-1.0,
-  "also_fills": [{"field_id": "...", "value": "..."}],
+  "also_fills": [{"field_id": "...", "value": "normalized value"}],
   "needs_clarification": false,
   "clarification_question": "follow-up question if value is null"
 }""")
@@ -196,16 +231,119 @@ class IntakeConversationEngine @Inject constructor(
         return when (val resp = apiService.sendMessage(
             userMessage = prompt,
             conversationHistory = emptyList(),
-            systemPrompt = "You extract field values from patient answers. Return valid JSON only.",
+            systemPrompt = "You extract and normalize field values from patient answers. Return valid JSON only.",
             model = Constants.AI.CONVERSATION_MODEL,
             maxTokens = 400
         )) {
-            is AiResponse.Success -> parseFieldResult(resp.message)
+            is AiResponse.Success -> parseFieldResult(resp.message).normalizeAll(field, allFields)
             is AiResponse.Error -> {
                 Log.w(TAG, "Parse answer offline fallback for ${field.id}: ${resp.message}")
-                offlineParse(field, userAnswer, allFields)
+                offlineParse(field, userAnswer, allFields).normalizeAll(field, allFields)
             }
         }
+    }
+
+    /** Apply deterministic normalization to primary value and all alsoFills. */
+    private fun FieldParseResult.normalizeAll(field: FormField, allFields: List<FormField>): FieldParseResult {
+        val normalizedValue = value?.let { normalizeValue(field, it) }
+        val normalizedFills = alsoFills.map { update ->
+            val relatedField = allFields.find { it.id == update.fieldId }
+            if (relatedField != null)
+                update.copy(value = normalizeValue(relatedField, update.value))
+            else
+                update
+        }
+        return copy(value = normalizedValue, alsoFills = normalizedFills)
+    }
+
+    /**
+     * Normalize a field's raw parsed value to a standard display format.
+     * Applied to both AI-parsed and offline-parsed values so the final form
+     * is always consistent regardless of how the patient typed their answer.
+     */
+    private fun normalizeValue(field: FormField, raw: String): String {
+        val t = raw.trim()
+        if (t.isBlank()) return t
+        return when {
+            field.fieldType == FieldType.DATE -> normalizeDate(t) ?: t
+            field.id.contains("phone") -> normalizePhone(t) ?: t
+            field.id.endsWith("_zip") || field.id == "zip" || field.id.contains("zip_code") ->
+                normalizeZip(t) ?: t
+            field.id.endsWith("_state") || field.id == "state" ->
+                normalizeState(t) ?: t
+            field.id.contains("income") || field.id.contains("monthly_income") ->
+                normalizeMoney(t) ?: t
+            field.fieldType == FieldType.NUMBER ->
+                t.filter { it.isDigit() || it == '.' }.trimStart('0').ifBlank { "0" }
+            field.id.contains("name") && field.fieldType == FieldType.TEXT ->
+                toTitleCase(t)
+            field.id.endsWith("_city") || field.id == "city" ->
+                toTitleCase(t)
+            field.id.endsWith("_street") || field.id == "street" ->
+                toTitleCase(t)
+            else -> t
+        }
+    }
+
+    private fun normalizeDate(raw: String): String? {
+        val output = java.text.SimpleDateFormat("MM/dd/yyyy", java.util.Locale.US)
+        // Remove ordinal suffixes: "15th" → "15"
+        val cleaned = raw.replace(Regex("""(\d+)(st|nd|rd|th)"""), "$1")
+            .replace(",", " ").replace(Regex(" {2,}"), " ").trim()
+        val patterns = listOf(
+            "MM/dd/yyyy", "M/d/yyyy", "MM-dd-yyyy", "M-d-yyyy",
+            "MM/dd/yy", "M/d/yy",
+            "yyyy-MM-dd",
+            "MMMM d yyyy", "MMM d yyyy",
+            "d MMMM yyyy", "d MMM yyyy",
+            "MMMM dd yyyy", "MMM dd yyyy"
+        )
+        for (fmt in patterns) {
+            try {
+                val df = java.text.SimpleDateFormat(fmt, java.util.Locale.US)
+                df.isLenient = false
+                val date = df.parse(cleaned) ?: continue
+                // Sanity-check: year must be reasonable
+                val cal = java.util.Calendar.getInstance().also { it.time = date }
+                val year = cal.get(java.util.Calendar.YEAR)
+                if (year < 1900 || year > 2100) continue
+                return output.format(date)
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    private fun normalizePhone(raw: String): String? {
+        val digits = raw.filter { it.isDigit() }
+        return when {
+            digits.length == 10 ->
+                "(${digits.substring(0,3)}) ${digits.substring(3,6)}-${digits.substring(6)}"
+            digits.length == 11 && digits[0] == '1' ->
+                "(${digits.substring(1,4)}) ${digits.substring(4,7)}-${digits.substring(7)}"
+            else -> null
+        }
+    }
+
+    private fun normalizeZip(raw: String): String? {
+        val digits = raw.filter { it.isDigit() }
+        return if (digits.length >= 5) digits.take(5) else null
+    }
+
+    private fun normalizeState(raw: String): String? {
+        val upper = raw.trim().uppercase()
+        if (upper.length == 2 && upper.all { it.isLetter() }) return upper
+        return STATE_ABBREVIATIONS[upper]
+    }
+
+    private fun normalizeMoney(raw: String): String? {
+        val digits = raw.replace(Regex("[^0-9.]"), "")
+        val amount = digits.toDoubleOrNull() ?: return null
+        return amount.toLong().toString()
+    }
+
+    private fun toTitleCase(s: String): String = s.split(" ").joinToString(" ") { word ->
+        if (word.length <= 1) word.uppercase()
+        else word[0].uppercase() + word.substring(1).lowercase()
     }
 
     /**
@@ -255,21 +393,29 @@ class IntakeConversationEngine @Inject constructor(
 
         val street = parts[0]
 
-        // Determine the field-id prefix (mailing_, physical_, or empty)
-        val prefix = when {
-            streetField.id.startsWith("mailing_") -> "mailing_"
-            streetField.id.startsWith("physical_") -> "physical_"
-            else -> ""
-        }
-        val cityId = "${prefix}city"
-        val stateId = "${prefix}state"
-        val zipId = "${prefix}zip"
+        // Derive prefix parts from the street field ID (drop "street" suffix).
+        // e.g. "mailing_address_street" → ["mailing","address"]
+        //      "address_street"         → ["address"]
+        //      "physical_address_street"→ ["physical","address"]
+        val idParts = streetField.id.split("_").dropLast(1)
 
-        // Only populate a field if it exists in this form and is currently blank
-        fun candidate(id: String) = allFields.find { it.id == id && it.value.isNullOrBlank() }
-        val cityField = candidate(cityId)
-        val stateField = candidate(stateId)
-        val zipField = candidate(zipId)
+        // Find a related blank address field by trying progressively shorter common prefixes.
+        // This handles all naming conventions without hardcoding.
+        fun findRelated(keyword: String): FormField? {
+            for (len in idParts.size downTo 0) {
+                val prefix = if (len == 0) "" else idParts.take(len).joinToString("_") + "_"
+                val match = allFields.find { f ->
+                    f.value.isNullOrBlank() &&
+                    (if (prefix.isEmpty()) f.id == keyword else f.id.startsWith(prefix) && f.id.endsWith(keyword))
+                }
+                if (match != null) return match
+            }
+            return null
+        }
+
+        val cityField = findRelated("city")
+        val stateField = findRelated("state")
+        val zipField = findRelated("zip")
         if (cityField == null && stateField == null && zipField == null) return null
 
         // "TX 77001" or "TX" or "77001"
@@ -321,9 +467,9 @@ class IntakeConversationEngine @Inject constructor(
         }
 
         val alsoFills = mutableListOf<FieldUpdate>()
-        if (city != null && cityField != null) alsoFills += FieldUpdate(cityId, city, 0.9f)
-        if (state != null && stateField != null) alsoFills += FieldUpdate(stateId, state, 0.9f)
-        if (zip != null && zipField != null) alsoFills += FieldUpdate(zipId, zip, 0.9f)
+        if (city != null && cityField != null) alsoFills += FieldUpdate(cityField.id, city, 0.9f)
+        if (state != null && stateField != null) alsoFills += FieldUpdate(stateField.id, state, 0.9f)
+        if (zip != null && zipField != null) alsoFills += FieldUpdate(zipField.id, zip, 0.9f)
         if (alsoFills.isEmpty()) return null
 
         return FieldParseResult(value = street, confidence = 0.9f, alsoFills = alsoFills)

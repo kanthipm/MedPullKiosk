@@ -217,7 +217,10 @@ fun NavGraph(
 
         composable(
             route = Screen.GuidedIntake.route,
-            arguments = listOf(navArgument("formId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("formId") { type = NavType.StringType },
+                navArgument("editLast") { type = NavType.BoolType; defaultValue = false }
+            )
         ) { backStackEntry ->
             val formId = backStackEntry.arguments?.getString("formId") ?: ""
             GuidedIntakeScreen(
@@ -238,7 +241,11 @@ fun NavGraph(
         ) { backStackEntry ->
             val formId = backStackEntry.arguments?.getString("formId") ?: ""
             IntakeReviewScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = {
+                    navController.navigate(Screen.GuidedIntake.createRoute(formId, editLast = true)) {
+                        popUpTo(Screen.ProgramSelection.route)
+                    }
+                },
                 onSubmit = {
                     navController.navigate(Screen.FilledFormPreview.createRoute(formId)) {
                         popUpTo(Screen.FormSelection.route)
