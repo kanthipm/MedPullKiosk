@@ -63,7 +63,16 @@ class PdfFormFiller @Inject constructor(
         var document: PDDocument? = null
         return try {
             outputDir.mkdirs()
-            val inputStream = context.assets.open(pdfAssetPath)
+            val inputStream = try {
+                context.assets.open(pdfAssetPath)
+            } catch (e: java.io.FileNotFoundException) {
+                Log.i(TAG, "No PDF template at $pdfAssetPath — generating formatted summary")
+                return createFormattedSummaryPdf(
+                    fields.filter { !it.value.isNullOrBlank() && it.fieldType != FieldType.STATIC_LABEL && it.value != "delivered" },
+                    outputDir,
+                    formName
+                )
+            }
             document = PDDocument.load(inputStream)
 
             val filledFields = fields.filter { f ->
@@ -406,6 +415,19 @@ class PdfFormFiller @Inject constructor(
 
             // ── Sections ──────────────────────────────────────────────────────
             val sections = linkedMapOf(
+                // Sliding Fee Eligibility
+                "Applicant Information" to listOf(
+                    "full_name", "date_of_birth",
+                    "address_street", "address_city", "address_state", "address_zip"
+                ),
+                "Household & Income" to listOf(
+                    "household_size", "number_of_dependents",
+                    "income_sources", "monthly_income"
+                ),
+                "Employment & Insurance" to listOf(
+                    "employment_status", "insurance_status"
+                ),
+                // Coastal Gateway / Medicaid
                 "Patient Registration" to listOf(
                     "first_name", "last_name", "date_of_birth", "gender", "preferred_language",
                     "phone_primary", "phone_secondary", "email",

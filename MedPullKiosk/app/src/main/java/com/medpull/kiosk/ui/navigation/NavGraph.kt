@@ -27,6 +27,9 @@ import com.medpull.kiosk.ui.screens.intake.FilledFormPreviewScreen
 import com.medpull.kiosk.ui.screens.intake.IntakeReviewScreen
 import com.medpull.kiosk.ui.screens.inventory.InventoryScreen
 import com.medpull.kiosk.ui.screens.language.LanguageSelectionScreen
+import com.medpull.kiosk.data.models.IntakeProgramType
+import com.medpull.kiosk.ui.screens.intake.GuidedIntakeViewModel
+import com.medpull.kiosk.ui.screens.programselection.ProgramSelectionScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeViewModel
 import com.medpull.kiosk.utils.SessionManager
@@ -90,8 +93,29 @@ fun NavGraph(
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onContinue = {
-                    navController.navigate(Screen.FormSelection.route) {
+                    navController.navigate(Screen.ProgramSelection.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.ProgramSelection.route) {
+            ProgramSelectionScreen(
+                onProgramSelected = { programType ->
+                    when (programType) {
+                        IntakeProgramType.SLIDING_FEE -> {
+                            navController.navigate(
+                                Screen.GuidedIntake.createRoute(GuidedIntakeViewModel.SLIDING_FEE_ID)
+                            ) {
+                                popUpTo(Screen.ProgramSelection.route)
+                            }
+                        }
+                        IntakeProgramType.MEDICAL_INTAKE -> {
+                            navController.navigate(Screen.FormSelection.route) {
+                                popUpTo(Screen.ProgramSelection.route)
+                            }
+                        }
                     }
                 }
             )
@@ -108,7 +132,7 @@ fun NavGraph(
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Screen.FormSelection.route) {
+                    navController.navigate(Screen.ProgramSelection.route) {
                         // Clear back stack to prevent back navigation to auth
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
@@ -125,7 +149,7 @@ fun NavGraph(
         composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = {
-                    navController.navigate(Screen.FormSelection.route) {
+                    navController.navigate(Screen.ProgramSelection.route) {
                         // Clear back stack to prevent back navigation to auth
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
@@ -147,7 +171,7 @@ fun NavGraph(
             VerificationScreen(
                 email = email,
                 onVerificationSuccess = {
-                    navController.navigate(Screen.FormSelection.route) {
+                    navController.navigate(Screen.ProgramSelection.route) {
                         // Clear back stack to prevent back navigation to auth
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
@@ -229,8 +253,8 @@ fun NavGraph(
         ) {
             FilledFormPreviewScreen(
                 onDone = {
-                    navController.navigate(Screen.FormSelection.route) {
-                        popUpTo(Screen.FormSelection.route) { inclusive = true }
+                    navController.navigate(Screen.ProgramSelection.route) {
+                        popUpTo(Screen.ProgramSelection.route) { inclusive = true }
                     }
                 }
             )
