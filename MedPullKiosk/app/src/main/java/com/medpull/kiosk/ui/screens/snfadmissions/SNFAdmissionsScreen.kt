@@ -214,7 +214,7 @@ private class SNFBridge {
     }
 
     companion object {
-        private const val SYSTEM_PROMPT = """You are an expert SNF admissions coordinator AI assistant. Analyze hospital transfer documents and extract structured patient information.
+        private const val SYSTEM_PROMPT = """You are an expert SNF admissions coordinator AI assistant. Analyze hospital transfer documents and extract structured patient information including a full medication reconciliation review.
 
 Return ONLY a valid JSON object — no markdown, no prose outside JSON.
 
@@ -226,9 +226,23 @@ Schema:
   "insurance": { "payerSource": string|null, "memberId": string|null, "groupNumber": string|null, "authorizationStatus": "authorized"|"pending"|"denied"|"unknown", "authorizationNumber": string|null, "coveredDays": number|null, "missingInfo": string[], "reimbursementConcerns": string|null },
   "issues": [{ "id": string, "title": string, "description": string, "severity": "warning"|"error", "field": string|null }],
   "risks": { "fallRisk": "low"|"moderate"|"high"|"unknown", "behavioralRisk": "low"|"moderate"|"high"|"unknown", "medicationNoncompliance": "low"|"moderate"|"high"|"unknown", "housingInstability": "low"|"moderate"|"high"|"unknown", "readmissionRisk": "low"|"moderate"|"high"|"unknown" },
-  "timeline": [{ "date": "YYYY-MM-DD", "event": string, "facility": string|null }]
+  "timeline": [{ "date": "YYYY-MM-DD", "event": string, "facility": string|null }],
+  "reconciliation": {
+    "summary": { "totalReviewed": number, "discrepanciesDetected": number, "highRiskMedications": number, "unresolvedAllergyConflicts": number },
+    "medications": [{ "id": string, "name": string, "dose": string, "frequency": string, "sources": string[], "status": "verified"|"conflict"|"missing_from_mar"|"discontinued"|"needs_review", "riskLevel": "high"|"moderate"|"standard", "confidence": number, "highRiskCategory": string|null, "highRiskReason": string|null, "sourceSnippets": [{ "document": string, "text": string }] }],
+    "alerts": [{ "id": string, "severity": "critical"|"warning"|"info", "message": string, "medications": string[] }],
+    "recommendedActions": [{ "id": string, "action": string, "priority": "urgent"|"routine" }]
+  }
 }
 
-Rules: Extract ALL medications. Flag every missing required field as an issue. Generate clinical alerts for high-risk meds. Build timeline from all date references. issues.id = "i1","i2"... medications[].id = "m1","m2"..."""
+Rules:
+- Extract ALL medications from every document. Cross-reference discharge summary vs MAR vs fax notes.
+- Flag conflicts: medication active in MAR but held/discontinued in discharge summary, or vice versa.
+- Flag missing_from_mar: medication in discharge summary not found in MAR.
+- Flag high-risk categories: anticoagulants, insulin, opioids, sedatives, antipsychotics, fall-risk medications.
+- Detect allergy conflicts across documents and include as a critical alert.
+- For each reconciliation medication include sourceSnippets with the exact text found in each document.
+- Generate specific recommended actions for each discrepancy.
+- issues.id = "i1","i2"... medications[].id = "m1","m2"... reconciliation.medications[].id = "r1","r2"... alerts[].id = "ra1","ra2"... recommendedActions[].id = "ac1","ac2"..."""
     }
 }

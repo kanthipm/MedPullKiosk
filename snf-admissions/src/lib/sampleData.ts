@@ -1,4 +1,4 @@
-import type { PatientProfile } from './types'
+import type { PatientProfile, MedReconciliation } from './types'
 
 export const SAMPLE_PROFILE: PatientProfile = {
   snapshot: {
@@ -91,6 +91,163 @@ export const SAMPLE_PROFILE: PatientProfile = {
     { date: '2024-11-02', event: 'Delirium resolved; patient cleared for SNF placement by surgical team', facility: 'Mercy General Hospital' },
     { date: '2024-11-03', event: 'Discharge to SNF — transfer documents prepared', facility: 'Mercy General Hospital → SNF' },
   ],
+
+  reconciliation: {
+    summary: {
+      totalReviewed: 11,
+      discrepanciesDetected: 3,
+      highRiskMedications: 3,
+      unresolvedAllergyConflicts: 1,
+    },
+    medications: [
+      {
+        id: 'r1', name: 'Enoxaparin (Lovenox)', dose: '40 mg', frequency: 'Once daily',
+        sources: ['Discharge Summary', 'MAR'],
+        status: 'verified', riskLevel: 'high', confidence: 0.96,
+        highRiskCategory: 'anticoagulant',
+        highRiskReason: 'High-alert anticoagulant. Renal dose adjustment may be required (CKD Stage 3, eGFR 42). Bleeding risk elevated post-ORIF.',
+        sourceSnippets: [
+          { document: 'Discharge Summary', text: 'Enoxaparin 40 mg SQ daily — DVT prophylaxis, continue at SNF. Reassess renal function at 72 hours post-admission.' },
+          { document: 'MAR (10/28–11/02)', text: 'Lovenox 40 mg SubQ QDay — administered 2100 daily. No missed doses documented.' },
+        ],
+      },
+      {
+        id: 'r2', name: 'Metformin', dose: '500 mg', frequency: 'Twice daily with meals',
+        sources: ['Discharge Summary', 'MAR'],
+        status: 'conflict', riskLevel: 'high', confidence: 0.99,
+        highRiskCategory: null, highRiskReason: null,
+        sourceSnippets: [
+          { document: 'Discharge Summary', text: 'HOLD Metformin — CKD Stage 3, eGFR 42. Do not restart until nephrology clears. Transition to insulin-only diabetes management.' },
+          { document: 'MAR (10/28–11/02)', text: 'Metformin 500 mg PO BID — ACTIVE. Administered with breakfast and dinner throughout stay.' },
+        ],
+      },
+      {
+        id: 'r3', name: 'Insulin Glargine (Lantus)', dose: '18 units', frequency: 'Once daily at bedtime',
+        sources: ['MAR', 'Discharge Summary'],
+        status: 'needs_review', riskLevel: 'high', confidence: 0.91,
+        highRiskCategory: 'insulin',
+        highRiskReason: 'High-alert medication. Requires daily nursing administration. Hypoglycemia risk; glucose monitoring protocol must be in place before administration.',
+        sourceSnippets: [
+          { document: 'Discharge Summary', text: 'Insulin Glargine 18 units SQ QHS — basal insulin for T2DM. Adjust per sliding scale if glucose >250 or <80.' },
+          { document: 'MAR (10/28–11/02)', text: 'Lantus 18 units SubQ QHS — nursing admin. Sliding scale insulin coverage per protocol not documented in transfer packet.' },
+        ],
+      },
+      {
+        id: 'r4', name: 'Lisinopril', dose: '10 mg', frequency: 'Once daily',
+        sources: ['Discharge Summary'],
+        status: 'missing_from_mar', riskLevel: 'moderate', confidence: 0.88,
+        highRiskCategory: null, highRiskReason: null,
+        sourceSnippets: [
+          { document: 'Discharge Summary', text: 'Lisinopril 10 mg PO daily — continue for hypertension management. Monitor BMP for renal function and potassium monthly.' },
+        ],
+      },
+      {
+        id: 'r5', name: 'Amlodipine', dose: '5 mg', frequency: 'Once daily',
+        sources: ['Discharge Summary', 'MAR'],
+        status: 'verified', riskLevel: 'standard', confidence: 0.97,
+        highRiskCategory: null, highRiskReason: null,
+        sourceSnippets: [
+          { document: 'MAR (10/28–11/02)', text: 'Amlodipine 5 mg PO QDay — administered 0800 daily. No holds or missed doses.' },
+        ],
+      },
+      {
+        id: 'r6', name: 'Atorvastatin', dose: '40 mg', frequency: 'Once daily at bedtime',
+        sources: ['MAR'],
+        status: 'missing_from_mar', riskLevel: 'standard', confidence: 0.85,
+        highRiskCategory: null, highRiskReason: null,
+        sourceSnippets: [
+          { document: 'MAR (10/28–11/02)', text: 'Atorvastatin 40 mg PO QHS. Not found in discharge medication reconciliation list — source discrepancy.' },
+        ],
+      },
+      {
+        id: 'r7', name: 'Donepezil (Aricept)', dose: '10 mg', frequency: 'Once daily at bedtime',
+        sources: ['Discharge Summary'],
+        status: 'needs_review', riskLevel: 'moderate', confidence: 0.93,
+        highRiskCategory: 'anticholinergic',
+        highRiskReason: 'May worsen bradycardia. Monitor heart rate. Consider Beers Criteria review in elderly patient with dementia.',
+        sourceSnippets: [
+          { document: 'Discharge Summary', text: 'Donepezil 10 mg PO QHS — continue for vascular dementia. Family reports consistent adherence at home.' },
+        ],
+      },
+      {
+        id: 'r8', name: 'Sertraline', dose: '50 mg', frequency: 'Once daily',
+        sources: ['Discharge Summary', 'MAR'],
+        status: 'verified', riskLevel: 'standard', confidence: 0.95,
+        highRiskCategory: null, highRiskReason: null,
+        sourceSnippets: [
+          { document: 'Discharge Summary', text: 'Sertraline 50 mg PO QDay — continue for anxiety and dementia-associated depression.' },
+        ],
+      },
+      {
+        id: 'r9', name: 'Calcium Carbonate + Vitamin D3', dose: '600 mg / 400 IU', frequency: 'Twice daily',
+        sources: ['MAR'],
+        status: 'verified', riskLevel: 'standard', confidence: 0.98,
+        highRiskCategory: null, highRiskReason: null,
+        sourceSnippets: [
+          { document: 'MAR (10/28–11/02)', text: 'Calcium Carbonate 600 mg + Vit D3 400 IU PO BID — administered with meals.' },
+        ],
+      },
+      {
+        id: 'r10', name: 'Nitrofurantoin (Macrobid)', dose: '100 mg', frequency: 'Twice daily ×5 days',
+        sources: ['Discharge Summary'],
+        status: 'discontinued', riskLevel: 'moderate', confidence: 0.97,
+        highRiskCategory: null,
+        highRiskReason: 'Course ends 11/05/2024. Avoid if eGFR <30. Confirm completion at SNF admission.',
+        sourceSnippets: [
+          { document: 'Discharge Summary', text: 'Nitrofurantoin (Macrobid) 100 mg BID ×5 days for UTI (E. coli). Course ends 11/05/2024. Do not renew — avoid with eGFR <30.' },
+        ],
+      },
+      {
+        id: 'r11', name: 'Omeprazole', dose: '20 mg', frequency: 'Once daily before breakfast',
+        sources: ['MAR', 'Discharge Summary'],
+        status: 'verified', riskLevel: 'standard', confidence: 0.99,
+        highRiskCategory: null, highRiskReason: null,
+        sourceSnippets: [
+          { document: 'MAR (10/28–11/02)', text: 'Omeprazole 20 mg PO QAM — GI prophylaxis. Administered before breakfast daily.' },
+        ],
+      },
+    ],
+    alerts: [
+      {
+        id: 'ra1', severity: 'critical',
+        message: 'Metformin marked ACTIVE in MAR but discharge summary recommends HOLD due to CKD Stage 3 (eGFR 42). Do not administer until nephrology clears.',
+        medications: ['Metformin'],
+      },
+      {
+        id: 'ra2', severity: 'critical',
+        message: 'Sulfa allergy conflict: MAR documents NKDA but discharge summary notes a reported sulfa drug reaction. Allergy history must be reconciled before any sulfonamide-class medications are ordered.',
+        medications: [],
+      },
+      {
+        id: 'ra3', severity: 'critical',
+        message: 'Insulin sliding scale protocol referenced in discharge summary but not included in transfer documents. Sliding scale must be established before first Lantus administration at SNF.',
+        medications: ['Insulin Glargine (Lantus)'],
+      },
+      {
+        id: 'ra4', severity: 'warning',
+        message: 'Lisinopril appears in discharge summary but is missing from MAR. Verify if intentionally held during hospitalization or omission error.',
+        medications: ['Lisinopril'],
+      },
+      {
+        id: 'ra5', severity: 'warning',
+        message: 'Nitrofurantoin course ends 11/05/2024. Confirm completion at admission. Do not renew — avoid if eGFR falls below 30.',
+        medications: ['Nitrofurantoin (Macrobid)'],
+      },
+      {
+        id: 'ra6', severity: 'info',
+        message: 'Enoxaparin renal dose check recommended at 72 hours post-admission. eGFR 42 is borderline for standard prophylactic dosing.',
+        medications: ['Enoxaparin (Lovenox)'],
+      },
+    ],
+    recommendedActions: [
+      { id: 'ac1', action: 'Clarify Metformin hold order with discharging provider (Dr. Solberg) before SNF admission. Do not administer until written hold order is obtained.', priority: 'urgent' },
+      { id: 'ac2', action: 'Reconcile allergy discrepancy: confirm sulfa drug reaction history with patient family and update allergy list in SNF chart.', priority: 'urgent' },
+      { id: 'ac3', action: 'Obtain insulin sliding scale protocol from discharging hospital before first Lantus dose at SNF.', priority: 'urgent' },
+      { id: 'ac4', action: 'Verify Lisinopril status — confirm whether hold during hospitalization was intentional or a documentation gap.', priority: 'routine' },
+      { id: 'ac5', action: 'Confirm Nitrofurantoin course completion date (11/05/2024) and do not renew at SNF.', priority: 'routine' },
+      { id: 'ac6', action: 'Recheck eGFR at 72 hours post-admission and reassess Enoxaparin dosing with attending physician.', priority: 'routine' },
+    ],
+  } satisfies MedReconciliation,
 
   meta: {
     filesProcessed: ['harrington_discharge_summary.pdf', 'harrington_MAR_10282024.pdf', 'harrington_insurance_eligibility.pdf'],

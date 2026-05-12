@@ -7,6 +7,7 @@ import { InsuranceCard } from './InsuranceCard'
 import { MissingInfoPanel, IntakeIssuesPanel } from './MissingInfoPanel'
 import { RiskFlagsPanel } from './RiskFlagsPanel'
 import { HospitalizationTimeline } from './HospitalizationTimeline'
+import { MedicationReconciliation } from './MedicationReconciliation'
 
 const RISK_LABELS: Record<keyof RiskFlags, string> = {
   fallRisk: 'Fall', behavioralRisk: 'Behavioral', medicationNoncompliance: 'Med Compliance',
@@ -14,7 +15,7 @@ const RISK_LABELS: Record<keyof RiskFlags, string> = {
 }
 
 export function Dashboard({ profile }: { profile: PatientProfile }) {
-  const { snapshot, clinical, medications, insurance, issues, risks, timeline, meta } = profile
+  const { snapshot, clinical, medications, insurance, issues, risks, timeline, meta: _meta } = profile
   const highRisks = (Object.entries(risks) as [keyof RiskFlags, RiskLevel][]).filter(([, v]) => v === 'high')
 
   return (
@@ -60,7 +61,7 @@ export function Dashboard({ profile }: { profile: PatientProfile }) {
       {/* 3-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         <div className="space-y-4">
-          <PatientSnapshotCard snapshot={snapshot} meta={meta} />
+          <PatientSnapshotCard snapshot={snapshot} meta={_meta} />
           <RiskFlagsPanel risks={risks} />
         </div>
         <div className="space-y-4">
@@ -80,6 +81,10 @@ export function Dashboard({ profile }: { profile: PatientProfile }) {
 
       {/* Full-width medications */}
       <MedicationTable medications={medications} />
+
+      {/* Medication reconciliation */}
+      <MedicationReconciliation reconciliation={profile.reconciliation} />
+
       <div className="h-4" />
     </div>
   )

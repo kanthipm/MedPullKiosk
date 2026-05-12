@@ -88,6 +88,53 @@ export interface ProcessingMeta {
   confidence: Partial<Record<string, number>>
 }
 
+// ─── Medication Reconciliation ───────────────────────────────────────────────
+
+export type ReconStatus = 'verified' | 'conflict' | 'missing_from_mar' | 'discontinued' | 'needs_review'
+export type MedRiskLevel = 'high' | 'moderate' | 'standard'
+export type ReconAlertSeverity = 'critical' | 'warning' | 'info'
+
+export interface ReconMedication {
+  id: string
+  name: string
+  dose: string
+  frequency: string
+  sources: string[]
+  status: ReconStatus
+  riskLevel: MedRiskLevel
+  confidence: number          // 0–1
+  highRiskCategory: string | null   // e.g. "anticoagulant", "insulin", "opioid"
+  highRiskReason: string | null     // e.g. "May increase fall risk in elderly patients"
+  sourceSnippets: { document: string; text: string }[]
+}
+
+export interface ReconAlert {
+  id: string
+  severity: ReconAlertSeverity
+  message: string
+  medications: string[]
+}
+
+export interface ReconAction {
+  id: string
+  action: string
+  priority: 'urgent' | 'routine'
+}
+
+export interface MedReconciliation {
+  medications: ReconMedication[]
+  alerts: ReconAlert[]
+  summary: {
+    totalReviewed: number
+    discrepanciesDetected: number
+    highRiskMedications: number
+    unresolvedAllergyConflicts: number
+  }
+  recommendedActions: ReconAction[]
+}
+
+// ─── Patient Profile ─────────────────────────────────────────────────────────
+
 export interface PatientProfile {
   snapshot: PatientSnapshot
   clinical: ClinicalSummary
@@ -96,6 +143,7 @@ export interface PatientProfile {
   issues: IntakeIssue[]
   risks: RiskFlags
   timeline: TimelineEvent[]
+  reconciliation: MedReconciliation
   meta: ProcessingMeta
 }
 
