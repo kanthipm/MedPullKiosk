@@ -31,10 +31,11 @@ export function getApiConfig(): { hasKey: boolean; model: string; provider: stri
     }
   }
   const key = getStoredApiKey()
+  const isGrok = key.startsWith('xai-')
   return {
     hasKey: key.length > 0,
-    model: 'gpt-4o',
-    provider: 'OpenAI (dev)',
+    model: isGrok ? 'grok-3' : 'gpt-4o',
+    provider: isGrok ? 'Grok (xAI)' : 'OpenAI (dev)',
   }
 }
 
@@ -62,12 +63,18 @@ export async function analyzeDocuments(
   // ── Path 2: Direct API call (browser / dev) ─────────────────────────────────
   const apiKey = getStoredApiKey()
   if (apiKey) {
-    onProgress?.('Sending to AI model…')
+    const isGrok = apiKey.startsWith('xai-')
+    onProgress?.(`Sending to ${isGrok ? 'Grok' : 'OpenAI'}…`)
     const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true })
+    const client = new OpenAI({
+      apiKey,
+      baseURL: isGrok ? 'https://api.x.ai/v1' : undefined,
+      dangerouslyAllowBrowser: true,
+    })
+    const model = isGrok ? 'grok-3' : 'gpt-4o'
     const combined = fileTexts.map((f) => `=== FILE: ${f.name} ===\n${f.text}`).join('\n\n')
     const completion = await client.chat.completions.create({
-      model: 'gpt-4o',
+      model,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: `Analyze these hospital transfer documents:\n\n${combined}` },
@@ -87,7 +94,8 @@ export async function analyzeDocuments(
 // ─── API key helpers (dev/browser only) ─────────────────────────────────────
 
 export function getStoredApiKey(): string {
-  return localStorage.getItem('snf_openai_key') ?? ''
+  // localStorage override first, then the key injected from local.properties at build time
+  return localStorage.getItem('snf_openai_key') || __LOCAL_API_KEY__ || ''
 }
 
 export function saveApiKey(key: string) {

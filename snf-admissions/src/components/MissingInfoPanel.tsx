@@ -18,22 +18,35 @@ function IssueCard({ issue }: { issue: IntakeIssue }) {
   )
 }
 
-export function MissingInfoPanel({ issues }: { issues: IntakeIssue[] }) {
+export function IntakeIssuesPanel({ issues }: { issues: IntakeIssue[] }) {
   const errors = issues.filter((i) => i.severity === 'error')
-  const warnings = issues.filter((i) => i.severity === 'warning')
   return (
-    <SectionCard title="Missing Information & Intake Issues" icon={<AlertTriangle className="h-3.5 w-3.5" />}
-      headerExtra={
-        <div className="flex gap-1.5">
-          {errors.length > 0 && <span className="text-xs font-semibold text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">{errors.length} critical</span>}
-          {warnings.length > 0 && <span className="text-xs font-semibold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>}
-        </div>
-      }>
-      {issues.length === 0 ? (
-        <p className="text-sm text-emerald-700 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />No critical intake issues identified.</p>
+    <SectionCard title="Intake Issues" icon={<XCircle className="h-3.5 w-3.5" />}
+      headerExtra={errors.length > 0 && (
+        <span className="text-xs font-semibold text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">{errors.length} critical</span>
+      )}>
+      {errors.length === 0 ? (
+        <p className="text-sm text-emerald-700 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />No critical issues.</p>
       ) : (
         <div className="space-y-2.5">
           {errors.map((i) => <IssueCard key={i.id} issue={i} />)}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
+export function MissingInfoPanel({ issues }: { issues: IntakeIssue[] }) {
+  const warnings = issues.filter((i) => i.severity === 'warning')
+  return (
+    <SectionCard title="Missing Information" icon={<AlertTriangle className="h-3.5 w-3.5" />}
+      headerExtra={warnings.length > 0 && (
+        <span className="text-xs font-semibold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>
+      )}>
+      {warnings.length === 0 ? (
+        <p className="text-sm text-emerald-700 flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />No missing information.</p>
+      ) : (
+        <div className="space-y-2.5">
           {warnings.map((i) => <IssueCard key={i.id} issue={i} />)}
         </div>
       )}

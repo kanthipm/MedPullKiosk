@@ -4,9 +4,8 @@ import { PatientSnapshotCard } from './PatientSnapshotCard'
 import { ClinicalSummaryCard } from './ClinicalSummaryCard'
 import { MedicationTable } from './MedicationTable'
 import { InsuranceCard } from './InsuranceCard'
-import { MissingInfoPanel } from './MissingInfoPanel'
+import { MissingInfoPanel, IntakeIssuesPanel } from './MissingInfoPanel'
 import { RiskFlagsPanel } from './RiskFlagsPanel'
-import { TimeSavedWidget } from './TimeSavedWidget'
 import { HospitalizationTimeline } from './HospitalizationTimeline'
 
 const RISK_LABELS: Record<keyof RiskFlags, string> = {
@@ -63,16 +62,20 @@ export function Dashboard({ profile }: { profile: PatientProfile }) {
         <div className="space-y-4">
           <PatientSnapshotCard snapshot={snapshot} meta={meta} />
           <RiskFlagsPanel risks={risks} />
-          <TimeSavedWidget meta={meta} />
         </div>
         <div className="space-y-4">
           <ClinicalSummaryCard clinical={clinical} />
-          <MissingInfoPanel issues={issues} />
         </div>
         <div className="space-y-4">
           <InsuranceCard insurance={insurance} />
           {timeline.length > 0 && <HospitalizationTimeline events={timeline} />}
         </div>
+      </div>
+
+      {/* Missing info + intake issues side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <IntakeIssuesPanel issues={issues} />
+        <MissingInfoPanel issues={issues} />
       </div>
 
       {/* Full-width medications */}
