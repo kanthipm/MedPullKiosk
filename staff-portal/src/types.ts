@@ -7,7 +7,7 @@ export type ApplicationStatus =
 
 // ── Document ────────────────────────────────────────────────────────────────
 
-export type DocumentUploadStatus = "uploaded" | "missing" | "processing";
+export type DocumentUploadStatus = "uploaded" | "missing" | "skipped" | "processing";
 
 export interface UploadedDocument {
   id: string;

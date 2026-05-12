@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.UploadStatus
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.DocumentRepository
@@ -135,26 +136,34 @@ class FilledFormPreviewViewModel @Inject constructor(
             .ifEmpty { listOf("Not specified") }
 
         val submissionDocs = docs.map { doc ->
-            val uploaded = doc.uploadStatus == UploadStatus.UPLOADED.name
+            val status = doc.uploadStatus
             SubmissionDocument(
                 id = doc.id,
                 type = doc.documentType.replace("_", " ").lowercase()
                     .split(" ").joinToString(" ") { it.replaceFirstChar(Char::uppercase) },
                 fileName = doc.filePath?.substringAfterLast("/") ?: "",
-                uploadStatus = if (uploaded) "uploaded" else "missing",
-                uploadedAt = if (uploaded)
+                uploadStatus = when (status) {
+                    UploadStatus.UPLOADED.name -> "uploaded"
+                    UploadStatus.SKIPPED.name -> "skipped"
+                    else -> "missing"
+                },
+                uploadedAt = if (status == UploadStatus.UPLOADED.name)
                     DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(doc.timestamp))
                 else null
             )
         }
 
-        val missingDocCount = docs.count { it.uploadStatus == UploadStatus.MISSING.name }
-        val status = if (missingDocCount > 0) "INCOMPLETE_APPLICATION" else "READY_FOR_REVIEW"
+        // Required docs that are missing OR skipped both make the application incomplete
+        val incompleteDocCount = docs.count { doc ->
+            val type = DocumentType.values().find { it.name == doc.documentType }
+            type?.required == true && doc.uploadStatus != UploadStatus.UPLOADED.name
+        }
+        val appStatus = if (incompleteDocCount > 0) "INCOMPLETE_APPLICATION" else "READY_FOR_REVIEW"
 
         return ClinicSubmission(
             id = formId,
             submittedAt = DateTimeFormatter.ISO_INSTANT.format(Instant.now()),
-            status = status,
+            status = appStatus,
             personal = SubmissionPersonal(
                 fullName = field("full_name").ifBlank { "Unknown Patient" },
                 dob = field("date_of_birth"),
@@ -173,7 +182,7 @@ class FilledFormPreviewViewModel @Inject constructor(
                 insuranceStatus = field("insurance_status").ifBlank { "Not specified" }
             ),
             documents = submissionDocs,
-            missingDocumentsCount = missingDocCount,
+            missingDocumentsCount = incompleteDocCount,
             missingRequiredFields = emptyList()
         )
     }
