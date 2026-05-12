@@ -4,9 +4,12 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.data.models.FormStatus
+import com.medpull.kiosk.data.models.UploadStatus
 import com.medpull.kiosk.data.repository.AuthRepository
+import com.medpull.kiosk.data.repository.DocumentRepository
 import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
 import com.medpull.kiosk.utils.PdfUtils
@@ -27,6 +30,7 @@ class IntakeReviewViewModel @Inject constructor(
     private val formRepository: FormRepository,
     private val intakeRepository: GuidedIntakeRepository,
     private val authRepository: AuthRepository,
+    private val documentRepository: DocumentRepository,
     private val pdfUtils: PdfUtils,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -47,7 +51,7 @@ class IntakeReviewViewModel @Inject constructor(
     private fun loadData() {
         viewModelScope.launch {
             try {
-                _state.update { it.copy(isLoading = true) }
+                _state.update { it.copy(isLoading = true, formId = formId) }
 
                 combine(
                     formRepository.getFormByIdFlow(formId),
@@ -72,6 +76,23 @@ class IntakeReviewViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading review data", e)
                 _state.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+
+        // Load document slots for sliding fee
+        if (formId == GuidedIntakeViewModel.SLIDING_FEE_ID) {
+            viewModelScope.launch {
+                documentRepository.getDocumentsFlow(formId).collect { entities ->
+                    val slots = DocumentType.values().map { type ->
+                        val entity = entities.find { it.documentType == type.name }
+                        DocumentSlot(
+                            type = type,
+                            status = entity?.uploadStatus() ?: UploadStatus.MISSING,
+                            filePath = entity?.filePath
+                        )
+                    }
+                    _state.update { it.copy(documents = slots) }
+                }
             }
         }
     }
@@ -141,9 +162,11 @@ class IntakeReviewViewModel @Inject constructor(
 
 data class IntakeReviewState(
     val isLoading: Boolean = true,
+    val formId: String = "",
     val formName: String = "",
     val fields: List<FormField> = emptyList(),
     val skippedFieldIds: Set<String> = emptySet(),
+    val documents: List<DocumentSlot> = emptyList(),
     val error: String? = null,
     val isSubmitted: Boolean = false,
     val isGeneratingPdf: Boolean = false,

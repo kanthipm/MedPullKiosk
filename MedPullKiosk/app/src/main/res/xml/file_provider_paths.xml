@@ -2,4 +2,5 @@
 <paths>
     <files-path name="pdf_exports" path="pdf_exports/" />
     <cache-path name="pdf_cache" path="pdf_cache/" />
+    <files-path name="documents" path="documents/" />
 </paths>

@@ -1,6 +1,7 @@
 package com.medpull.kiosk.ui.screens.intake
 
 import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -18,8 +21,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
+import com.medpull.kiosk.data.models.UploadStatus
+import java.io.File
 
 /**
  * Review screen shown after guided intake completes.
@@ -199,8 +206,7 @@ fun IntakeReviewScreen(
                 }
             }
             else -> {
-                // Group fields by section (fields come in section order from schema)
-                val sections = groupFieldsBySectionLabel(state.fields)
+                val sections = groupFieldsBySectionLabel(state.fields, state.formId)
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
@@ -226,6 +232,15 @@ fun IntakeReviewScreen(
                             }
                         }
                     }
+
+                    // Documents section — only shown for Sliding Fee
+                    if (state.documents.isNotEmpty()) {
+                        item { SectionHeader("Supporting Documents") }
+                        items(state.documents, key = { "doc_${it.type.name}" }) { slot ->
+                            DocumentReviewRow(slot)
+                        }
+                    }
+
                     item { Spacer(Modifier.height(8.dp)) }
                 }
             }
@@ -367,11 +382,163 @@ private fun SkippedFieldRow(field: FormField) {
     }
 }
 
+// ── Document review row ────────────────────────────────────────────────────
+
+@Composable
+private fun DocumentReviewRow(slot: DocumentSlot) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (slot.status == UploadStatus.MISSING) 1.5.dp else 0.5.dp,
+            color = when (slot.status) {
+                UploadStatus.UPLOADED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                UploadStatus.MISSING -> MaterialTheme.colorScheme.error
+                UploadStatus.SKIPPED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            }
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = when (slot.status) {
+                UploadStatus.MISSING -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.12f)
+                else -> MaterialTheme.colorScheme.surface
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Thumbnail / status icon
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    slot.status == UploadStatus.UPLOADED && slot.filePath != null -> {
+                        val isPdf = slot.filePath.endsWith(".pdf", ignoreCase = true)
+                        if (isPdf) {
+                            Icon(
+                                Icons.Default.Description, null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            AsyncImage(
+                                model = File(slot.filePath),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                    slot.status == UploadStatus.SKIPPED ->
+                        Icon(Icons.Default.RemoveCircleOutline, null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                    else ->
+                        Icon(Icons.Default.Warning, null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            // Label + status text
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = slot.type.displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (!slot.type.required) {
+                        Text(
+                            "Optional",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = when (slot.status) {
+                        UploadStatus.UPLOADED -> "Uploaded"
+                        UploadStatus.SKIPPED -> "Skipped"
+                        UploadStatus.MISSING -> if (slot.type.required) "Missing — required" else "Not provided"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = when (slot.status) {
+                        UploadStatus.UPLOADED -> MaterialTheme.colorScheme.primary
+                        UploadStatus.SKIPPED -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        UploadStatus.MISSING -> if (slot.type.required) MaterialTheme.colorScheme.error
+                                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    }
+                )
+            }
+
+            // Status icon on the right
+            when (slot.status) {
+                UploadStatus.UPLOADED ->
+                    Icon(Icons.Default.CheckCircle, null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                UploadStatus.MISSING ->
+                    if (slot.type.required)
+                        Icon(Icons.Default.Error, null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.error)
+                else -> {}
+            }
+        }
+    }
+}
+
+// ── Field grouping ─────────────────────────────────────────────────────────
+
+/** Per-form explicit field → section maps for correct display order. */
+private val FIELD_SECTION_MAPS = mapOf(
+    "sliding_fee_intake" to linkedMapOf(
+        "full_name" to "Personal Information",
+        "date_of_birth" to "Personal Information",
+        "address_street" to "Address",
+        "address_city" to "Address",
+        "address_state" to "Address",
+        "address_zip" to "Address",
+        "household_size" to "Household",
+        "number_of_dependents" to "Household",
+        "income_sources" to "Income",
+        "monthly_income" to "Income",
+        "employment_status" to "Employment & Insurance",
+        "insurance_status" to "Employment & Insurance"
+    )
+)
+
 /**
- * Groups fields into sections based on the schema order.
- * Uses known section boundary field IDs to infer section labels.
+ * Groups fields into labelled sections.
+ * Uses an explicit field→section map for known forms; falls back to
+ * boundary-based detection for others (e.g. Coastal Gateway).
  */
-private fun groupFieldsBySectionLabel(fields: List<FormField>): List<Pair<String, List<FormField>>> {
+private fun groupFieldsBySectionLabel(
+    fields: List<FormField>,
+    formId: String
+): List<Pair<String, List<FormField>>> {
+    val explicitMap = FIELD_SECTION_MAPS[formId]
+    if (explicitMap != null) {
+        val grouped = LinkedHashMap<String, MutableList<FormField>>()
+        for (field in fields) {
+            val section = explicitMap[field.id] ?: "Other"
+            grouped.getOrPut(section) { mutableListOf() }.add(field)
+        }
+        return grouped.entries.map { Pair(it.key, it.value.toList()) }
+    }
+
+    // Fallback: boundary-based detection for Coastal Gateway / Medicaid
     val sections = mutableListOf<Pair<String, MutableList<FormField>>>()
     val sectionBoundaries = mapOf(
         "preferred_language" to "Registration",
@@ -379,25 +546,17 @@ private fun groupFieldsBySectionLabel(fields: List<FormField>): List<Pair<String
         "hipaa_summary_delivered" to "HIPAA Consent",
         "general_consents_summary_delivered" to "General Consents"
     )
-
     var currentSection = "Registration"
     var currentFields = mutableListOf<FormField>()
-
     for (field in fields) {
         val newSection = sectionBoundaries[field.id]
         if (newSection != null && newSection != currentSection) {
-            if (currentFields.isNotEmpty()) {
-                sections.add(Pair(currentSection, currentFields))
-            }
+            if (currentFields.isNotEmpty()) sections.add(Pair(currentSection, currentFields))
             currentSection = newSection
             currentFields = mutableListOf()
         }
         currentFields.add(field)
     }
-
-    if (currentFields.isNotEmpty()) {
-        sections.add(Pair(currentSection, currentFields))
-    }
-
+    if (currentFields.isNotEmpty()) sections.add(Pair(currentSection, currentFields))
     return sections
 }

@@ -17,6 +17,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
+    <!-- Camera for document photo capture -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <!-- Microphone for speech-to-text -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
