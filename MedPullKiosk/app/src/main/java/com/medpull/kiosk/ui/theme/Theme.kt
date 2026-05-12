@@ -47,7 +47,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun MedPullKioskTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Kiosk always uses light theme for readability
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
