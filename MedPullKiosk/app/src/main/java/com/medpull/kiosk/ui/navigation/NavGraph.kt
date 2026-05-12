@@ -34,6 +34,7 @@ import com.medpull.kiosk.ui.screens.intake.GuidedIntakeViewModel
 import com.medpull.kiosk.ui.screens.programselection.ProgramSelectionScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeViewModel
+import com.medpull.kiosk.ui.screens.snfadmissions.SNFAdmissionsScreen
 import com.medpull.kiosk.ui.screens.staff.StaffPortalScreen
 import com.medpull.kiosk.utils.SessionManager
 import com.medpull.kiosk.utils.SessionState
@@ -123,6 +124,9 @@ fun NavGraph(
                             navController.navigate(Screen.FormSelection.route) {
                                 popUpTo(Screen.ProgramSelection.route)
                             }
+                        }
+                        IntakeProgramType.SNF_ADMISSIONS -> {
+                            navController.navigate(Screen.SNFAdmissions.route)
                         }
                     }
                 },
@@ -356,6 +360,12 @@ fun NavGraph(
             StaffPortalScreen(
                 onBack = { navController.popBackStack() },
                 submissionStore = submissionStore
+            )
+        }
+
+        composable(Screen.SNFAdmissions.route) {
+            SNFAdmissionsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

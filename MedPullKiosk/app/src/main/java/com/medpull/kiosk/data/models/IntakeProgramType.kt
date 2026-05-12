@@ -6,5 +6,6 @@ package com.medpull.kiosk.data.models
  */
 enum class IntakeProgramType {
     SLIDING_FEE,
-    MEDICAL_INTAKE
+    MEDICAL_INTAKE,
+    SNF_ADMISSIONS
 }

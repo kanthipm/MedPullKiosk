@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -94,6 +95,41 @@ fun ProgramSelectionScreen(
                         text = "New patient registration and health history",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Tertiary option: SNF Admissions Copilot ──────────────────────
+            OutlinedButton(
+                onClick = { onProgramSelected(IntakeProgramType.SNF_ADMISSIONS) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp),
+                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.tertiary),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.tertiary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MedicalServices,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .padding(end = 8.dp)
+                )
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text(
+                        text = "SNF Admissions Copilot",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "AI-assisted skilled nursing facility intake",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.75f)
                     )
                 }
             }

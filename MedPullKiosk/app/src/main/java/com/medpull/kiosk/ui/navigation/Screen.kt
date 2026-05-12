@@ -41,4 +41,5 @@ sealed class Screen(val route: String) {
         fun createRoute(formId: String) = "eligibility_summary/$formId"
     }
     object StaffPortal : Screen("staff_portal")
+    object SNFAdmissions : Screen("snf_admissions")
 }
