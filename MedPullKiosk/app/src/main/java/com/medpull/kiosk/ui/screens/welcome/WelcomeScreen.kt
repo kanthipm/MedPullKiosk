@@ -11,6 +11,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material3.Icon
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 
@@ -31,7 +38,8 @@ private val welcomeTranslations = listOf(
 @Composable
 fun WelcomeScreen(
     viewModel: WelcomeViewModel = hiltViewModel(),
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    onStaffView: () -> Unit = {}
 ) {
     var languageIndex by remember { mutableIntStateOf(0) }
 
@@ -48,6 +56,7 @@ fun WelcomeScreen(
         animationSpec = androidx.compose.animation.core.tween(600)
     )
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -123,5 +132,25 @@ fun WelcomeScreen(
             textAlign = TextAlign.Center
         )
 
+    } // end Column
+
+    // Staff View — bottom-end corner
+    OutlinedButton(
+        onClick = onStaffView,
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(24.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Filled.AdminPanelSettings,
+            contentDescription = null,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Text(
+            text = "Staff View",
+            style = MaterialTheme.typography.labelLarge
+        )
     }
+
+    } // end Box
 }

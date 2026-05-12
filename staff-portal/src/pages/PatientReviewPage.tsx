@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MOCK_APPLICATIONS } from "../mockData";
+import { useSubmissions } from "../hooks/useSubmissions";
 import { SectionCard } from "../components/SectionCard";
 import { StatusBadge } from "../components/StatusBadge";
 import type { ApplicationStatus, UploadedDocument } from "../types";
@@ -191,8 +191,9 @@ export function PatientReviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [notes, setNotes] = useState("");
+  const applications = useSubmissions();
 
-  const app = MOCK_APPLICATIONS.find((a) => a.id === id);
+  const app = applications.find((a) => a.id === id);
 
   if (!app) {
     return (

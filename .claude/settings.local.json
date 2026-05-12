@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(curl:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(\"/c/Users/kanth/AppData/Local/Android/Sdk/emulator/emulator.exe\" -avd Medium_Tablet -gpu host -no-boot-anim -wipe-data)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npx tailwindcss *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(pkill -f \"vite --port 5173\")",
+      "Bash(adb exec-out *)",
+      "Bash(adb shell *)",
+      "Bash(adb pull *)"
     ]
   }
 }

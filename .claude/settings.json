@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs basename *)",
+      "Bash(grep -i \"coil\\\\|glide\\\\|picasso\" c:/Users/kanth/MedPullKiosk/MedPullKiosk/app/build.gradle*)",
+      "Bash(/c/Users/kanth/AppData/Local/Android/Sdk/platform-tools/adb reboot *)",
+      "Bash(/c/Users/kanth/AppData/Local/Android/Sdk/emulator/emulator -list-avds)",
+      "Bash(tasklist)",
+      "Bash(cmd.exe /c 'start /B \"\" \"/c/Users/kanth/AppData/Local/Android/Sdk/emulator/emulator.exe\" -avd Medium_Tablet -no-boot-anim -no-snapshot-load')",
+      "Bash(\"/c/Users/kanth/AppData/Local/Android/Sdk/emulator/emulator.exe\" -avd Medium_Tablet -no-boot-anim -no-snapshot-load)",
+      "Bash(echo \"Emulator PID: $!\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)"
+    ]
+  }
+}

@@ -2,6 +2,7 @@ package com.medpull.kiosk.ui
 
 import android.os.Bundle
 import android.view.WindowManager
+import com.medpull.kiosk.BuildConfig
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import com.medpull.kiosk.ui.navigation.NavGraph
 import com.medpull.kiosk.ui.theme.MedPullKioskTheme
 import com.medpull.kiosk.utils.LocaleManager
 import com.medpull.kiosk.utils.SessionManager
+import com.medpull.kiosk.utils.SubmissionStore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -36,16 +38,21 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionManager: SessionManager
 
     @Inject
+    lateinit var submissionStore: SubmissionStore
+
+    @Inject
     lateinit var localeManager: LocaleManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Apply security settings (prevent screenshots)
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        // Apply security settings (prevent screenshots — disabled in debug for development)
+        if (!BuildConfig.DEBUG) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+        }
 
         setContent {
             // Observe saved language and update the Activity's resource configuration.
@@ -90,7 +97,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        NavGraph(sessionManager = sessionManager)
+                        NavGraph(sessionManager = sessionManager, submissionStore = submissionStore)
                     }
                 }
             }

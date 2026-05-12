@@ -1,17 +1,6 @@
-import { useNavigate } from "react-router-dom";
-import { MOCK_APPLICATIONS } from "../mockData";
+import { useSubmissions } from "../hooks/useSubmissions";
 import { ApplicationTable } from "../components/ApplicationTable";
 import type { ApplicationStatus } from "../types";
-
-const STATUS_COUNTS: Record<ApplicationStatus, number> = {
-  READY_FOR_REVIEW: 0,
-  INCOMPLETE_APPLICATION: 0,
-  NEEDS_FOLLOW_UP: 0,
-};
-
-MOCK_APPLICATIONS.forEach((app) => {
-  STATUS_COUNTS[app.status]++;
-});
 
 interface StatCardProps {
   label: string;
@@ -30,7 +19,17 @@ function StatCard({ label, value, colorClass, bgClass }: StatCardProps) {
 }
 
 export function StaffDashboardPage() {
-  const navigate = useNavigate();
+  const handleBackToKiosk = () => window.history.go(-window.history.length);
+  const applications = useSubmissions();
+
+  const statusCounts: Record<ApplicationStatus, number> = {
+    READY_FOR_REVIEW: 0,
+    INCOMPLETE_APPLICATION: 0,
+    NEEDS_FOLLOW_UP: 0,
+  };
+  applications.forEach((app) => {
+    statusCounts[app.status]++;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -52,7 +51,7 @@ export function StaffDashboardPage() {
             </div>
           </div>
           <button
-            onClick={() => navigate("/")}
+            onClick={handleBackToKiosk}
             className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +68,7 @@ export function StaffDashboardPage() {
         <div>
           <h2 className="text-xl font-bold text-slate-900">Application Review</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {MOCK_APPLICATIONS.length} submitted applications · Today
+            {applications.length} submitted applications · Today
           </p>
         </div>
 
@@ -77,25 +76,25 @@ export function StaffDashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard
             label="Total"
-            value={MOCK_APPLICATIONS.length}
+            value={applications.length}
             colorClass="text-slate-800"
             bgClass="border-slate-200 bg-white"
           />
           <StatCard
             label="Ready for Review"
-            value={STATUS_COUNTS.READY_FOR_REVIEW}
+            value={statusCounts.READY_FOR_REVIEW}
             colorClass="text-emerald-700"
             bgClass="border-emerald-100 bg-emerald-50"
           />
           <StatCard
             label="Incomplete"
-            value={STATUS_COUNTS.INCOMPLETE_APPLICATION}
+            value={statusCounts.INCOMPLETE_APPLICATION}
             colorClass="text-amber-700"
             bgClass="border-amber-100 bg-amber-50"
           />
           <StatCard
             label="Needs Follow-Up"
-            value={STATUS_COUNTS.NEEDS_FOLLOW_UP}
+            value={statusCounts.NEEDS_FOLLOW_UP}
             colorClass="text-red-700"
             bgClass="border-red-100 bg-red-50"
           />
@@ -103,7 +102,7 @@ export function StaffDashboardPage() {
 
         {/* Applications table */}
         <section>
-          <ApplicationTable applications={MOCK_APPLICATIONS} />
+          <ApplicationTable applications={applications} />
         </section>
       </main>
     </div>

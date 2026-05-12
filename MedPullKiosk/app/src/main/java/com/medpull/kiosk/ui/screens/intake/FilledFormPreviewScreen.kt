@@ -1,6 +1,5 @@
 package com.medpull.kiosk.ui.screens.intake
 
-import android.content.Intent
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.webkit.WebView
@@ -15,10 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.ui.components.InteractivePdfViewer
 
@@ -33,7 +32,7 @@ fun FilledFormPreviewScreen(
     viewModel: FilledFormPreviewViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
+    val context = LocalContext.current  // still needed for print
 
     var currentPage by remember { mutableIntStateOf(0) }
     var pageCount by remember { mutableIntStateOf(1) }
@@ -110,8 +109,7 @@ fun FilledFormPreviewScreen(
                                     })
                                 }
                             } catch (e: Exception) {
-                                // Fallback: share as PDF
-                                sharePdf(context, state)
+                                android.util.Log.e("FilledFormPreview", "Print failed", e)
                             }
                         },
                         enabled = state.pdfFile != null,
@@ -124,13 +122,28 @@ fun FilledFormPreviewScreen(
 
                     // Send to clinic button
                     Button(
-                        onClick = { sharePdf(context, state) },
-                        enabled = state.pdfFile != null,
+                        onClick = { if (!state.isSent) viewModel.sendToClinic() },
+                        enabled = state.pdfFile != null && !state.isSending,
+                        colors = if (state.isSent)
+                            ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A))
+                        else ButtonDefaults.buttonColors(),
                         modifier = Modifier.weight(1f).height(52.dp)
                     ) {
-                        Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Send to Clinic")
+                        if (state.isSending) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else if (state.isSent) {
+                            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Sent!")
+                        } else {
+                            Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Send to Clinic")
+                        }
                     }
 
                     // Done button
@@ -222,19 +235,3 @@ fun FilledFormPreviewScreen(
     }
 }
 
-private fun sharePdf(context: android.content.Context, state: FilledFormPreviewState) {
-    val file = state.pdfFile ?: return
-    try {
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/pdf"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, state.formName)
-            putExtra(Intent.EXTRA_TEXT, "Patient intake form — ${state.formName}")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(Intent.createChooser(intent, "Send Filled Form"))
-    } catch (e: Exception) {
-        android.util.Log.e("FilledFormPreview", "Error sharing PDF", e)
-    }
-}

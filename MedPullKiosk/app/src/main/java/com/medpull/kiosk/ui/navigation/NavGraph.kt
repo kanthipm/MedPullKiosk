@@ -34,8 +34,10 @@ import com.medpull.kiosk.ui.screens.intake.GuidedIntakeViewModel
 import com.medpull.kiosk.ui.screens.programselection.ProgramSelectionScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeScreen
 import com.medpull.kiosk.ui.screens.welcome.WelcomeViewModel
+import com.medpull.kiosk.ui.screens.staff.StaffPortalScreen
 import com.medpull.kiosk.utils.SessionManager
 import com.medpull.kiosk.utils.SessionState
+import com.medpull.kiosk.utils.SubmissionStore
 
 /**
  * Navigation graph for the app
@@ -44,7 +46,8 @@ import com.medpull.kiosk.utils.SessionState
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
-    sessionManager: SessionManager
+    sessionManager: SessionManager,
+    submissionStore: SubmissionStore
 ) {
     // Monitor session state
     val sessionState by sessionManager.sessionState.collectAsState()
@@ -98,6 +101,9 @@ fun NavGraph(
                     navController.navigate(Screen.ProgramSelection.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
+                },
+                onStaffView = {
+                    navController.navigate(Screen.StaffPortal.route)
                 }
             )
         }
@@ -119,6 +125,9 @@ fun NavGraph(
                             }
                         }
                     }
+                },
+                onStaffView = {
+                    navController.navigate(Screen.StaffPortal.route)
                 }
             )
         }
@@ -340,6 +349,13 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(Screen.StaffPortal.route) {
+            StaffPortalScreen(
+                onBack = { navController.popBackStack() },
+                submissionStore = submissionStore
             )
         }
     }
