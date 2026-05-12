@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.medpull.kiosk.data.local.AppDatabase
 import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.dao.BranchingRuleDao
+import com.medpull.kiosk.data.local.dao.DocumentDao
 import com.medpull.kiosk.data.local.dao.FormDao
 import com.medpull.kiosk.data.local.dao.PatientCacheDao
 import com.medpull.kiosk.data.local.dao.FormFieldDao
@@ -86,5 +87,11 @@ object DatabaseModule {
     @Singleton
     fun providePatientCacheDao(database: AppDatabase): PatientCacheDao {
         return database.patientCacheDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideDocumentDao(database: AppDatabase): DocumentDao {
+        return database.documentDao()
     }
 }

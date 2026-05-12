@@ -22,6 +22,8 @@ import com.medpull.kiosk.healthcare.ui.FhirSettingsScreen
 import com.medpull.kiosk.ui.screens.export.ExportScreen
 import com.medpull.kiosk.ui.screens.formselection.FormSelectionScreen
 import com.medpull.kiosk.ui.screens.formfill.FormFillScreen
+import com.medpull.kiosk.ui.screens.intake.DocumentUploadScreen
+import com.medpull.kiosk.ui.screens.intake.EligibilitySummaryScreen
 import com.medpull.kiosk.ui.screens.intake.GuidedIntakeScreen
 import com.medpull.kiosk.ui.screens.intake.FilledFormPreviewScreen
 import com.medpull.kiosk.ui.screens.intake.IntakeReviewScreen
@@ -228,8 +230,57 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onComplete = {
-                    navController.navigate(Screen.IntakeReview.createRoute(formId)) {
-                        popUpTo(Screen.FormSelection.route)
+                    if (formId == GuidedIntakeViewModel.SLIDING_FEE_ID) {
+                        navController.navigate(Screen.DocumentUpload.createRoute(formId)) {
+                            popUpTo(Screen.ProgramSelection.route)
+                        }
+                    } else {
+                        navController.navigate(Screen.IntakeReview.createRoute(formId)) {
+                            popUpTo(Screen.FormSelection.route)
+                        }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Screen.DocumentUpload.route,
+            arguments = listOf(navArgument("formId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val formId = backStackEntry.arguments?.getString("formId") ?: ""
+            DocumentUploadScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onContinue = {
+                    navController.navigate(Screen.EligibilitySummary.createRoute(formId)) {
+                        popUpTo(Screen.ProgramSelection.route)
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Screen.EligibilitySummary.route,
+            arguments = listOf(navArgument("formId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val formId = backStackEntry.arguments?.getString("formId") ?: ""
+            EligibilitySummaryScreen(
+                onEditInfo = {
+                    navController.navigate(
+                        Screen.GuidedIntake.createRoute(formId, editLast = true)
+                    ) {
+                        popUpTo(Screen.ProgramSelection.route)
+                    }
+                },
+                onReuploadDocs = {
+                    navController.navigate(Screen.DocumentUpload.createRoute(formId)) {
+                        popUpTo(Screen.EligibilitySummary.createRoute(formId)) { inclusive = true }
+                    }
+                },
+                onSubmitted = {
+                    navController.navigate(Screen.FilledFormPreview.createRoute(formId)) {
+                        popUpTo(Screen.ProgramSelection.route)
                     }
                 }
             )

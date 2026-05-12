@@ -34,4 +34,10 @@ sealed class Screen(val route: String) {
     }
     object Inventory : Screen("inventory")
     object ProgramSelection : Screen("program_selection")
+    object DocumentUpload : Screen("document_upload/{formId}") {
+        fun createRoute(formId: String) = "document_upload/$formId"
+    }
+    object EligibilitySummary : Screen("eligibility_summary/{formId}") {
+        fun createRoute(formId: String) = "eligibility_summary/$formId"
+    }
 }
