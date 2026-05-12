@@ -8,6 +8,7 @@ import { MissingInfoPanel, IntakeIssuesPanel } from './MissingInfoPanel'
 import { RiskFlagsPanel } from './RiskFlagsPanel'
 import { HospitalizationTimeline } from './HospitalizationTimeline'
 import { MedicationReconciliation } from './MedicationReconciliation'
+import { AdmissionReadinessBadge, FollowUpWorkflowSection } from './FollowUpWorkflow'
 
 const RISK_LABELS: Record<keyof RiskFlags, string> = {
   fallRisk: 'Fall', behavioralRisk: 'Behavioral', medicationNoncompliance: 'Med Compliance',
@@ -40,8 +41,14 @@ export function Dashboard({ profile }: { profile: PatientProfile }) {
             ))}
           </div>
         </div>
+        <div className="mt-3">
+          <AdmissionReadinessBadge
+            readiness={profile.followUp.admissionReadiness}
+            reason={profile.followUp.admissionReadinessReason}
+          />
+        </div>
         {highRisks.length > 0 && (
-          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
             <p className="text-xs font-semibold text-red-700">High-risk patient: {highRisks.map(([k]) => RISK_LABELS[k]).join(', ')}</p>
           </div>
@@ -84,6 +91,9 @@ export function Dashboard({ profile }: { profile: PatientProfile }) {
 
       {/* Medication reconciliation */}
       <MedicationReconciliation reconciliation={profile.reconciliation} />
+
+      {/* Follow-up workflow */}
+      <FollowUpWorkflowSection workflow={profile.followUp} />
 
       <div className="h-4" />
     </div>

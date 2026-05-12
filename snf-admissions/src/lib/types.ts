@@ -133,6 +133,36 @@ export interface MedReconciliation {
   recommendedActions: ReconAction[]
 }
 
+// ─── Follow-Up Workflow ───────────────────────────────────────────────────────
+
+export type FollowUpOwner = 'admissions' | 'nursing' | 'billing' | 'case_management' | 'infection_control' | 'pharmacy'
+export type FollowUpUrgency = 'critical' | 'high' | 'medium' | 'low'
+export type FollowUpStatus = 'pending' | 'awaiting_response' | 'needs_clinical_review' | 'resolved' | 'admission_blocker'
+export type AdmissionReadiness = 'ready' | 'ready_with_warnings' | 'pending_critical' | 'high_risk'
+
+export interface ActivityEvent {
+  timestamp: string    // display string e.g. "Today 9:14 AM"
+  event: string
+}
+
+export interface FollowUpAction {
+  id: string
+  issueTitle: string
+  description: string
+  owner: FollowUpOwner
+  urgency: FollowUpUrgency
+  suggestedAction: string
+  communicationAction: string | null   // e.g. "Contact hospital case manager"
+  status: FollowUpStatus
+  activityLog: ActivityEvent[]
+}
+
+export interface FollowUpWorkflow {
+  admissionReadiness: AdmissionReadiness
+  admissionReadinessReason: string
+  actions: FollowUpAction[]
+}
+
 // ─── Patient Profile ─────────────────────────────────────────────────────────
 
 export interface PatientProfile {
@@ -144,6 +174,7 @@ export interface PatientProfile {
   risks: RiskFlags
   timeline: TimelineEvent[]
   reconciliation: MedReconciliation
+  followUp: FollowUpWorkflow
   meta: ProcessingMeta
 }
 

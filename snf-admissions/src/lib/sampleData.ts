@@ -1,4 +1,4 @@
-import type { PatientProfile, MedReconciliation } from './types'
+import type { PatientProfile, MedReconciliation, FollowUpWorkflow } from './types'
 
 export const SAMPLE_PROFILE: PatientProfile = {
   snapshot: {
@@ -248,6 +248,111 @@ export const SAMPLE_PROFILE: PatientProfile = {
       { id: 'ac6', action: 'Recheck eGFR at 72 hours post-admission and reassess Enoxaparin dosing with attending physician.', priority: 'routine' },
     ],
   } satisfies MedReconciliation,
+
+  followUp: {
+    admissionReadiness: 'pending_critical',
+    admissionReadinessReason: '3 critical blockers unresolved: advance directive missing, allergy conflict undocumented, Metformin hold order not reconciled.',
+    actions: [
+      {
+        id: 'f1',
+        issueTitle: 'Advance Directive / POLST Not Included',
+        description: 'No POLST or Advance Directive present in transfer packet. Family reports DNR status — must be documented within 24 hours of admission.',
+        owner: 'admissions',
+        urgency: 'critical',
+        suggestedAction: 'Request POLST/DNR documentation from hospital discharge planner before admission finalization. If unavailable, initiate facility POLST intake process with patient family on day of admission.',
+        communicationAction: 'Contact hospital discharge planner — request POLST or Advance Directive fax',
+        status: 'admission_blocker',
+        activityLog: [
+          { timestamp: 'Today 9:14 AM', event: 'Issue detected during document review' },
+          { timestamp: 'Today 9:14 AM', event: 'Flagged as admission blocker — follow-up required before finalization' },
+        ],
+      },
+      {
+        id: 'f2',
+        issueTitle: 'Allergy Documentation Conflict',
+        description: 'MAR lists NKDA but discharge summary notes a reported sulfa drug reaction. Allergy list must be reconciled and documented before any medications are ordered.',
+        owner: 'nursing',
+        urgency: 'critical',
+        suggestedAction: 'Confirm allergy history with patient family and discharging nurse before admission. Update allergy list in SNF chart immediately. Notify pharmacy of sulfa allergy flag.',
+        communicationAction: 'Contact discharging unit nurse — verify allergy history',
+        status: 'needs_clinical_review',
+        activityLog: [
+          { timestamp: 'Today 9:14 AM', event: 'Conflict detected: MAR documents NKDA, discharge summary notes sulfa reaction' },
+          { timestamp: 'Today 9:14 AM', event: 'Assigned to Nursing Review — clinical verification required' },
+        ],
+      },
+      {
+        id: 'f3',
+        issueTitle: 'Metformin Hold Not on MAR',
+        description: 'Discharge summary recommends holding Metformin due to CKD Stage 3 (eGFR 42), but MAR still lists it as active. Risk of renal complications if administered.',
+        owner: 'nursing',
+        urgency: 'critical',
+        suggestedAction: 'Confirm Metformin hold order with discharging provider prior to any medication administration. Obtain written hold order and update MAR at SNF before first medication pass.',
+        communicationAction: 'Contact discharging physician — obtain written Metformin hold order',
+        status: 'needs_clinical_review',
+        activityLog: [
+          { timestamp: 'Today 9:14 AM', event: 'Discrepancy identified: Metformin active in MAR, hold ordered in discharge summary' },
+          { timestamp: 'Today 9:14 AM', event: 'Flagged for nursing review — do not administer until resolved' },
+        ],
+      },
+      {
+        id: 'f4',
+        issueTitle: 'Primary Care Physician Not Identified',
+        description: 'No PCP listed in discharge documents. Required for care continuity and medication reconciliation sign-off within 30 days of admission.',
+        owner: 'case_management',
+        urgency: 'high',
+        suggestedAction: 'Contact patient family to identify PCP. If no established PCP, assign SNF medical director as interim attending and initiate PCP referral within 30 days.',
+        communicationAction: 'Contact patient family — request PCP information',
+        status: 'pending',
+        activityLog: [
+          { timestamp: 'Today 9:14 AM', event: 'No PCP identified in transfer documents' },
+          { timestamp: 'Today 9:14 AM', event: 'Assigned to Case Management for follow-up' },
+        ],
+      },
+      {
+        id: 'f5',
+        issueTitle: 'MRSA Screen Result Pending',
+        description: 'MRSA nasal screen collected 10/31 — result not in discharge packet. Contact precautions must remain in place until result received.',
+        owner: 'infection_control',
+        urgency: 'high',
+        suggestedAction: 'Request MRSA screen result from hospital lab or infection control. Maintain contact precautions on admission until negative result confirmed. Notify admissions team of room assignment implications.',
+        communicationAction: 'Request MRSA screen result from Mercy General lab/infection control',
+        status: 'awaiting_response',
+        activityLog: [
+          { timestamp: 'Today 9:14 AM', event: 'MRSA screen result not included in transfer packet' },
+          { timestamp: 'Today 9:14 AM', event: 'Contact precautions recommended pending result' },
+          { timestamp: 'Today 9:22 AM', event: 'Follow-up initiated — awaiting result from Mercy General' },
+        ],
+      },
+      {
+        id: 'f6',
+        issueTitle: 'Speech Therapy Order Missing',
+        description: 'Nursing noted aspiration concern; thickened liquids ordered, but no formal speech therapy order found in transfer documents.',
+        owner: 'admissions',
+        urgency: 'medium',
+        suggestedAction: 'Obtain speech therapy order from discharging physician or SNF attending. Initiate soft mechanical diet and thickened liquids per nursing note until formal SLP evaluation is completed.',
+        communicationAction: 'Request speech therapy order from discharging provider',
+        status: 'pending',
+        activityLog: [
+          { timestamp: 'Today 9:14 AM', event: 'Aspiration precautions noted but no SLP order found in documents' },
+        ],
+      },
+      {
+        id: 'f7',
+        issueTitle: 'Secondary Insurance Prior Auth Unconfirmed',
+        description: 'UnitedHealthcare MedSupp Plan G secondary authorization for SNF stay not documented. Verify before day 21 cost-sharing begins.',
+        owner: 'billing',
+        urgency: 'medium',
+        suggestedAction: 'Contact UnitedHealthcare to verify SNF secondary authorization. Confirm benefit period and document authorization number in billing system. Alert financial counselor to schedule family cost projection meeting.',
+        communicationAction: 'Call UnitedHealthcare — verify secondary SNF authorization',
+        status: 'pending',
+        activityLog: [
+          { timestamp: 'Today 9:14 AM', event: 'Secondary prior auth not confirmed in eligibility documents' },
+          { timestamp: 'Today 9:14 AM', event: 'Assigned to Billing — follow up before day 21' },
+        ],
+      },
+    ],
+  } satisfies FollowUpWorkflow,
 
   meta: {
     filesProcessed: ['harrington_discharge_summary.pdf', 'harrington_MAR_10282024.pdf', 'harrington_insurance_eligibility.pdf'],

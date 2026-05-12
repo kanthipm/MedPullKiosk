@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   AlertTriangle, CheckCircle2, XCircle, Clock, FileText,
-  ChevronDown, ChevronRight, Pencil, Check, X, ShieldAlert, Info,
+  ChevronDown, ChevronRight, Pencil, Check, X, ShieldAlert, Info, AlignLeft,
 } from 'lucide-react'
 import { SectionCard } from './SectionCard'
 import { cn } from '@/lib/utils'
@@ -170,72 +170,47 @@ function ReconRow({ med }: { med: ReconMedication }) {
   )
 }
 
-// ─── Alerts panel ────────────────────────────────────────────────────────────
+// ─── Recommended actions + alerts combined ────────────────────────────────────
 
-function AlertsPanel({ alerts }: { alerts: MedReconciliation['alerts'] }) {
+function RecommendedActions({ actions, alerts }: { actions: MedReconciliation['recommendedActions']; alerts: MedReconciliation['alerts'] }) {
+  const urgent  = actions.filter((a) => a.priority === 'urgent')
+  const routine = actions.filter((a) => a.priority === 'routine')
   const criticals = alerts.filter((a) => a.severity === 'critical')
   const warnings  = alerts.filter((a) => a.severity === 'warning')
   const infos     = alerts.filter((a) => a.severity === 'info')
-  const ordered   = [...criticals, ...warnings, ...infos]
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-fit">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-        <div className="flex items-center gap-2">
-          <ShieldAlert className="h-3.5 w-3.5 text-slate-500" />
-          <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Reconciliation Alerts</h2>
-        </div>
-        {criticals.length > 0 && (
-          <span className="text-xs font-semibold text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">
-            {criticals.length} critical
-          </span>
-        )}
-      </div>
-      <div className="p-3 space-y-2">
-        {ordered.length === 0 ? (
-          <p className="text-sm text-emerald-700 flex items-center gap-2 p-2">
-            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />No reconciliation alerts identified.
-          </p>
-        ) : ordered.map((alert) => {
-          const cfg = ALERT_CONFIG[alert.severity]
-          return (
-            <div key={alert.id} className={cn('rounded-lg border p-3', cfg.bg)}>
-              <div className="flex items-start gap-2">
-                {cfg.icon}
-                <div>
-                  <span className={cn('text-xs font-bold uppercase tracking-wide', cfg.color)}>{cfg.label}</span>
-                  <p className={cn('text-xs mt-0.5 leading-snug', cfg.color)}>{alert.message}</p>
-                  {alert.medications.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {alert.medications.map((m) => (
-                        <span key={m} className="text-xs px-1.5 py-0.5 bg-white/70 border border-current/20 rounded font-medium opacity-80">{m}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ─── Recommended actions ──────────────────────────────────────────────────────
-
-function RecommendedActions({ actions }: { actions: MedReconciliation['recommendedActions'] }) {
-  const urgent  = actions.filter((a) => a.priority === 'urgent')
-  const routine = actions.filter((a) => a.priority === 'routine')
+  const orderedAlerts = [...criticals, ...warnings, ...infos]
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
-        <Check className="h-3.5 w-3.5 text-slate-500" />
-        <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Recommended Actions</h2>
+        <AlignLeft className="h-3.5 w-3.5 text-slate-500" />
+        <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Findings &amp; Recommended Actions</h2>
       </div>
-      <div className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="p-4 space-y-5">
+        {/* Alerts inline */}
+        {orderedAlerts.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Reconciliation Findings</p>
+            {orderedAlerts.map((alert) => {
+              const cfg = ALERT_CONFIG[alert.severity]
+              return (
+                <div key={alert.id} className={cn('rounded-lg border p-3 flex items-start gap-2.5', cfg.bg)}>
+                  {cfg.icon}
+                  <div>
+                    <span className={cn('text-xs font-bold uppercase tracking-wide', cfg.color)}>{cfg.label}</span>
+                    {alert.medications.length > 0 && (
+                      <span className="ml-2 text-xs text-slate-500">{alert.medications.join(', ')}</span>
+                    )}
+                    <p className={cn('text-xs mt-0.5 leading-snug', cfg.color)}>{alert.message}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {urgent.length > 0 && (
             <div>
               <p className="text-xs font-bold text-red-700 uppercase tracking-wide mb-2">Urgent — Before Admission</p>
@@ -279,48 +254,36 @@ export function MedicationReconciliation({ reconciliation }: { reconciliation: M
       <SectionCard
         title="Medication Reconciliation Review"
         icon={<ShieldAlert className="h-3.5 w-3.5" />}
-        headerExtra={
-          <div className="flex items-center gap-2">
-            {criticalCount > 0 && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">
-                <XCircle className="h-3 w-3" />{criticalCount} critical
-              </span>
-            )}
-          </div>
-        }
+        headerExtra={criticalCount > 0 ? (
+          <span className="flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">
+            <XCircle className="h-3 w-3" />{criticalCount} critical
+          </span>
+        ) : undefined}
       >
         <SummaryWidget summary={summary} />
 
-        {/* Table + alerts side by side */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4 items-start">
-          {/* Main table */}
-          <div className="overflow-x-auto -mx-4 -mb-4">
-            <table className="w-full min-w-[900px] text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  {['Medication', 'Dose', 'Frequency', 'Source Documents', 'Reconciliation Status', 'Risk Level', 'Confidence', 'Staff Notes'].map((h) => (
-                    <th key={h} className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {medications.length > 0
-                  ? medications.map((m) => <ReconRow key={m.id} med={m} />)
-                  : <tr><td colSpan={8} className="px-3 py-6 text-sm text-slate-400 text-center">No medications extracted</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
-
-          {/* Alerts panel */}
-          <div className="-mb-4">
-            <AlertsPanel alerts={alerts} />
-          </div>
+        {/* Full-width table */}
+        <div className="overflow-x-auto -mx-4 -mb-4">
+          <table className="w-full min-w-[900px] text-left">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                {['Medication', 'Dose', 'Frequency', 'Source Documents', 'Reconciliation Status', 'Risk Level', 'Confidence', 'Staff Notes'].map((h) => (
+                  <th key={h} className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {medications.length > 0
+                ? medications.map((m) => <ReconRow key={m.id} med={m} />)
+                : <tr><td colSpan={8} className="px-3 py-6 text-sm text-slate-400 text-center">No medications extracted</td></tr>
+              }
+            </tbody>
+          </table>
         </div>
       </SectionCard>
 
-      {/* Recommended actions */}
-      {recommendedActions.length > 0 && <RecommendedActions actions={recommendedActions} />}
+      {/* Findings + recommended actions */}
+      <RecommendedActions actions={recommendedActions} alerts={alerts} />
 
       {/* Disclaimer */}
       <p className="text-xs text-slate-400 text-center px-4">

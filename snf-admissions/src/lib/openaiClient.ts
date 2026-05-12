@@ -134,6 +134,21 @@ Schema:
     }],
     "alerts": [{ "id": string, "severity": "critical"|"warning"|"info", "message": string, "medications": string[] }],
     "recommendedActions": [{ "id": string, "action": string, "priority": "urgent"|"routine" }]
+  },
+  "followUp": {
+    "admissionReadiness": "ready"|"ready_with_warnings"|"pending_critical"|"high_risk",
+    "admissionReadinessReason": string,
+    "actions": [{
+      "id": string,
+      "issueTitle": string,
+      "description": string,
+      "owner": "admissions"|"nursing"|"billing"|"case_management"|"infection_control"|"pharmacy",
+      "urgency": "critical"|"high"|"medium"|"low",
+      "suggestedAction": string,
+      "communicationAction": string|null,
+      "status": "pending"|"awaiting_response"|"needs_clinical_review"|"resolved"|"admission_blocker",
+      "activityLog": [{ "timestamp": string, "event": string }]
+    }]
   }
 }
 
@@ -145,4 +160,6 @@ Rules:
 - Detect allergy conflicts across documents and include as a critical alert.
 - For each reconciliation medication include sourceSnippets with the exact text found in each document.
 - Generate specific recommended actions for each discrepancy.
-- issues.id = "i1","i2"... medications[].id = "m1","m2"... reconciliation.medications[].id = "r1","r2"... alerts[].id = "ra1","ra2"... recommendedActions[].id = "ac1","ac2"...`
+- For followUp.actions: generate one action per issue detected. Assign realistic owner, urgency, suggested action, and communicationAction. activityLog should show "Issue detected" as first entry.
+- admissionReadiness: "pending_critical" if any critical unresolved issues exist; "high_risk" if patient is medically complex AND has critical blockers; "ready_with_warnings" if only warnings remain; "ready" if all clear.
+- issues.id = "i1","i2"... medications[].id = "m1","m2"... reconciliation.medications[].id = "r1","r2"... alerts[].id = "ra1","ra2"... recommendedActions[].id = "ac1","ac2"... followUp.actions[].id = "f1","f2"...`
