@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.medpull.kiosk.data.local.entities.DocumentEntity
 import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.UploadStatus
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.DocumentRepository
+import com.medpull.kiosk.utils.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +43,7 @@ data class DocumentUploadState(
 @HiltViewModel
 class DocumentUploadViewModel @Inject constructor(
     private val repository: DocumentRepository,
+    private val appStrings: AppStrings,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -82,7 +85,7 @@ class DocumentUploadViewModel @Inject constructor(
             }.onSuccess { entity ->
                 updateSlot(entity)
             }.onFailure { e ->
-                _state.update { it.copy(error = "Failed to save document: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_save_document, e.message ?: "")) }
             }
             _state.update { it.copy(isLoading = false) }
         }
@@ -97,7 +100,7 @@ class DocumentUploadViewModel @Inject constructor(
             }.onSuccess { entity ->
                 updateSlot(entity)
             }.onFailure { e ->
-                _state.update { it.copy(error = "Failed to save photo: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_save_photo, e.message ?: "")) }
             }
             _state.update { it.copy(isLoading = false) }
         }

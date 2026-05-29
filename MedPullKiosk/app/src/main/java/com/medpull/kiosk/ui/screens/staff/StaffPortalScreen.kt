@@ -22,8 +22,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.medpull.kiosk.R
 import androidx.webkit.WebViewAssetLoader
 import com.medpull.kiosk.utils.SubmissionStore
 
@@ -43,13 +45,13 @@ fun StaffPortalScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Staff Portal") },
+                title = { Text(stringResource(R.string.staff_portal)) },
                 navigationIcon = {
                     IconButton(onClick = {
                         val wv = webView
                         if (wv != null && wv.canGoBack()) wv.goBack() else onBack()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )

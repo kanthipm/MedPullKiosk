@@ -4,6 +4,10 @@
   "version": "2.0-demo",
   "ai_instructions": "You are helping a patient complete their Medicaid renewal. Ask one question at a time. Be warm and reassuring — many patients are anxious about losing coverage.",
 
+  "skip_rules": [
+    { "when_field": "has_other_insurance", "equals": "No", "skip": ["other_insurance_type"] }
+  ],
+
   "sections": [
     {
       "id": "personal_info",

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
@@ -63,7 +65,9 @@ fun IntakeReviewScreen(
                 putExtra(Intent.EXTRA_SUBJECT, state.formName)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Share or Print Form"))
+            context.startActivity(
+                Intent.createChooser(intent, context.getString(R.string.review_share_or_print))
+            )
         } catch (e: Exception) {
             android.util.Log.e("IntakeReviewScreen", "Error sharing PDF", e)
         }
@@ -76,7 +80,7 @@ fun IntakeReviewScreen(
                 title = {
                     Column {
                         Text(
-                            "Review Your Answers",
+                            stringResource(R.string.review_title),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
@@ -88,7 +92,7 @@ fun IntakeReviewScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -120,7 +124,7 @@ fun IntakeReviewScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "$unfilled required field${if (unfilled != 1) "s" else ""} still need${if (unfilled == 1) "s" else ""} an answer",
+                                text = stringResource(R.string.review_unfilled_fields, unfilled),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -148,7 +152,11 @@ fun IntakeReviewScreen(
                             }
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                if (state.isGeneratingPdf) "Generating…" else "Export PDF",
+                                if (state.isGeneratingPdf) {
+                                    stringResource(R.string.review_generating)
+                                } else {
+                                    stringResource(R.string.export_pdf)
+                                },
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
@@ -160,7 +168,7 @@ fun IntakeReviewScreen(
                             Icon(Icons.Default.CheckCircle, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "Submit",
+                                stringResource(R.string.review_submit),
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
@@ -178,7 +186,7 @@ fun IntakeReviewScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(Modifier.height(16.dp))
-                        Text("Loading your answers...")
+                        Text(stringResource(R.string.review_loading))
                     }
                 }
             }
@@ -213,9 +221,9 @@ fun IntakeReviewScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    sections.forEach { (sectionName, sectionFields) ->
+                    sections.forEach { (sectionKey, sectionFields) ->
                         item {
-                            SectionHeader(sectionName)
+                            SectionHeader(sectionKey)
                         }
                         items(sectionFields, key = { it.id }) { field ->
                             when {
@@ -235,7 +243,7 @@ fun IntakeReviewScreen(
 
                     // Documents section — only shown for Sliding Fee
                     if (state.documents.isNotEmpty()) {
-                        item { SectionHeader("Supporting Documents") }
+                        item { SectionHeader("section_supporting_documents") }
                         items(state.documents, key = { "doc_${it.type.name}" }) { slot ->
                             DocumentReviewRow(slot)
                         }
@@ -249,7 +257,8 @@ fun IntakeReviewScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String) {
+private fun SectionHeader(sectionKey: String) {
+    val title = localizedSectionTitle(sectionKey)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -305,7 +314,7 @@ private fun ReviewFieldCard(
                 )
                 if (field.required) {
                     Text(
-                        text = "Required",
+                        text = stringResource(R.string.review_required_label),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = if (isEmpty)
                             MaterialTheme.colorScheme.error
@@ -326,7 +335,7 @@ private fun ReviewFieldCard(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "Please fill in before submitting",
+                        stringResource(R.string.review_required_field_warning),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.error
                     )
@@ -341,7 +350,7 @@ private fun ReviewFieldCard(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = if (isEmpty) "Tap to enter…" else "",
+                        text = if (isEmpty) stringResource(R.string.review_tap_to_enter) else "",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
@@ -375,7 +384,7 @@ private fun SkippedFieldRow(field: FormField) {
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = "Not applicable",
+            text = stringResource(R.string.review_not_applicable),
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         )
@@ -452,14 +461,14 @@ private fun DocumentReviewRow(slot: DocumentSlot) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = slot.type.displayName,
+                        text = slot.type.localizedDisplayName(),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f)
                     )
                     if (!slot.type.required) {
                         Text(
-                            "Optional",
+                            stringResource(R.string.optional_label),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
@@ -468,9 +477,13 @@ private fun DocumentReviewRow(slot: DocumentSlot) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = when (slot.status) {
-                        UploadStatus.UPLOADED -> "Uploaded"
-                        UploadStatus.SKIPPED -> "Skipped"
-                        UploadStatus.MISSING -> if (slot.type.required) "Missing — required" else "Not provided"
+                        UploadStatus.UPLOADED -> stringResource(R.string.status_uploaded)
+                        UploadStatus.SKIPPED -> stringResource(R.string.status_skipped)
+                        UploadStatus.MISSING -> if (slot.type.required) {
+                            stringResource(R.string.status_missing_required)
+                        } else {
+                            stringResource(R.string.status_not_provided)
+                        }
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = when (slot.status) {
@@ -501,23 +514,39 @@ private fun DocumentReviewRow(slot: DocumentSlot) {
 
 // ── Field grouping ─────────────────────────────────────────────────────────
 
-/** Per-form explicit field → section maps for correct display order. */
+/** Per-form explicit field → section key maps for correct display order. */
 private val FIELD_SECTION_MAPS = mapOf(
     "sliding_fee_intake" to linkedMapOf(
-        "full_name" to "Personal Information",
-        "date_of_birth" to "Personal Information",
-        "address_street" to "Address",
-        "address_city" to "Address",
-        "address_state" to "Address",
-        "address_zip" to "Address",
-        "household_size" to "Household",
-        "number_of_dependents" to "Household",
-        "income_sources" to "Income",
-        "monthly_income" to "Income",
-        "employment_status" to "Employment & Insurance",
-        "insurance_status" to "Employment & Insurance"
+        "full_name" to "section_personal_information",
+        "date_of_birth" to "section_personal_information",
+        "address_street" to "section_address",
+        "address_city" to "section_address",
+        "address_state" to "section_address",
+        "address_zip" to "section_address",
+        "household_size" to "section_household",
+        "number_of_dependents" to "section_household",
+        "income_sources" to "section_income",
+        "monthly_income" to "section_income",
+        "employment_status" to "section_employment_insurance",
+        "insurance_status" to "section_employment_insurance"
     )
 )
+
+@Composable
+internal fun localizedSectionTitle(key: String): String = when (key) {
+    "section_personal_information" -> stringResource(R.string.section_personal_information)
+    "section_address" -> stringResource(R.string.section_address)
+    "section_household" -> stringResource(R.string.section_household)
+    "section_income" -> stringResource(R.string.section_income)
+    "section_employment_insurance" -> stringResource(R.string.section_employment_insurance)
+    "section_registration" -> stringResource(R.string.section_registration)
+    "section_health_history" -> stringResource(R.string.section_health_history)
+    "section_hipaa_consent" -> stringResource(R.string.section_hipaa_consent)
+    "section_general_consents" -> stringResource(R.string.section_general_consents)
+    "section_supporting_documents" -> stringResource(R.string.section_supporting_documents)
+    "section_other" -> stringResource(R.string.section_other)
+    else -> key
+}
 
 /**
  * Groups fields into labelled sections.
@@ -532,7 +561,7 @@ private fun groupFieldsBySectionLabel(
     if (explicitMap != null) {
         val grouped = LinkedHashMap<String, MutableList<FormField>>()
         for (field in fields) {
-            val section = explicitMap[field.id] ?: "Other"
+            val section = explicitMap[field.id] ?: "section_other"
             grouped.getOrPut(section) { mutableListOf() }.add(field)
         }
         return grouped.entries.map { Pair(it.key, it.value.toList()) }
@@ -541,12 +570,12 @@ private fun groupFieldsBySectionLabel(
     // Fallback: boundary-based detection for Coastal Gateway / Medicaid
     val sections = mutableListOf<Pair<String, MutableList<FormField>>>()
     val sectionBoundaries = mapOf(
-        "preferred_language" to "Registration",
-        "medical_conditions" to "Health History",
-        "hipaa_summary_delivered" to "HIPAA Consent",
-        "general_consents_summary_delivered" to "General Consents"
+        "preferred_language" to "section_registration",
+        "medical_conditions" to "section_health_history",
+        "hipaa_summary_delivered" to "section_hipaa_consent",
+        "general_consents_summary_delivered" to "section_general_consents"
     )
-    var currentSection = "Registration"
+    var currentSection = "section_registration"
     var currentFields = mutableListOf<FormField>()
     for (field in fields) {
         val newSection = sectionBoundaries[field.id]

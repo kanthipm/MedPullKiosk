@@ -2,8 +2,10 @@ package com.medpull.kiosk.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.AuthResult
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val appStrings: AppStrings
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -87,21 +90,21 @@ class RegisterViewModel @Inject constructor(
         // Validate input
         if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
             _uiState.value = _uiState.value.copy(
-                error = "Please fill in all required fields"
+                error = appStrings.get(R.string.err_fill_required)
             )
             return
         }
 
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             _uiState.value = _uiState.value.copy(
-                error = "Please enter a valid email address"
+                error = appStrings.get(R.string.err_invalid_email)
             )
             return
         }
 
         if (password.length < 12) {
             _uiState.value = _uiState.value.copy(
-                error = "Password must be at least 12 characters"
+                error = appStrings.get(R.string.err_password_min_length)
             )
             return
         }
@@ -114,14 +117,14 @@ class RegisterViewModel @Inject constructor(
 
         if (!hasUpperCase || !hasLowerCase || !hasDigit || !hasSpecialChar) {
             _uiState.value = _uiState.value.copy(
-                error = "Password must contain uppercase, lowercase, number, and special character"
+                error = appStrings.get(R.string.err_password_complexity)
             )
             return
         }
 
         if (password != confirmPassword) {
             _uiState.value = _uiState.value.copy(
-                error = "Passwords do not match"
+                error = appStrings.get(R.string.err_passwords_mismatch)
             )
             return
         }
@@ -168,7 +171,7 @@ class RegisterViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Registration failed"
+                    error = e.message ?: appStrings.get(R.string.err_registration_failed)
                 )
             }
         }

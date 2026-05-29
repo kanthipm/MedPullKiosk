@@ -20,7 +20,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.medpull.kiosk.R
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.vision.digitalink.*
@@ -57,6 +59,9 @@ fun HandwritingInput(
 
     var recognizer by remember { mutableStateOf<DigitalInkRecognizer?>(null) }
 
+    val handwritingNotSupported = stringResource(R.string.handwriting_not_supported)
+    val handwritingDownloadFailed = stringResource(R.string.handwriting_download_failed)
+
     val languageTag = remember(language) {
         when (language) {
             "es" -> "es-ES"
@@ -71,7 +76,7 @@ fun HandwritingInput(
     }
 
     // Download model when language changes
-    LaunchedEffect(languageTag) {
+    LaunchedEffect(languageTag, handwritingNotSupported, handwritingDownloadFailed) {
         modelDownloading = true
         modelReady = false
         error = null
@@ -80,7 +85,7 @@ fun HandwritingInput(
 
         val modelIdentifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag(languageTag)
         if (modelIdentifier == null) {
-            error = "Language not supported for handwriting"
+            error = handwritingNotSupported
             modelDownloading = false
             return@LaunchedEffect
         }
@@ -97,7 +102,7 @@ fun HandwritingInput(
             }
             .addOnFailureListener { e ->
                 Log.e("HandwritingInput", "Model download failed", e)
-                error = "Failed to download handwriting model"
+                error = handwritingDownloadFailed
                 modelDownloading = false
             }
     }
@@ -229,7 +234,7 @@ fun HandwritingInput(
                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Downloading handwriting model...",
+                        stringResource(R.string.handwriting_downloading),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -241,7 +246,7 @@ fun HandwritingInput(
 
             if (modelReady && completedPaths.isEmpty() && currentPathPoints.isEmpty() && !recognizing) {
                 Text(
-                    "Write here",
+                    stringResource(R.string.write_here),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 )
@@ -272,13 +277,13 @@ fun HandwritingInput(
             ) {
                 Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Clear")
+                Text(stringResource(R.string.clear))
             }
 
             TextButton(onClick = onSwitchToKeyboard) {
                 Icon(Icons.Default.Keyboard, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Keyboard")
+                Text(stringResource(R.string.keyboard))
             }
         }
     }

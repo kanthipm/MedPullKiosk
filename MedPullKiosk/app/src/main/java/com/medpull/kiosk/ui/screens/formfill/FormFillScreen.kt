@@ -83,12 +83,15 @@ fun FormFillScreen(
                 title = {
                     Column {
                         Text(
-                            text = state.form?.fileName ?: "Form",
+                            text = state.form?.fileName ?: stringResource(R.string.form_title_fallback),
                             style = MaterialTheme.typography.titleMedium
                         )
                         if (state.fields.isNotEmpty()) {
                             Text(
-                                text = "${state.completionPercentage.toInt()}% Complete",
+                                text = stringResource(
+                                    R.string.percent_complete,
+                                    state.completionPercentage.toInt()
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
@@ -97,7 +100,7 @@ fun FormFillScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.saveAndExit() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -108,12 +111,12 @@ fun FormFillScreen(
                             } else {
                                 Icons.Default.VisibilityOff
                             },
-                            contentDescription = "Toggle overlays"
+                            contentDescription = stringResource(R.string.toggle_overlays)
                         )
                     }
                     if (state.completionPercentage >= 100f) {
                         IconButton(onClick = { state.form?.let { onExport(it.id) } }) {
-                            Icon(Icons.Default.FileDownload, contentDescription = "Export")
+                            Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.export))
                         }
                     }
                 },
@@ -147,7 +150,7 @@ fun FormFillScreen(
                     LoadingState()
                 }
                 state.form == null -> {
-                    ErrorState(message = state.error ?: "Form not found")
+                    ErrorState(message = state.error ?: stringResource(R.string.form_not_found))
                 }
                 else -> {
                     // Full-screen interactive PDF viewer
@@ -192,13 +195,13 @@ fun FormFillScreen(
                             onClick = { userScale = (userScale * 1.5f).coerceAtMost(5f) },
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Zoom in")
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.zoom_in))
                         }
                         SmallFloatingActionButton(
                             onClick = { userScale = (userScale / 1.5f).coerceAtLeast(0.5f) },
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                         ) {
-                            Icon(Icons.Default.Remove, contentDescription = "Zoom out")
+                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.zoom_out))
                         }
                     }
 
@@ -234,7 +237,7 @@ fun FormFillScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Create New Form",
+                                text = stringResource(R.string.create_new_form),
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
@@ -335,11 +338,11 @@ private fun PageNavigationBar(
                 onClick = onPreviousPage,
                 enabled = currentPage > 0
             ) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous page")
+                Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.previous_page))
             }
 
             Text(
-                text = "Page ${currentPage + 1} of $totalPages",
+                text = stringResource(R.string.page_of, currentPage + 1, totalPages),
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -347,7 +350,7 @@ private fun PageNavigationBar(
                 onClick = onNextPage,
                 enabled = currentPage < totalPages - 1
             ) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Next page")
+                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.next_page))
             }
         }
     }
@@ -365,7 +368,7 @@ private fun LoadingState() {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = stringResource(R.string.loading),
+                text = stringResource(R.string.loading_form),
                 style = MaterialTheme.typography.bodyLarge
             )
         }
@@ -516,7 +519,11 @@ private fun FieldInputDialog(
                     ) {
                         Icon(
                             imageVector = if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
-                            contentDescription = if (showHandwriting) "Switch to keyboard" else "Handwriting input",
+                            contentDescription = if (showHandwriting) {
+                                stringResource(R.string.switch_to_keyboard)
+                            } else {
+                                stringResource(R.string.handwriting_input)
+                            },
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -539,7 +546,11 @@ private fun FieldInputDialog(
                         ) {
                             Icon(
                                 imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                                contentDescription = if (isListening) "Stop listening" else "Speech to text",
+                                contentDescription = if (isListening) {
+                                    stringResource(R.string.stop_listening)
+                                } else {
+                                    stringResource(R.string.speech_to_text)
+                                },
                                 tint = if (isListening) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.primary
                             )
@@ -614,7 +625,7 @@ private fun GenerateFormDialog(
                         CircularProgressIndicator(modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Generating form...",
+                            text = stringResource(R.string.generating_form),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(24.dp))
@@ -645,7 +656,7 @@ private fun GenerateFormDialog(
                     generatedPath != null -> {
                         // Title
                         Text(
-                            text = "Form Generated",
+                            text = stringResource(R.string.form_generated),
                             style = MaterialTheme.typography.headlineSmall
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -720,15 +731,15 @@ private fun GenerateFormDialog(
                             CircularProgressIndicator(modifier = Modifier.size(32.dp))
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Exporting...",
+                                text = stringResource(R.string.exporting),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         } else {
                             // Cloud upload card
                             ExportOptionCard(
                                 icon = Icons.Default.CloudUpload,
-                                title = "Export to Cloud",
-                                description = "Upload to your secure cloud storage",
+                                title = stringResource(R.string.export_to_cloud),
+                                description = stringResource(R.string.export_to_cloud_desc),
                                 onClick = onExportToCloud,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -736,8 +747,8 @@ private fun GenerateFormDialog(
                             // Local save card
                             ExportOptionCard(
                                 icon = Icons.Default.SaveAlt,
-                                title = "Save to Device",
-                                description = "Save a copy to your Documents folder",
+                                title = stringResource(R.string.save_to_device),
+                                description = stringResource(R.string.save_to_device_desc),
                                 onClick = onExportToLocal,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -751,7 +762,7 @@ private fun GenerateFormDialog(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isExporting
                         ) {
-                            Text("Done")
+                            Text(stringResource(R.string.done))
                         }
                     }
                 }
@@ -825,7 +836,7 @@ private fun PdfPreviewImage(pdfFile: File, modifier: Modifier = Modifier) {
     if (bitmap != null) {
         Image(
             bitmap = bitmap.asImageBitmap(),
-            contentDescription = "PDF preview",
+            contentDescription = stringResource(R.string.pdf_preview),
             modifier = modifier,
             contentScale = ContentScale.Fit
         )
@@ -837,7 +848,7 @@ private fun PdfPreviewImage(pdfFile: File, modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Preview unavailable",
+                text = stringResource(R.string.preview_unavailable),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )

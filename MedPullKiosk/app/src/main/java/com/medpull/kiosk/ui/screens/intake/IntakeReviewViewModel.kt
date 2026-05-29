@@ -11,7 +11,9 @@ import com.medpull.kiosk.data.models.UploadStatus
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.DocumentRepository
 import com.medpull.kiosk.data.repository.FormRepository
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.PdfUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ class IntakeReviewViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val documentRepository: DocumentRepository,
     private val pdfUtils: PdfUtils,
+    private val appStrings: AppStrings,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -60,7 +63,7 @@ class IntakeReviewViewModel @Inject constructor(
                     Pair(form, flow)
                 }.collect { (form, flow) ->
                     if (form == null) {
-                        _state.update { it.copy(isLoading = false, error = "Form not found") }
+                        _state.update { it.copy(isLoading = false, error = appStrings.get(R.string.form_not_found)) }
                         return@collect
                     }
                     val skipped = flow?.skippedFieldIds ?: emptySet()
@@ -125,7 +128,7 @@ class IntakeReviewViewModel @Inject constructor(
                 Log.d(TAG, "Intake review submitted")
             } catch (e: Exception) {
                 Log.e(TAG, "Error submitting", e)
-                _state.update { it.copy(error = "Failed to submit: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_submit, e.message ?: "")) }
             }
         }
     }
@@ -146,7 +149,7 @@ class IntakeReviewViewModel @Inject constructor(
                 if (file == null) Log.e(TAG, "PDF generation returned null")
             } catch (e: Exception) {
                 Log.e(TAG, "Error generating PDF", e)
-                _state.update { it.copy(isGeneratingPdf = false, error = "Failed to generate PDF: ${e.message}") }
+                _state.update { it.copy(isGeneratingPdf = false, error = appStrings.get(R.string.err_failed_generate_pdf, e.message ?: "")) }
             }
         }
     }

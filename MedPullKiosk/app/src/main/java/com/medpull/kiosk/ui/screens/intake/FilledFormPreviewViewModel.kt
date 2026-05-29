@@ -8,7 +8,9 @@ import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.UploadStatus
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.DocumentRepository
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.FormRepository
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.ClinicSubmission
 import com.medpull.kiosk.utils.PdfFormFiller
 import com.medpull.kiosk.utils.SubmissionDocument
@@ -39,6 +41,7 @@ class FilledFormPreviewViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val pdfFormFiller: PdfFormFiller,
     private val submissionStore: SubmissionStore,
+    private val appStrings: AppStrings,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -65,7 +68,7 @@ class FilledFormPreviewViewModel @Inject constructor(
                 }
 
                 if (form == null) {
-                    _state.update { it.copy(isLoading = false, error = "Form not found") }
+                    _state.update { it.copy(isLoading = false, error = appStrings.get(R.string.form_not_found)) }
                     return@launch
                 }
 
@@ -87,12 +90,12 @@ class FilledFormPreviewViewModel @Inject constructor(
                 if (filledPdf != null) {
                     _state.update { it.copy(isLoading = false, pdfFile = filledPdf) }
                 } else {
-                    _state.update { it.copy(isLoading = false, error = "Could not generate filled PDF") }
+                    _state.update { it.copy(isLoading = false, error = appStrings.get(R.string.err_could_not_generate_pdf)) }
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error generating filled PDF", e)
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Unknown error") }
+                _state.update { it.copy(isLoading = false, error = e.message ?: appStrings.get(R.string.err_unknown)) }
             }
         }
     }
@@ -107,7 +110,7 @@ class FilledFormPreviewViewModel @Inject constructor(
                 _state.update { it.copy(isSending = false, isSent = true) }
             } catch (e: Exception) {
                 Log.e(TAG, "Error sending to clinic", e)
-                _state.update { it.copy(isSending = false, error = "Failed to send: ${e.message}") }
+                _state.update { it.copy(isSending = false, error = appStrings.get(R.string.err_failed_send, e.message ?: "")) }
             }
         }
     }

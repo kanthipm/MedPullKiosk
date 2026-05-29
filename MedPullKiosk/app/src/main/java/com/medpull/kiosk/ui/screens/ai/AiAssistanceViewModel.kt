@@ -4,8 +4,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.medpull.kiosk.data.models.FormField
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.AiChatResult
 import com.medpull.kiosk.data.repository.AiRepository
+import com.medpull.kiosk.utils.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +21,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class AiAssistanceViewModel @Inject constructor(
-    private val aiRepository: AiRepository
+    private val aiRepository: AiRepository,
+    private val appStrings: AppStrings
 ) : ViewModel() {
 
     companion object {
@@ -94,7 +97,7 @@ class AiAssistanceViewModel @Inject constructor(
                 Log.e(TAG, "Error sending message", e)
                 _state.update {
                     it.copy(
-                        error = "Failed to send message: ${e.message}",
+                        error = appStrings.get(R.string.err_failed_send_message, e.message ?: ""),
                         isLoading = false
                     )
                 }
@@ -136,7 +139,7 @@ class AiAssistanceViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.update {
                     it.copy(
-                        error = "Failed to get field help: ${e.message}",
+                        error = appStrings.get(R.string.err_failed_field_help, e.message ?: ""),
                         isLoading = false
                     )
                 }
@@ -178,7 +181,7 @@ class AiAssistanceViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.update {
                     it.copy(
-                        error = "Failed to suggest value: ${e.message}",
+                        error = appStrings.get(R.string.err_failed_suggest_value, e.message ?: ""),
                         isLoading = false
                     )
                 }
@@ -220,7 +223,7 @@ class AiAssistanceViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.update {
                     it.copy(
-                        error = "Failed to explain term: ${e.message}",
+                        error = appStrings.get(R.string.err_failed_explain_term, e.message ?: ""),
                         isLoading = false
                     )
                 }

@@ -48,12 +48,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.data.models.UploadStatus
@@ -61,11 +63,11 @@ import java.io.File
 
 // Logical section groupings for the summary display
 private val ELIGIBILITY_SECTIONS = listOf(
-    "Personal Information" to listOf("full_name", "date_of_birth"),
-    "Address" to listOf("address_street", "address_city", "address_state", "address_zip"),
-    "Household" to listOf("household_size", "number_of_dependents"),
-    "Income" to listOf("income_sources", "monthly_income"),
-    "Employment & Insurance" to listOf("employment_status", "insurance_status")
+    "section_personal_information" to listOf("full_name", "date_of_birth"),
+    "section_address" to listOf("address_street", "address_city", "address_state", "address_zip"),
+    "section_household" to listOf("household_size", "number_of_dependents"),
+    "section_income" to listOf("income_sources", "monthly_income"),
+    "section_employment_insurance" to listOf("employment_status", "insurance_status")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,9 +90,9 @@ fun EligibilitySummaryScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Eligibility Summary", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.eligibility_summary), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Review before submitting",
+                            stringResource(R.string.review_before_submitting),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
                         )
@@ -98,7 +100,7 @@ fun EligibilitySummaryScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -153,16 +155,16 @@ fun EligibilitySummaryScreen(
                     }
 
                     // Patient info sections
-                    ELIGIBILITY_SECTIONS.forEach { (sectionName, fieldIds) ->
+                    ELIGIBILITY_SECTIONS.forEach { (sectionKey, fieldIds) ->
                         val sectionFields = fieldIds.mapNotNull { fieldMap[it] }
                         if (sectionFields.isNotEmpty()) {
-                            item { SummarySectionHeader(sectionName) }
+                            item { SummarySectionHeader(sectionKey) }
                             item { SummarySectionCard(sectionFields, state.skippedFieldIds) }
                         }
                     }
 
                     // Documents section
-                    item { SummarySectionHeader("Supporting Documents") }
+                    item { SummarySectionHeader("section_supporting_documents") }
                     item { DocumentsSectionCard(state.documents) }
 
                     item { Spacer(Modifier.height(8.dp)) }
@@ -194,7 +196,7 @@ private fun ValidationBanner(state: EligibilitySummaryState) {
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "Incomplete — please review before submitting",
+                    stringResource(R.string.incomplete_review),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onErrorContainer
@@ -203,7 +205,10 @@ private fun ValidationBanner(state: EligibilitySummaryState) {
             if (missingFields.isNotEmpty()) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Missing fields: ${missingFields.joinToString(", ") { it.fieldName }}",
+                    stringResource(
+                        R.string.missing_fields_list,
+                        missingFields.joinToString(", ") { it.fieldName }
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -211,7 +216,10 @@ private fun ValidationBanner(state: EligibilitySummaryState) {
             if (missingDocs.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Missing documents: ${missingDocs.joinToString(", ") { it.displayName }}",
+                    stringResource(
+                        R.string.missing_documents_list,
+                        missingDocs.map { it.localizedDisplayName() }.joinToString(", ")
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -223,7 +231,8 @@ private fun ValidationBanner(state: EligibilitySummaryState) {
 // ── Section header ─────────────────────────────────────────────────────────
 
 @Composable
-private fun SummarySectionHeader(title: String) {
+private fun SummarySectionHeader(sectionKey: String) {
+    val title = localizedSectionTitle(sectionKey)
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -290,14 +299,14 @@ private fun SummaryFieldRow(field: FormField, isSkipped: Boolean) {
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    "Missing",
+                    stringResource(R.string.missing),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.Medium
                 )
             } else if (isSkipped) {
                 Text(
-                    "Not applicable",
+                    stringResource(R.string.review_not_applicable),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
@@ -326,7 +335,7 @@ private fun DocumentsSectionCard(documents: List<DocumentSlot>) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (documents.isEmpty()) {
                 Text(
-                    "No documents uploaded.",
+                    stringResource(R.string.no_documents_uploaded),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
@@ -393,14 +402,14 @@ private fun SummaryDocumentRow(slot: DocumentSlot) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    slot.type.displayName,
+                    slot.type.localizedDisplayName(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
                 if (!slot.type.required) {
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "(Optional)",
+                        stringResource(R.string.optional_paren),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
@@ -408,9 +417,13 @@ private fun SummaryDocumentRow(slot: DocumentSlot) {
             }
             Text(
                 text = when (slot.status) {
-                    UploadStatus.UPLOADED -> "Uploaded"
-                    UploadStatus.SKIPPED -> "Skipped"
-                    UploadStatus.MISSING -> if (slot.type.required) "Missing — required" else "Not provided"
+                    UploadStatus.UPLOADED -> stringResource(R.string.status_uploaded)
+                    UploadStatus.SKIPPED -> stringResource(R.string.status_skipped)
+                    UploadStatus.MISSING -> if (slot.type.required) {
+                        stringResource(R.string.status_missing_required)
+                    } else {
+                        stringResource(R.string.status_not_provided)
+                    }
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = when (slot.status) {
@@ -462,7 +475,7 @@ private fun EligibilityActionBar(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "$missingCount item${if (missingCount != 1) "s" else ""} need${if (missingCount == 1) "s" else ""} attention before submitting",
+                        stringResource(R.string.items_need_attention, missingCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -478,7 +491,7 @@ private fun EligibilityActionBar(
                 ) {
                     Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Edit Info", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.edit_info), style = MaterialTheme.typography.labelLarge)
                 }
                 OutlinedButton(
                     onClick = onReuploadDocs,
@@ -486,7 +499,7 @@ private fun EligibilityActionBar(
                 ) {
                     Icon(Icons.Default.Upload, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Documents", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.documents), style = MaterialTheme.typography.labelLarge)
                 }
                 Button(
                     onClick = onSubmit,
@@ -495,7 +508,7 @@ private fun EligibilityActionBar(
                 ) {
                     Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Submit", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.review_submit), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }

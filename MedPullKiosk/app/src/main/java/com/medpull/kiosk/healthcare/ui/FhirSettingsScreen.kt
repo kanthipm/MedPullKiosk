@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.medpull.kiosk.R
 import com.medpull.kiosk.healthcare.client.FhirAuthType
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,10 +32,10 @@ fun FhirSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("FHIR Server Settings") },
+                title = { Text(stringResource(R.string.fhir_server_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -55,8 +57,8 @@ fun FhirSettingsScreen(
             OutlinedTextField(
                 value = state.serverUrl,
                 onValueChange = { viewModel.updateServerUrl(it) },
-                label = { Text("FHIR Server URL") },
-                placeholder = { Text("https://fhir.example.com/fhir") },
+                label = { Text(stringResource(R.string.fhir_server_url)) },
+                placeholder = { Text(stringResource(R.string.fhir_server_url_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) }
@@ -72,7 +74,7 @@ fun FhirSettingsScreen(
                     value = state.authType.name.replace("_", " "),
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Authentication Type") },
+                    label = { Text(stringResource(R.string.auth_type)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(),
@@ -99,7 +101,7 @@ fun FhirSettingsScreen(
                 OutlinedTextField(
                     value = state.smartClientId,
                     onValueChange = { viewModel.updateSmartClientId(it) },
-                    label = { Text("SMART Client ID") },
+                    label = { Text(stringResource(R.string.smart_client_id)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) }
@@ -121,7 +123,7 @@ fun FhirSettingsScreen(
                 ) {
                     Icon(Icons.Default.Save, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
 
                 // Test Connection
@@ -139,7 +141,7 @@ fun FhirSettingsScreen(
                         Icon(Icons.Default.NetworkCheck, contentDescription = null)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Test Connection")
+                    Text(stringResource(R.string.test_connection))
                 }
             }
 
@@ -178,9 +180,9 @@ fun FhirSettingsScreen(
                         Column {
                             Text(
                                 text = if (status == ConnectionStatus.SUCCESS) {
-                                    "Connection Successful"
+                                    stringResource(R.string.connection_successful)
                                 } else {
-                                    "Connection Failed"
+                                    stringResource(R.string.connection_failed)
                                 },
                                 style = MaterialTheme.typography.titleSmall
                             )

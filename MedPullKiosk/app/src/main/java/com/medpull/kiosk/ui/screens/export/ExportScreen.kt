@@ -52,7 +52,7 @@ fun ExportScreen(
                 title = { Text(stringResource(R.string.export_pdf)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -72,7 +72,7 @@ fun ExportScreen(
                     LoadingState()
                 }
                 state.exportSuccess -> {
-                    SuccessState(message = state.exportMessage ?: "Export successful")
+                    SuccessState(message = state.exportMessage ?: stringResource(R.string.export_success))
                 }
                 !state.canExport -> {
                     IncompleteFormState(completionPercentage = state.completionPercentage)
@@ -161,7 +161,7 @@ private fun SuccessState(message: String) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Returning to form list...",
+                text = stringResource(R.string.returning_to_form_list),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -188,14 +188,14 @@ private fun IncompleteFormState(completionPercentage: Float) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Form Not Complete",
+                text = stringResource(R.string.form_not_complete),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Complete all required fields before exporting",
+                text = stringResource(R.string.complete_required_before_export),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -209,7 +209,7 @@ private fun IncompleteFormState(completionPercentage: Float) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "${completionPercentage.toInt()}% Complete",
+                text = stringResource(R.string.percent_complete, completionPercentage.toInt()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
@@ -243,7 +243,7 @@ private fun ExportOptions(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Export Completed Form",
+            text = stringResource(R.string.export_completed_form),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -251,7 +251,7 @@ private fun ExportOptions(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Choose where to save your filled form",
+            text = stringResource(R.string.choose_export_destination),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -282,12 +282,12 @@ private fun ExportOptions(
                 Spacer(modifier = Modifier.width(24.dp))
                 Column {
                     Text(
-                        text = "Export to Cloud",
+                        text = stringResource(R.string.export_to_cloud),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Upload to secure HIPAA storage",
+                        text = stringResource(R.string.export_to_cloud_hipaa),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
@@ -320,12 +320,12 @@ private fun ExportOptions(
                 Spacer(modifier = Modifier.width(24.dp))
                 Column {
                     Text(
-                        text = "Save to Device",
+                        text = stringResource(R.string.save_to_device),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Save PDF to device storage",
+                        text = stringResource(R.string.save_pdf_to_device),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
@@ -359,12 +359,12 @@ private fun ExportOptions(
                     Spacer(modifier = Modifier.width(24.dp))
                     Column {
                         Text(
-                            text = "Export to FHIR",
+                            text = stringResource(R.string.export_to_fhir),
                             style = MaterialTheme.typography.titleLarge
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Send to EHR system via FHIR R4",
+                            text = stringResource(R.string.export_to_fhir_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
@@ -379,7 +379,7 @@ private fun ExportOptions(
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = stringResource(R.string.processing),
+                text = stringResource(R.string.exporting),
                 style = MaterialTheme.typography.bodyMedium
             )
         }

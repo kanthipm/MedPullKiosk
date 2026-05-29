@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.healthcare.models.HealthcarePatient
 
@@ -63,11 +65,11 @@ fun FhirImportDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Import Patient from FHIR",
+                        text = stringResource(R.string.import_patient_from_fhir),
                         style = MaterialTheme.typography.headlineSmall
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -77,14 +79,14 @@ fun FhirImportDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = { Text("Search by name or MRN") },
+                    label = { Text(stringResource(R.string.search_by_name_mrn)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
                             IconButton(onClick = { onSearch(searchQuery) }) {
-                                Icon(Icons.Default.Send, contentDescription = "Search")
+                                Icon(Icons.Default.Send, contentDescription = stringResource(R.string.search))
                             }
                         }
                     }
@@ -110,7 +112,7 @@ fun FhirImportDialog(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator()
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Text("Importing patient data...")
+                                Text(stringResource(R.string.importing_patient_data))
                             }
                         }
                     }
@@ -141,7 +143,7 @@ fun FhirImportDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "Search for a patient by name or MRN",
+                                stringResource(R.string.search_by_name_mrn),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
@@ -194,21 +196,21 @@ private fun PatientResultCard(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = patient.fullName.ifBlank { "Unknown" },
+                    text = patient.fullName.ifBlank { stringResource(R.string.unknown_patient) },
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (patient.dateOfBirth != null) {
                     Text(
-                        text = "DOB: ${patient.dateOfBirth}",
+                        text = stringResource(R.string.patient_dob, patient.dateOfBirth!!),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
                 if (patient.mrn != null) {
                     Text(
-                        text = "MRN: ${patient.mrn}",
+                        text = stringResource(R.string.patient_mrn, patient.mrn!!),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
@@ -216,7 +218,7 @@ private fun PatientResultCard(
             }
             Icon(
                 Icons.Default.ChevronRight,
-                contentDescription = "Select",
+                contentDescription = stringResource(R.string.select),
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
         }

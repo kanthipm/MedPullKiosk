@@ -10,7 +10,9 @@ import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.StorageRepository
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.TranslationRepository
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.LocaleManager
 import com.medpull.kiosk.utils.PdfUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,6 +37,7 @@ class FormFillViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val localeManager: LocaleManager,
     private val pdfUtils: PdfUtils,
+    private val appStrings: AppStrings,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -67,7 +70,7 @@ class FormFillViewModel @Inject constructor(
                 formRepository.getFormByIdFlow(formId)
                     .catch { e ->
                         Log.e(TAG, "Error loading form", e)
-                        _state.update { it.copy(error = "Failed to load form: ${e.message}") }
+                        _state.update { it.copy(error = appStrings.get(R.string.err_failed_load_form, e.message ?: "")) }
                     }
                     .collect { form ->
                         if (form != null) {
@@ -89,7 +92,7 @@ class FormFillViewModel @Inject constructor(
                         } else {
                             _state.update {
                                 it.copy(
-                                    error = "Form not found",
+                                    error = appStrings.get(R.string.form_not_found),
                                     isLoading = false
                                 )
                             }
@@ -99,7 +102,7 @@ class FormFillViewModel @Inject constructor(
                 Log.e(TAG, "Error loading form", e)
                 _state.update {
                     it.copy(
-                        error = "Failed to load form: ${e.message}",
+                        error = appStrings.get(R.string.err_failed_load_form, e.message ?: ""),
                         isLoading = false
                     )
                 }
@@ -170,7 +173,7 @@ class FormFillViewModel @Inject constructor(
                 Log.d(TAG, "Field value updated: $fieldId")
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating field value", e)
-                _state.update { it.copy(error = "Failed to update field: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_update_field, e.message ?: "")) }
             }
         }
     }
@@ -201,7 +204,7 @@ class FormFillViewModel @Inject constructor(
                 Log.d(TAG, "Field translated: ${field.fieldName} -> $translatedText")
             } catch (e: Exception) {
                 Log.e(TAG, "Error translating field", e)
-                _state.update { it.copy(error = "Translation failed: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_translation_failed, e.message ?: "")) }
             }
         }
     }
@@ -236,7 +239,7 @@ class FormFillViewModel @Inject constructor(
                 _state.update { it.copy(shouldNavigateBack = true) }
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving form", e)
-                _state.update { it.copy(error = "Failed to save: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_save, e.message ?: "")) }
             }
         }
     }
@@ -261,7 +264,7 @@ class FormFillViewModel @Inject constructor(
                 if (filledValues.isEmpty()) {
                     _state.update { it.copy(
                         isGeneratingForm = false,
-                        generatedFormError = "No fields have been filled in yet"
+                        generatedFormError = appStrings.get(R.string.err_no_fields_filled)
                     ) }
                     return@launch
                 }
@@ -301,14 +304,14 @@ class FormFillViewModel @Inject constructor(
                 } else {
                     _state.update { it.copy(
                         isGeneratingForm = false,
-                        generatedFormError = "Failed to generate PDF"
+                        generatedFormError = appStrings.get(R.string.err_failed_generate_pdf_short)
                     ) }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error generating new form", e)
                 _state.update { it.copy(
                     isGeneratingForm = false,
-                    generatedFormError = "Error: ${e.message}"
+                    generatedFormError = e.message ?: appStrings.get(R.string.err_failed_generate_pdf_short)
                 ) }
             }
         }
@@ -334,7 +337,7 @@ class FormFillViewModel @Inject constructor(
             _state.update { it.copy(isExportingGeneratedForm = true, generatedFormExportSuccess = null) }
             try {
                 val userId = authRepository.getCurrentUserId()
-                    ?: throw IllegalStateException("No user logged in")
+                    ?: throw IllegalStateException(appStrings.get(R.string.err_no_user_logged_in))
                 val file = File(path)
                 val result = storageRepository.uploadFilledForm(file, userId, formId)
                 result.fold(
@@ -348,7 +351,7 @@ class FormFillViewModel @Inject constructor(
                     onFailure = { e ->
                         _state.update { it.copy(
                             isExportingGeneratedForm = false,
-                            generatedFormError = "Upload failed: ${e.message}"
+                            generatedFormError = appStrings.get(R.string.err_upload_failed, e.message ?: "")
                         ) }
                         Log.e(TAG, "Failed to upload generated form", e)
                     }
@@ -356,7 +359,7 @@ class FormFillViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.update { it.copy(
                     isExportingGeneratedForm = false,
-                    generatedFormError = "Upload failed: ${e.message}"
+                    generatedFormError = appStrings.get(R.string.err_upload_failed, e.message ?: "")
                 ) }
                 Log.e(TAG, "Failed to upload generated form", e)
             }
@@ -382,13 +385,13 @@ class FormFillViewModel @Inject constructor(
                 }
                 _state.update { it.copy(
                     isExportingGeneratedForm = false,
-                    generatedFormExportSuccess = "Saved to ${destFile.absolutePath}"
+                    generatedFormExportSuccess = appStrings.get(R.string.msg_saved_to, destFile.absolutePath)
                 ) }
                 Log.d(TAG, "Generated form saved locally: ${destFile.absolutePath}")
             } catch (e: Exception) {
                 _state.update { it.copy(
                     isExportingGeneratedForm = false,
-                    generatedFormError = "Save failed: ${e.message}"
+                    generatedFormError = appStrings.get(R.string.err_save_failed, e.message ?: "")
                 ) }
                 Log.e(TAG, "Failed to save generated form locally", e)
             }

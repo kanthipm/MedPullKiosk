@@ -2,8 +2,10 @@ package com.medpull.kiosk.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.AuthResult
+import com.medpull.kiosk.utils.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +18,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class VerificationViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val appStrings: AppStrings
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VerificationUiState())
@@ -51,21 +54,21 @@ class VerificationViewModel @Inject constructor(
         // Validate input
         if (email.isEmpty()) {
             _uiState.value = _uiState.value.copy(
-                error = "Email is missing. Please go back and register again."
+                error = appStrings.get(R.string.err_email_missing)
             )
             return
         }
 
         if (code.isEmpty()) {
             _uiState.value = _uiState.value.copy(
-                error = "Please enter the verification code"
+                error = appStrings.get(R.string.err_enter_verification_code)
             )
             return
         }
 
         if (code.length != 6) {
             _uiState.value = _uiState.value.copy(
-                error = "Verification code must be 6 digits"
+                error = appStrings.get(R.string.err_verification_code_length)
             )
             return
         }
@@ -83,7 +86,7 @@ class VerificationViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             error = null,
-                            successMessage = "Email verified successfully! Please login."
+                            successMessage = appStrings.get(R.string.msg_email_verified)
                         )
                         // Navigate to login after a short delay
                         kotlinx.coroutines.delay(1500)
@@ -98,14 +101,14 @@ class VerificationViewModel @Inject constructor(
                     is AuthResult.RequiresConfirmation -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = "Unexpected state: ${result.message}"
+                            error = appStrings.get(R.string.err_unexpected_state, result.message)
                         )
                     }
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Verification failed"
+                    error = e.message ?: appStrings.get(R.string.err_verification_failed)
                 )
             }
         }
@@ -119,7 +122,7 @@ class VerificationViewModel @Inject constructor(
 
         if (email.isEmpty()) {
             _uiState.value = _uiState.value.copy(
-                error = "Email is missing. Please go back and register again."
+                error = appStrings.get(R.string.err_email_missing)
             )
             return
         }
@@ -136,7 +139,7 @@ class VerificationViewModel @Inject constructor(
                     is AuthResult.Success, is AuthResult.RequiresConfirmation -> {
                         _uiState.value = _uiState.value.copy(
                             isResending = false,
-                            successMessage = "A new verification code has been sent to your email."
+                            successMessage = appStrings.get(R.string.msg_verification_code_sent)
                         )
                     }
                     is AuthResult.Error -> {
@@ -149,7 +152,7 @@ class VerificationViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isResending = false,
-                    error = e.message ?: "Failed to resend code"
+                    error = e.message ?: appStrings.get(R.string.err_resend_failed)
                 )
             }
         }

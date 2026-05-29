@@ -8,7 +8,9 @@ import com.medpull.kiosk.data.models.Form
 import com.medpull.kiosk.data.models.FormStatus
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.FormProcessResult
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.FormRepository
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.Constants
 import com.medpull.kiosk.utils.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +29,7 @@ class FormSelectionViewModel @Inject constructor(
     private val formRepository: FormRepository,
     private val authRepository: AuthRepository,
     private val localeManager: LocaleManager,
+    private val appStrings: AppStrings,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -52,17 +55,17 @@ class FormSelectionViewModel @Inject constructor(
                     formRepository.getFormsByUserIdFlow(userId)
                         .catch { e ->
                             Log.e(TAG, "Error loading forms", e)
-                            _state.update { it.copy(error = "Failed to load forms: ${e.message}") }
+                            _state.update { it.copy(error = appStrings.get(R.string.err_failed_load_forms, e.message ?: "")) }
                         }
                         .collect { forms ->
                             _state.update { it.copy(forms = forms, isLoading = false) }
                         }
                 } else {
-                    _state.update { it.copy(error = "No user logged in", isLoading = false) }
+                    _state.update { it.copy(error = appStrings.get(R.string.err_no_user_logged_in), isLoading = false) }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading forms", e)
-                _state.update { it.copy(error = "Failed to load forms: ${e.message}", isLoading = false) }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_load_forms, e.message ?: ""), isLoading = false) }
             }
         }
     }
@@ -81,7 +84,11 @@ class FormSelectionViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isUploading = false,
-                            error = "File size (${String.format("%.2f", fileSizeMB)} MB) exceeds maximum allowed size (${Constants.Pdf.MAX_FILE_SIZE_MB} MB)"
+                            error = appStrings.get(
+                                R.string.err_file_too_large,
+                                String.format("%.2f", fileSizeMB),
+                                Constants.Pdf.MAX_FILE_SIZE_MB
+                            )
                         )
                     }
                     return@launch
@@ -89,7 +96,7 @@ class FormSelectionViewModel @Inject constructor(
 
                 val userId = authRepository.getCurrentUserId()
                 if (userId == null) {
-                    _state.update { it.copy(isUploading = false, error = "No user logged in") }
+                    _state.update { it.copy(isUploading = false, error = appStrings.get(R.string.err_no_user_logged_in)) }
                     return@launch
                 }
 
@@ -134,7 +141,7 @@ class FormSelectionViewModel @Inject constructor(
                             it.copy(
                                 isUploading = false,
                                 uploadProgress = 1f,
-                                successMessage = "Form uploaded and processed successfully"
+                                successMessage = appStrings.get(R.string.msg_form_uploaded)
                             )
                         }
                         // Clear success message after 3 seconds
@@ -145,7 +152,7 @@ class FormSelectionViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 isUploading = false,
-                                successMessage = "Form is being processed..."
+                                successMessage = appStrings.get(R.string.msg_form_processing)
                             )
                         }
                     }
@@ -157,7 +164,7 @@ class FormSelectionViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 isUploading = false,
-                                error = if (!isSessionError) "Failed to process form: ${result.message}" else null,
+                                error = if (!isSessionError) appStrings.get(R.string.err_failed_process_form, result.message) else null,
                                 sessionExpired = isSessionError,
                                 sessionExpiredMessage = if (isSessionError) result.message else null
                             )
@@ -167,7 +174,7 @@ class FormSelectionViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 isUploading = false,
-                                successMessage = "Form queued for upload when online"
+                                successMessage = appStrings.get(R.string.msg_form_queued)
                             )
                         }
                     }
@@ -178,7 +185,7 @@ class FormSelectionViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isUploading = false,
-                        error = "Failed to upload form: ${e.message}"
+                        error = appStrings.get(R.string.err_failed_upload_form, e.message ?: "")
                     )
                 }
             }
@@ -195,7 +202,7 @@ class FormSelectionViewModel @Inject constructor(
                 Log.d(TAG, "Form deleted: $formId")
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting form", e)
-                _state.update { it.copy(error = "Failed to delete form: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_delete_form, e.message ?: "")) }
             }
         }
     }

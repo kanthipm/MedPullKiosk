@@ -315,7 +315,7 @@ private fun QuantityBadge(quantity: Int, isLow: Boolean) {
         shape = MaterialTheme.shapes.small
     ) {
         Text(
-            text = "Qty: $quantity",
+            text = stringResource(R.string.inventory_qty, quantity),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium,
             color = if (isLow) MaterialTheme.colorScheme.error

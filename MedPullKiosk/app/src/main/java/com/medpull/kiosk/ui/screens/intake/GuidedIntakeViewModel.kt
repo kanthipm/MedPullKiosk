@@ -16,7 +16,9 @@ import com.medpull.kiosk.data.local.entities.PatientCacheEntity
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
+import com.medpull.kiosk.R
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -52,6 +54,7 @@ class GuidedIntakeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val engine: IntakeConversationEngine,
     private val localeManager: LocaleManager,
+    private val appStrings: AppStrings,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -61,249 +64,137 @@ class GuidedIntakeViewModel @Inject constructor(
         const val COASTAL_GATEWAY_ID = "coastal_gateway_intake"
         const val MEDICAID_RENEWAL_ID = "medicaid_renewal_intake"
         const val SLIDING_FEE_ID = "sliding_fee_intake"
-        private const val SCHEMA_FILE = "schemas/coastal_gateway_intake.json"
-        private const val SCHEMA_FILE_MEDICAID = "schemas/medicaid_renewal_intake.json"
-        private const val SCHEMA_FILE_SLIDING_FEE = "schemas/sliding_fee_intake.json"
+        // All built-in conversational forms live here as declarative JSON schemas.
+        // Adding a new form is just dropping a *.json file in this assets folder —
+        // it is auto-discovered by its "form_id" (or filename) at runtime. No new
+        // Kotlin code, skip rules, or consent wiring required.
+        private const val SCHEMAS_DIR = "schemas"
         const val DEMO_USER_ID = "demo_user"
         private const val CONFIDENCE_THRESHOLD = 0.75f
         private const val MAX_CLARIFICATIONS = 2
 
         /**
-         * Fields that belong to the review step, not the intake conversation.
-         * name_confirmation: covered by the review screen edit-in-place.
-         * telehealth_notice_acknowledged: skip for in-person visits (default).
+         * Result of parsing a declarative form schema: the form + field list plus
+         * all the behavior metadata the intake state machine needs, derived
+         * entirely from the JSON (no per-form Kotlin).
          */
-        val SKIP_DURING_INTAKE = setOf(
-            "name_confirmation",
-            "telehealth_notice_acknowledged"
+        data class LoadedSchema(
+            val form: Form,
+            /** triggerFieldId → triggerValue → list of field ids to skip. */
+            val skipRules: Map<String, Map<String, List<String>>>,
+            /** Consent fields surfaced together in the batch panel. */
+            val consentGroupFieldIds: Set<String>,
+            /** Fields handled by the review step, not asked during the conversation. */
+            val skipDuringIntakeIds: Set<String>
         )
 
         /**
-         * Consent fields batched into a single panel UI instead of one-by-one questions.
+         * Auto-discover every built-in schema: formId → asset path.
+         *
+         * Lists every *.json under assets/schemas and keys it by its "form_id"
+         * (falling back to the filename). This is what makes the conversational
+         * interface work on ANY form — adding one is just dropping a JSON file.
          */
-        val CONSENT_GROUP_FIELD_IDS = setOf(
-            "hipaa_consent",
-            "sliding_fee_acknowledgment",
-            "ghhc_data_sharing",
-            "photo_consent"
-        )
+        fun discoverSchemas(context: Context): Map<String, String> {
+            val files = context.assets.list(SCHEMAS_DIR)
+                ?.filter { it.endsWith(".json") } ?: emptyList()
+            val map = LinkedHashMap<String, String>()
+            for (file in files) {
+                val path = "$SCHEMAS_DIR/$file"
+                val id = try {
+                    JSONObject(context.assets.open(path).bufferedReader().readText())
+                        .optString("form_id")
+                        .ifBlank { file.removeSuffix(".json") }
+                } catch (e: Exception) {
+                    file.removeSuffix(".json")
+                }
+                map[id] = path
+            }
+            return map
+        }
+
+        /** Map a schema "type" string to a FieldType. */
+        private fun fieldTypeOf(type: String): FieldType = when (type) {
+            "date" -> FieldType.DATE
+            "checkbox" -> FieldType.CHECKBOX
+            "radio" -> FieldType.RADIO
+            "dropdown" -> FieldType.DROPDOWN
+            "multi_select" -> FieldType.MULTI_SELECT
+            "signature" -> FieldType.SIGNATURE
+            "static_label" -> FieldType.STATIC_LABEL
+            "number", "phone", "zip", "email" -> FieldType.NUMBER
+            else -> FieldType.TEXT
+        }
 
         /**
-         * Deterministic skip rules derived from schema skip_if blocks.
-         * fieldId → triggerValue → list of fields to skip.
+         * Generic parser for any declarative form schema. Replaces the previous
+         * per-form loaders — the schema fully describes fields, skip logic,
+         * consent batching, and which fields to defer to the review step.
          */
-        val SKIP_RULES: Map<String, Map<String, List<String>>> = mapOf(
-            // ── Coastal Gateway ─────────────────────────────────────────────────
-            "physical_same_as_mailing" to mapOf(
-                "Yes" to listOf("physical_address_street", "physical_city", "physical_state", "physical_zip")
-            ),
-            "has_insurance" to mapOf(
-                "No" to listOf(
-                    "primary_insurance_provider", "primary_insurance_id", "primary_insurance_group",
-                    "policyholder_is_self", "policyholder_name", "policyholder_dob", "policyholder_relationship",
-                    "has_secondary_insurance", "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"
-                )
-            ),
-            "policyholder_is_self" to mapOf(
-                "Yes" to listOf("policyholder_name", "policyholder_dob", "policyholder_relationship")
-            ),
-            "has_secondary_insurance" to mapOf(
-                "No" to listOf("secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group")
-            ),
-            "family_history_any" to mapOf(
-                "No" to listOf("family_history_conditions", "family_history_members")
-            ),
-            "tobacco_use" to mapOf(
-                "No" to listOf("tobacco_type", "tobacco_frequency")
-            ),
-            "alcohol_use" to mapOf(
-                "No" to listOf("alcohol_frequency")
-            ),
-            "surgeries_any" to mapOf(
-                "No" to listOf("surgeries_list")
-            ),
-            "medications_any" to mapOf(
-                "No" to listOf("medications_list")
-            ),
-            "allergies_any" to mapOf(
-                "No" to listOf("allergies_list")
-            ),
-            "authorized_phi_contacts_any" to mapOf(
-                "No" to listOf(
-                    "authorized_phi_contact_1_name", "authorized_phi_contact_1_relationship",
-                    "authorized_phi_contact_2_name", "authorized_phi_contact_2_relationship"
-                )
-            ),
-            "filling_for_self" to mapOf(
-                "Myself" to listOf("representative_name", "representative_relationship")
-            ),
-            // ── Medicaid Renewal ─────────────────────────────────────────────────
-            "has_other_insurance" to mapOf(
-                "No" to listOf("other_insurance_type")
-            )
-        )
-
-        /** Parse the Coastal Gateway JSON schema into a Form + field list. */
-        fun loadCoastalGatewayForm(context: Context): Form {
-            val json = context.assets.open(SCHEMA_FILE).bufferedReader().readText()
-            val root = JSONObject(json)
-            val formName = root.optString("form_name", "Coastal Gateway Intake")
-            val sections = root.optJSONArray("sections") ?: return emptyForm(formName)
+        fun loadSchemaForm(context: Context, formId: String, assetPath: String): LoadedSchema {
+            val root = JSONObject(context.assets.open(assetPath).bufferedReader().readText())
+            val formName = root.optString("form_name", formId)
+            val sections = root.optJSONArray("sections")
 
             val fields = mutableListOf<FormField>()
-            for (s in 0 until sections.length()) {
-                val section = sections.getJSONObject(s)
-                val sectionFields = section.optJSONArray("fields") ?: continue
-                for (f in 0 until sectionFields.length()) {
-                    val field = sectionFields.getJSONObject(f)
-                    val opts = field.optJSONArray("options")
-                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
-                        ?: emptyList()
-                    fields += FormField(
-                        id = field.optString("id"),
-                        formId = COASTAL_GATEWAY_ID,
-                        fieldName = field.optString("label"),
-                        originalText = field.optString("label"),
-                        translatedText = field.optString("label"),
-                        fieldType = when (field.optString("type")) {
-                            "date" -> FieldType.DATE
-                            "checkbox" -> FieldType.CHECKBOX
-                            "radio" -> FieldType.RADIO
-                            "dropdown" -> FieldType.DROPDOWN
-                            "multi_select" -> FieldType.MULTI_SELECT
-                            "signature" -> FieldType.SIGNATURE
-                            "static_label" -> FieldType.STATIC_LABEL
-                            "number", "phone", "zip", "email" -> FieldType.NUMBER
-                            else -> FieldType.TEXT
-                        },
-                        required = field.optBoolean("required", false),
-                        options = opts,
-                        description = field.optString("ai_note", "").ifBlank { null }
-                    )
+            if (sections != null) {
+                for (s in 0 until sections.length()) {
+                    val section = sections.getJSONObject(s)
+                    val sectionFields = section.optJSONArray("fields") ?: continue
+                    for (f in 0 until sectionFields.length()) {
+                        val field = sectionFields.getJSONObject(f)
+                        val opts = field.optJSONArray("options")
+                            ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                            ?: emptyList()
+                        fields += FormField(
+                            id = field.optString("id"),
+                            formId = formId,
+                            fieldName = field.optString("label"),
+                            originalText = field.optString("label"),
+                            translatedText = field.optString("label"),
+                            fieldType = fieldTypeOf(field.optString("type")),
+                            required = field.optBoolean("required", false),
+                            options = opts,
+                            description = field.optString("ai_note", "").ifBlank { null }
+                        )
+                    }
                 }
             }
 
-            return Form(
-                id = COASTAL_GATEWAY_ID,
-                userId = "builtin",
-                fileName = formName,
-                originalFileUri = "",
-                status = FormStatus.READY,
-                fields = fields
-            )
-        }
-
-        private fun emptyForm(name: String) = Form(
-            id = COASTAL_GATEWAY_ID, userId = "builtin",
-            fileName = name, originalFileUri = "",
-            status = FormStatus.READY, fields = emptyList()
-        )
-
-        /** Parse the Medicaid Renewal JSON schema into a Form + field list. */
-        fun loadMedicaidRenewalForm(context: Context): Form {
-            val json = context.assets.open(SCHEMA_FILE_MEDICAID).bufferedReader().readText()
-            val root = JSONObject(json)
-            val formName = root.optString("form_name", "Medicaid Coverage Renewal")
-            val sections = root.optJSONArray("sections") ?: return Form(
-                id = MEDICAID_RENEWAL_ID, userId = "builtin",
-                fileName = formName, originalFileUri = "",
-                status = FormStatus.READY, fields = emptyList()
-            )
-
-            val fields = mutableListOf<FormField>()
-            for (s in 0 until sections.length()) {
-                val section = sections.getJSONObject(s)
-                val sectionFields = section.optJSONArray("fields") ?: continue
-                for (f in 0 until sectionFields.length()) {
-                    val field = sectionFields.getJSONObject(f)
-                    val opts = field.optJSONArray("options")
-                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
-                        ?: emptyList()
-                    fields += FormField(
-                        id = field.optString("id"),
-                        formId = MEDICAID_RENEWAL_ID,
-                        fieldName = field.optString("label"),
-                        originalText = field.optString("label"),
-                        translatedText = field.optString("label"),
-                        fieldType = when (field.optString("type")) {
-                            "date" -> FieldType.DATE
-                            "checkbox" -> FieldType.CHECKBOX
-                            "radio" -> FieldType.RADIO
-                            "dropdown" -> FieldType.DROPDOWN
-                            "multi_select" -> FieldType.MULTI_SELECT
-                            "signature" -> FieldType.SIGNATURE
-                            "static_label" -> FieldType.STATIC_LABEL
-                            "number", "phone", "zip", "email" -> FieldType.NUMBER
-                            else -> FieldType.TEXT
-                        },
-                        required = field.optBoolean("required", false),
-                        options = opts,
-                        description = field.optString("ai_note", "").ifBlank { null }
-                    )
+            // skip_rules: [{ when_field, equals, skip: [...] }] → nested map
+            val skipRules = mutableMapOf<String, MutableMap<String, MutableList<String>>>()
+            root.optJSONArray("skip_rules")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    val rule = arr.getJSONObject(i)
+                    val whenField = rule.optString("when_field")
+                    val equals = rule.optString("equals")
+                    val skip = rule.optJSONArray("skip")
+                        ?.let { s -> (0 until s.length()).map { s.getString(it) } } ?: emptyList()
+                    if (whenField.isNotBlank() && equals.isNotBlank()) {
+                        skipRules.getOrPut(whenField) { mutableMapOf() }
+                            .getOrPut(equals) { mutableListOf() }
+                            .addAll(skip)
+                    }
                 }
             }
 
-            return Form(
-                id = MEDICAID_RENEWAL_ID,
-                userId = "builtin",
-                fileName = formName,
-                originalFileUri = "",
-                status = FormStatus.READY,
-                fields = fields
-            )
-        }
+            fun stringSet(key: String): Set<String> =
+                root.optJSONArray(key)
+                    ?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
+                    ?: emptySet()
 
-        /** Parse the Sliding Fee Eligibility JSON schema into a Form + field list. */
-        fun loadSlidingFeeForm(context: Context): Form {
-            val json = context.assets.open(SCHEMA_FILE_SLIDING_FEE).bufferedReader().readText()
-            val root = JSONObject(json)
-            val formName = root.optString("form_name", "Sliding Fee Eligibility Application")
-            val sections = root.optJSONArray("sections") ?: return Form(
-                id = SLIDING_FEE_ID, userId = "builtin",
-                fileName = formName, originalFileUri = "",
-                status = FormStatus.READY, fields = emptyList()
-            )
-
-            val fields = mutableListOf<FormField>()
-            for (s in 0 until sections.length()) {
-                val section = sections.getJSONObject(s)
-                val sectionFields = section.optJSONArray("fields") ?: continue
-                for (f in 0 until sectionFields.length()) {
-                    val field = sectionFields.getJSONObject(f)
-                    val opts = field.optJSONArray("options")
-                        ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
-                        ?: emptyList()
-                    fields += FormField(
-                        id = field.optString("id"),
-                        formId = SLIDING_FEE_ID,
-                        fieldName = field.optString("label"),
-                        originalText = field.optString("label"),
-                        translatedText = field.optString("label"),
-                        fieldType = when (field.optString("type")) {
-                            "date" -> FieldType.DATE
-                            "checkbox" -> FieldType.CHECKBOX
-                            "radio" -> FieldType.RADIO
-                            "dropdown" -> FieldType.DROPDOWN
-                            "multi_select" -> FieldType.MULTI_SELECT
-                            "signature" -> FieldType.SIGNATURE
-                            "static_label" -> FieldType.STATIC_LABEL
-                            "number", "phone", "zip", "email" -> FieldType.NUMBER
-                            else -> FieldType.TEXT
-                        },
-                        required = field.optBoolean("required", false),
-                        options = opts,
-                        description = field.optString("ai_note", "").ifBlank { null }
-                    )
-                }
-            }
-
-            return Form(
-                id = SLIDING_FEE_ID,
-                userId = "builtin",
-                fileName = formName,
-                originalFileUri = "",
-                status = FormStatus.READY,
-                fields = fields
+            return LoadedSchema(
+                form = Form(
+                    id = formId,
+                    userId = "builtin",
+                    fileName = formName,
+                    originalFileUri = "",
+                    status = FormStatus.READY,
+                    fields = fields
+                ),
+                skipRules = skipRules,
+                consentGroupFieldIds = stringSet("consent_batch_fields"),
+                skipDuringIntakeIds = stringSet("skip_during_intake")
             )
         }
     }
@@ -312,6 +203,12 @@ class GuidedIntakeViewModel @Inject constructor(
     // True when navigating back from the review screen — open last answered field instead of going to review.
     private val editLast: Boolean = savedStateHandle.get<Boolean>("editLast") ?: false
     private var editLastConsumed = false
+
+    // Behavior metadata for the active form, loaded from its schema (empty for
+    // ad-hoc / uploaded forms that have no schema).
+    private var skipRules: Map<String, Map<String, List<String>>> = emptyMap()
+    private var consentGroupFieldIds: Set<String> = emptySet()
+    private var skipDuringIntakeIds: Set<String> = emptySet()
 
     private val _state = MutableStateFlow(GuidedIntakeState())
     val state: StateFlow<GuidedIntakeState> = _state.asStateFlow()
@@ -350,30 +247,38 @@ class GuidedIntakeViewModel @Inject constructor(
                     )
                 }
 
-                if (formId == COASTAL_GATEWAY_ID) {
-                    val schema = loadCoastalGatewayForm(appContext)
-                    val merged = mergeWithSavedValues(schema)
-                    formRepository.saveForm(merged)
-                    initFormState(merged)
-                } else if (formId == MEDICAID_RENEWAL_ID) {
-                    val schema = loadMedicaidRenewalForm(appContext)
-                    val merged = mergeWithSavedValues(schema)
-                    formRepository.saveForm(merged)
-                    initFormState(merged)
-                } else if (formId == SLIDING_FEE_ID) {
-                    val schema = loadSlidingFeeForm(appContext)
-                    val merged = mergeWithSavedValues(schema)
+                // Auto-discover a declarative schema for this formId. Any built-in
+                // form (sliding fee, coastal gateway, medicaid, or a future one)
+                // is loaded through the same generic path — no per-form code.
+                val schemaPath = try {
+                    discoverSchemas(appContext)[formId]
+                } catch (e: Exception) {
+                    Log.w(TAG, "Schema discovery failed", e); null
+                }
+
+                if (schemaPath != null) {
+                    val loaded = loadSchemaForm(appContext, formId, schemaPath)
+                    skipRules = loaded.skipRules
+                    consentGroupFieldIds = loaded.consentGroupFieldIds
+                    skipDuringIntakeIds = loaded.skipDuringIntakeIds
+                    val merged = mergeWithSavedValues(loaded.form)
                     formRepository.saveForm(merged)
                     initFormState(merged)
                 } else {
+                    // Ad-hoc / uploaded (Textract) form straight from the DB. It has
+                    // no schema metadata, but the conversational engine still drives
+                    // it field-by-field generically.
+                    skipRules = emptyMap()
+                    consentGroupFieldIds = emptySet()
+                    skipDuringIntakeIds = emptySet()
                     formRepository.getFormByIdFlow(formId).collect { form ->
                         if (form != null) initFormState(form)
-                        else _state.update { it.copy(error = "Form not found", isLoading = false) }
+                        else _state.update { it.copy(error = appStrings.get(R.string.form_not_found), isLoading = false) }
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading form", e)
-                _state.update { it.copy(error = "Failed to load form: ${e.message}", isLoading = false) }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_load_form, e.message ?: ""), isLoading = false) }
             }
         }
     }
@@ -426,7 +331,7 @@ class GuidedIntakeViewModel @Inject constructor(
         // Restore skip state from previous session
         val restoredSkips = flow.skippedFieldIds
 
-        val allSkipped = restoredSkips + SKIP_DURING_INTAKE
+        val allSkipped = restoredSkips + skipDuringIntakeIds
         val filledCount = withCache.count { f ->
             f.id !in allSkipped &&
             f.fieldType != FieldType.STATIC_LABEL &&
@@ -468,7 +373,7 @@ class GuidedIntakeViewModel @Inject constructor(
      */
     private fun advanceToNextField() {
         val state = _state.value
-        val allSkipped = state.skippedFieldIds + SKIP_DURING_INTAKE
+        val allSkipped = state.skippedFieldIds + skipDuringIntakeIds
 
         val next = state.fields.firstOrNull { f ->
             f.id !in allSkipped && f.value.isNullOrBlank()
@@ -476,9 +381,9 @@ class GuidedIntakeViewModel @Inject constructor(
 
         // If the next unanswered field is a consent field, surface the entire consent
         // group as a batch rather than asking them one-by-one.
-        if (next != null && next.id in CONSENT_GROUP_FIELD_IDS) {
+        if (next != null && next.id in consentGroupFieldIds) {
             val pendingConsentFields = state.fields.filter { f ->
-                f.id in CONSENT_GROUP_FIELD_IDS && f.value.isNullOrBlank() && f.id !in allSkipped
+                f.id in consentGroupFieldIds && f.value.isNullOrBlank() && f.id !in allSkipped
             }
             if (pendingConsentFields.isNotEmpty()) {
                 _state.update { it.copy(consentBatchFields = pendingConsentFields, isLoadingResponse = false) }
@@ -549,7 +454,7 @@ class GuidedIntakeViewModel @Inject constructor(
      */
     fun hasPreviousField(): Boolean {
         val s = _state.value
-        val allSkipped = s.skippedFieldIds + SKIP_DURING_INTAKE
+        val allSkipped = s.skippedFieldIds + skipDuringIntakeIds
         val answered = s.fields.filter { f ->
             f.id !in allSkipped && f.fieldType != FieldType.STATIC_LABEL &&
             !f.value.isNullOrBlank() && f.value != "delivered"
@@ -569,7 +474,7 @@ class GuidedIntakeViewModel @Inject constructor(
      */
     fun goToPreviousField() {
         val s = _state.value
-        val allSkipped = s.skippedFieldIds + SKIP_DURING_INTAKE
+        val allSkipped = s.skippedFieldIds + skipDuringIntakeIds
         val answered = s.fields.filter { f ->
             f.id !in allSkipped && f.fieldType != FieldType.STATIC_LABEL &&
             !f.value.isNullOrBlank() && f.value != "delivered"
@@ -696,7 +601,7 @@ class GuidedIntakeViewModel @Inject constructor(
 
                     result.needsClarification -> {
                         val clarificationText = result.clarificationQuestion.ifBlank {
-                            "Could you clarify that for me?"
+                            appStrings.get(R.string.err_clarify)
                         }
                         _state.update {
                             it.copy(
@@ -717,7 +622,7 @@ class GuidedIntakeViewModel @Inject constructor(
                                 isLoadingResponse = false,
                                 clarificationCount = it.clarificationCount + 1,
                                 chatMessages = it.chatMessages + ChatMessage(
-                                    text = "I want to make sure I got that right — could you say that again?",
+                                    text = appStrings.get(R.string.err_try_again),
                                     isFromUser = false,
                                     timestamp = System.currentTimeMillis()
                                 )
@@ -730,7 +635,7 @@ class GuidedIntakeViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isLoadingResponse = false,
-                        error = "Could not process your answer. Please try again."
+                        error = appStrings.get(R.string.err_process_answer)
                     )
                 }
             }
@@ -899,7 +804,7 @@ class GuidedIntakeViewModel @Inject constructor(
         }
 
         // Recalculate progress
-        val skipSet = updatedSkipped + SKIP_DURING_INTAKE
+        val skipSet = updatedSkipped + skipDuringIntakeIds
         val filledCount = updatedFields.count { f ->
             f.id !in skipSet && f.fieldType != FieldType.STATIC_LABEL && !f.value.isNullOrBlank()
         }
@@ -934,7 +839,7 @@ class GuidedIntakeViewModel @Inject constructor(
      * Handles both exact-match rules and the multi-select "None" case.
      */
     private fun computeSkips(fieldId: String, value: String): Set<String> {
-        val rules = SKIP_RULES[fieldId] ?: return emptySet()
+        val rules = skipRules[fieldId] ?: return emptySet()
         val result = mutableSetOf<String>()
         rules[value]?.let { result.addAll(it) }
         // multi-select: if "None" is the only or first selection
@@ -952,7 +857,7 @@ class GuidedIntakeViewModel @Inject constructor(
                 skippedFieldIds = it.skippedFieldIds + field.id,
                 isLoadingResponse = false,
                 chatMessages = it.chatMessages + ChatMessage(
-                    text = "No problem — a staff member can help with that part. Let's keep going.",
+                    text = appStrings.get(R.string.msg_staff_help),
                     isFromUser = false,
                     timestamp = System.currentTimeMillis()
                 )
@@ -987,7 +892,7 @@ class GuidedIntakeViewModel @Inject constructor(
             }
 
             val updatedSkipped = _state.value.skippedFieldIds + allNewSkips
-            val skipSet = updatedSkipped + SKIP_DURING_INTAKE
+            val skipSet = updatedSkipped + skipDuringIntakeIds
             val filledCount = updatedFields.count { f ->
                 f.id !in skipSet && f.fieldType != FieldType.STATIC_LABEL && !f.value.isNullOrBlank()
             }
@@ -1002,7 +907,7 @@ class GuidedIntakeViewModel @Inject constructor(
                     filledCount = filledCount,
                     totalCount = totalCount,
                     chatMessages = it.chatMessages + ChatMessage(
-                        text = "Thank you — your consent selections have been recorded.",
+                        text = appStrings.get(R.string.msg_consent_recorded),
                         isFromUser = false,
                         timestamp = System.currentTimeMillis()
                     )
@@ -1047,7 +952,7 @@ class GuidedIntakeViewModel @Inject constructor(
                 _state.update { it.copy(isComplete = true) }
             } catch (e: Exception) {
                 Log.e(TAG, "Error completing intake", e)
-                _state.update { it.copy(error = "Failed to save: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_save, e.message ?: "")) }
             }
         }
     }

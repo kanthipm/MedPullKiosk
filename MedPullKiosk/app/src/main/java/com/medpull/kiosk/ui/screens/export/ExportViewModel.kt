@@ -6,9 +6,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.medpull.kiosk.data.models.FormStatus
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.StorageRepository
 import com.medpull.kiosk.healthcare.repository.FhirRepository
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.PdfUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,6 +32,7 @@ class ExportViewModel @Inject constructor(
     private val storageRepository: StorageRepository,
     private val fhirRepository: FhirRepository,
     private val pdfUtils: PdfUtils,
+    private val appStrings: AppStrings,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -67,7 +70,7 @@ class ExportViewModel @Inject constructor(
                         } else {
                             _state.update {
                                 it.copy(
-                                    error = "Form not found",
+                                    error = appStrings.get(R.string.form_not_found),
                                     isLoading = false
                                 )
                             }
@@ -77,7 +80,7 @@ class ExportViewModel @Inject constructor(
                 Log.e(TAG, "Error loading form", e)
                 _state.update {
                     it.copy(
-                        error = "Failed to load form: ${e.message}",
+                        error = appStrings.get(R.string.err_failed_load_form, e.message ?: ""),
                         isLoading = false
                     )
                 }
@@ -95,7 +98,7 @@ class ExportViewModel @Inject constructor(
 
                 val form = _state.value.form
                 if (form == null) {
-                    _state.update { it.copy(error = "No form to export", isExporting = false) }
+                    _state.update { it.copy(error = appStrings.get(R.string.err_no_form_export), isExporting = false) }
                     return@launch
                 }
 
@@ -109,7 +112,7 @@ class ExportViewModel @Inject constructor(
                 if (filledPdfResult == null) {
                     _state.update {
                         it.copy(
-                            error = "Failed to generate PDF",
+                            error = appStrings.get(R.string.err_failed_generate_pdf_short),
                             isExporting = false
                         )
                     }
@@ -129,7 +132,7 @@ class ExportViewModel @Inject constructor(
                         it.copy(
                             isExporting = false,
                             exportSuccess = true,
-                            exportMessage = "Form exported to cloud storage successfully"
+                            exportMessage = appStrings.get(R.string.msg_exported_cloud)
                         )
                     }
 
@@ -137,7 +140,7 @@ class ExportViewModel @Inject constructor(
                 } else {
                     _state.update {
                         it.copy(
-                            error = "Failed to upload to cloud: ${result.exceptionOrNull()?.message}",
+                            error = appStrings.get(R.string.err_upload_cloud_failed, result.exceptionOrNull()?.message ?: ""),
                             isExporting = false
                         )
                     }
@@ -150,7 +153,7 @@ class ExportViewModel @Inject constructor(
                 Log.e(TAG, "Error exporting to S3", e)
                 _state.update {
                     it.copy(
-                        error = "Export failed: ${e.message}",
+                        error = appStrings.get(R.string.err_export_failed, e.message ?: ""),
                         isExporting = false
                     )
                 }
@@ -168,7 +171,7 @@ class ExportViewModel @Inject constructor(
 
                 val form = _state.value.form
                 if (form == null) {
-                    _state.update { it.copy(error = "No form to export", isExporting = false) }
+                    _state.update { it.copy(error = appStrings.get(R.string.err_no_form_export), isExporting = false) }
                     return@launch
                 }
 
@@ -183,7 +186,7 @@ class ExportViewModel @Inject constructor(
                 if (filledPdfResult == null) {
                     _state.update {
                         it.copy(
-                            error = "Failed to generate PDF",
+                            error = appStrings.get(R.string.err_failed_generate_pdf_short),
                             isExporting = false
                         )
                     }
@@ -199,7 +202,7 @@ class ExportViewModel @Inject constructor(
                     it.copy(
                         isExporting = false,
                         exportSuccess = true,
-                        exportMessage = "Form saved to: ${filledPdf.absolutePath}",
+                        exportMessage = appStrings.get(R.string.msg_form_saved_to, filledPdf.absolutePath),
                         localFilePath = filledPdf.absolutePath
                     )
                 }
@@ -210,7 +213,7 @@ class ExportViewModel @Inject constructor(
                 Log.e(TAG, "Error exporting locally", e)
                 _state.update {
                     it.copy(
-                        error = "Export failed: ${e.message}",
+                        error = appStrings.get(R.string.err_export_failed, e.message ?: ""),
                         isExporting = false
                     )
                 }
@@ -230,7 +233,7 @@ class ExportViewModel @Inject constructor(
                 if (form == null) {
                     _state.update {
                         it.copy(
-                            error = "No form to preview",
+                            error = appStrings.get(R.string.err_no_form_preview),
                             isGeneratingPreview = false
                         )
                     }
@@ -254,7 +257,7 @@ class ExportViewModel @Inject constructor(
                 } else {
                     _state.update {
                         it.copy(
-                            error = "Failed to generate preview",
+                            error = appStrings.get(R.string.err_failed_generate_pdf_short),
                             isGeneratingPreview = false
                         )
                     }
@@ -264,7 +267,7 @@ class ExportViewModel @Inject constructor(
                 Log.e(TAG, "Error generating preview", e)
                 _state.update {
                     it.copy(
-                        error = "Preview failed: ${e.message}",
+                        error = appStrings.get(R.string.err_preview_failed, e.message ?: ""),
                         isGeneratingPreview = false
                     )
                 }
@@ -282,7 +285,7 @@ class ExportViewModel @Inject constructor(
 
                 val form = _state.value.form
                 if (form == null) {
-                    _state.update { it.copy(error = "No form to export", isExporting = false) }
+                    _state.update { it.copy(error = appStrings.get(R.string.err_no_form_export), isExporting = false) }
                     return@launch
                 }
 
@@ -315,14 +318,14 @@ class ExportViewModel @Inject constructor(
                         it.copy(
                             isExporting = false,
                             exportSuccess = true,
-                            exportMessage = "Form exported to FHIR server (ID: ${exportResult.questionnaireResponseId})"
+                            exportMessage = appStrings.get(R.string.msg_exported_fhir, exportResult.questionnaireResponseId)
                         )
                     }
                     Log.d(TAG, "Form exported to FHIR: ${exportResult.questionnaireResponseId}")
                 } else {
                     _state.update {
                         it.copy(
-                            error = "FHIR export failed: ${result.exceptionOrNull()?.message}",
+                            error = appStrings.get(R.string.err_fhir_export_failed, result.exceptionOrNull()?.message ?: ""),
                             isExporting = false
                         )
                     }
@@ -331,7 +334,7 @@ class ExportViewModel @Inject constructor(
                 Log.e(TAG, "Error exporting to FHIR", e)
                 _state.update {
                     it.copy(
-                        error = "FHIR export failed: ${e.message}",
+                        error = appStrings.get(R.string.err_fhir_export_failed, e.message ?: ""),
                         isExporting = false
                     )
                 }

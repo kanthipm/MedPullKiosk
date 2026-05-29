@@ -200,13 +200,13 @@ fun AiChatDialog(
                     },
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Close")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                         }
                     },
                     actions = {
                         if (state.messages.isNotEmpty()) {
                             IconButton(onClick = { viewModel.clearChat() }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Clear chat")
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.clear_chat))
                             }
                         }
                     },
@@ -297,7 +297,7 @@ fun AiChatDialog(
                             IconButton(onClick = { viewModel.clearError() }) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
+                                    contentDescription = stringResource(R.string.dismiss),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -350,7 +350,11 @@ fun AiChatDialog(
                         ) {
                             Icon(
                                 imageVector = if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
-                                contentDescription = if (showHandwriting) "Switch to keyboard" else "Handwriting input",
+                                contentDescription = if (showHandwriting) {
+                                    stringResource(R.string.switch_to_keyboard)
+                                } else {
+                                    stringResource(R.string.handwriting_input)
+                                },
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -375,7 +379,11 @@ fun AiChatDialog(
                             ) {
                                 Icon(
                                     imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                                    contentDescription = if (isListening) "Stop listening" else "Speech to text",
+                                    contentDescription = if (isListening) {
+                                        stringResource(R.string.stop_listening)
+                                    } else {
+                                        stringResource(R.string.speech_to_text)
+                                    },
                                     tint = if (isListening) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.primary
                                 )
@@ -393,7 +401,7 @@ fun AiChatDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Send,
-                                contentDescription = "Send",
+                                contentDescription = stringResource(R.string.voice_send),
                                 tint = if (messageText.isNotBlank() && !state.isLoading) {
                                     MaterialTheme.colorScheme.onPrimaryContainer
                                 } else {
@@ -432,7 +440,7 @@ private fun EmptyState() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Type a message below to get started",
+            text = stringResource(R.string.type_message_empty),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -509,7 +517,11 @@ private fun ChatMessageBubble(
                     ) {
                         Icon(
                             imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
-                            contentDescription = if (isSpeaking) "Stop reading" else "Read aloud",
+                            contentDescription = if (isSpeaking) {
+                                stringResource(R.string.stop_reading)
+                            } else {
+                                stringResource(R.string.read_aloud)
+                            },
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )

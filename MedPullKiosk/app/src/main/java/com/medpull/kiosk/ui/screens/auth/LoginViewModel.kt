@@ -2,8 +2,10 @@ package com.medpull.kiosk.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.AuthResult
+import com.medpull.kiosk.utils.AppStrings
 import com.medpull.kiosk.utils.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val appStrings: AppStrings
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -54,14 +57,14 @@ class LoginViewModel @Inject constructor(
         // Validate input
         if (email.isEmpty() || password.isEmpty()) {
             _uiState.value = _uiState.value.copy(
-                error = "Please enter email and password"
+                error = appStrings.get(R.string.err_enter_email_password)
             )
             return
         }
 
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             _uiState.value = _uiState.value.copy(
-                error = "Please enter a valid email address"
+                error = appStrings.get(R.string.err_invalid_email)
             )
             return
         }
@@ -101,7 +104,7 @@ class LoginViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Login failed"
+                    error = e.message ?: appStrings.get(R.string.err_login_failed)
                 )
             }
         }

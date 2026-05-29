@@ -29,6 +29,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -156,18 +157,19 @@ fun GuidedIntakeScreen(
         state.chatMessages.lastOrNull { !it.isFromUser && !it.isClarification }
     }
 
-    // ── Voice-first mode (sliding fee, free-text questions only) ────────────────
+    // ── Voice-first mode (free-text questions on ANY conversational form) ───────
     // Voice-first replaces the typed input with: auto-spoken question, an animated
     // blue arch that reacts to the mic, a live blue transcript, and an
     // accept / re-record / edit confirmation step. Choice-chip, multi-select and
     // signature questions keep their specialized inputs (but are still spoken).
-    val isSlidingFee = state.form?.id == GuidedIntakeViewModel.SLIDING_FEE_ID
+    // This is driven entirely by field type, so it works for every form the
+    // schema engine can load (sliding fee, medical intake, future forms).
     val activeField = state.currentAskingField
     val isFreeTextField = activeField == null ||
         (activeField.options.isEmpty() &&
             activeField.fieldType != FieldType.SIGNATURE &&
             activeField.fieldType != FieldType.MULTI_SELECT)
-    val voiceFirstActive = isSlidingFee && isFreeTextField &&
+    val voiceFirstActive = isFreeTextField &&
         currentQuestion != null && !state.isLoadingResponse &&
         state.consentBatchFields == null && state.pendingConfirmFields == null
 
@@ -389,10 +391,10 @@ fun GuidedIntakeScreen(
         }
     }
 
-    // Auto-speak the choice-chip / signature questions too (sliding fee), so every
-    // question is read aloud — these keep their specialized inputs (no mic flow).
+    // Auto-speak the choice-chip / signature questions too, so every question is
+    // read aloud — these keep their specialized inputs (no mic flow).
     LaunchedEffect(currentQuestion?.text, voiceFirstActive, ttsReady, state.consentBatchFields) {
-        if (isSlidingFee && !voiceFirstActive && ttsReady && currentQuestion != null &&
+        if (!voiceFirstActive && ttsReady && currentQuestion != null &&
             state.consentBatchFields == null && state.pendingConfirmFields == null &&
             !state.isLoadingResponse
         ) {
@@ -498,7 +500,7 @@ fun GuidedIntakeScreen(
                 else onNavigateBack()
             }) {
                 Icon(
-                    Icons.Default.ArrowBack, "Back",
+                    Icons.Default.ArrowBack, stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                 )
             }
@@ -519,7 +521,7 @@ fun GuidedIntakeScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Review so far",
+                    text = stringResource(R.string.review_so_far),
                     style = MaterialTheme.typography.labelMedium
                 )
             }
@@ -527,7 +529,7 @@ fun GuidedIntakeScreen(
 
         when {
             state.isLoading -> LoadingState()
-            state.form == null -> ErrorState(state.error ?: "Form not found")
+            state.form == null -> ErrorState(state.error ?: stringResource(R.string.form_not_found))
             else -> {
                 // Pre-fill confirm panel takes priority (cross-form returning patient)
                 val confirmFields = state.pendingConfirmFields
@@ -580,7 +582,7 @@ fun GuidedIntakeScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = { viewModel.clearError() }) {
-                                Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Close, stringResource(R.string.dismiss), modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -638,73 +640,100 @@ fun GuidedIntakeScreen(
                                 val displayText = question.text
                                     .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
 
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 48.dp),
-                                    horizontalAlignment = Alignment.Start
-                                ) {
-                                    // Question text
-                                    Text(
-                                        text = displayText,
-                                        style = MaterialTheme.typography.headlineMedium.copy(
-                                            fontWeight = FontWeight.Normal,
-                                            fontSize = 28.sp,
-                                            lineHeight = 38.sp
-                                        ),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                // Button-press questions (radio / dropdown / multi-select)
+                                // get the same BIG, centered question as the voice text
+                                // questions, with large full-width option buttons.
+                                val isOptionField = field != null && field.options.isNotEmpty() &&
+                                    field.fieldType != FieldType.SIGNATURE
 
-
-                                    Spacer(Modifier.height(36.dp))
-
-                                    // Inline answer area — type varies by field
-                                    when {
-                                        // Signature: dedicated drawing canvas, bitmap capture
-                                        field != null && field.fieldType == FieldType.SIGNATURE -> {
-                                            SignatureCapture(
-                                                onSignatureCaptured = { bitmap ->
-                                                    viewModel.submitSignature(bitmap)
-                                                },
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-
-                                        // Handwriting mode for non-signature text fields
-                                        showHandwriting -> {
-                                            HandwritingInput(
-                                                language = state.userLanguage,
-                                                onTextRecognized = { text ->
-                                                    messageText = if (messageText.isBlank()) text else "$messageText $text"
-                                                },
-                                                onSwitchToKeyboard = { showHandwriting = false },
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-
-                                        field != null &&
-                                        field.fieldType == FieldType.MULTI_SELECT &&
-                                        field.options.isNotEmpty() -> {
-                                            MultiSelectInline(field = field, viewModel = viewModel)
-                                        }
-
-                                        field != null && field.options.isNotEmpty() -> {
-                                            RadioChipsInline(
+                                if (isOptionField && field != null) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        // Bias the question slightly above center, matching the text questions
+                                        Spacer(Modifier.weight(0.8f))
+                                        Text(
+                                            text = displayText,
+                                            style = MaterialTheme.typography.displaySmall.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                lineHeight = 46.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Spacer(Modifier.height(36.dp))
+                                        if (field.fieldType == FieldType.MULTI_SELECT) {
+                                            BigMultiSelect(
                                                 field = field,
-                                                onSelect = { viewModel.sendMessage(it) }
-                                            )
-                                        }
-
-                                        else -> {
-                                            // Typeform underline text input
-                                            TypeformTextInput(
-                                                value = messageText,
-                                                onValueChange = { messageText = it },
-                                                onSend = sendMessage,
-                                                enabled = !state.isLoadingResponse,
-                                                focusRequester = focusRequester,
+                                                viewModel = viewModel,
                                                 modifier = Modifier.fillMaxWidth()
                                             )
+                                        } else {
+                                            BigOptionButtons(
+                                                options = field.options,
+                                                onSelect = { viewModel.sendMessage(it) },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                        Spacer(Modifier.weight(1.2f))
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 48.dp),
+                                        horizontalAlignment = Alignment.Start
+                                    ) {
+                                        // Question text
+                                        Text(
+                                            text = displayText,
+                                            style = MaterialTheme.typography.headlineMedium.copy(
+                                                fontWeight = FontWeight.Normal,
+                                                fontSize = 28.sp,
+                                                lineHeight = 38.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Spacer(Modifier.height(36.dp))
+
+                                        // Inline answer area — signature / handwriting / typed text
+                                        when {
+                                            field != null && field.fieldType == FieldType.SIGNATURE -> {
+                                                SignatureCapture(
+                                                    onSignatureCaptured = { bitmap ->
+                                                        viewModel.submitSignature(bitmap)
+                                                    },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            }
+
+                                            showHandwriting -> {
+                                                HandwritingInput(
+                                                    language = state.userLanguage,
+                                                    onTextRecognized = { text ->
+                                                        messageText = if (messageText.isBlank()) text else "$messageText $text"
+                                                    },
+                                                    onSwitchToKeyboard = { showHandwriting = false },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            }
+
+                                            else -> {
+                                                // Typeform underline text input
+                                                TypeformTextInput(
+                                                    value = messageText,
+                                                    onValueChange = { messageText = it },
+                                                    onSend = sendMessage,
+                                                    enabled = !state.isLoadingResponse,
+                                                    focusRequester = focusRequester,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -713,7 +742,7 @@ fun GuidedIntakeScreen(
 
                         else -> {
                             Text(
-                                "Starting your intake...",
+                                stringResource(R.string.starting_intake),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                             )
@@ -750,12 +779,12 @@ fun GuidedIntakeScreen(
                                     shape = RoundedCornerShape(6.dp),
                                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                                 ) {
-                                    Text("OK", fontWeight = FontWeight.SemiBold)
+                                    Text(stringResource(R.string.ok), fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.width(4.dp))
                                     Icon(Icons.Default.Check, null, modifier = Modifier.size(14.dp))
                                 }
                                 Text(
-                                    text = "press Enter ↵",
+                                    text = stringResource(R.string.press_enter),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                 )
@@ -767,7 +796,7 @@ fun GuidedIntakeScreen(
                             IconButton(onClick = { showHandwriting = !showHandwriting }) {
                                 Icon(
                                     if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
-                                    contentDescription = if (showHandwriting) "Keyboard" else "Write",
+                                    contentDescription = if (showHandwriting) stringResource(R.string.keyboard) else stringResource(R.string.write),
                                     tint = if (showHandwriting)
                                         MaterialTheme.colorScheme.primary
                                     else
@@ -794,7 +823,7 @@ fun GuidedIntakeScreen(
                                 ) {
                                     Icon(
                                         if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                                        contentDescription = if (isListening) "Stop" else "Speak",
+                                        contentDescription = if (isListening) stringResource(R.string.stop) else stringResource(R.string.speak),
                                         tint = if (isListening)
                                             MaterialTheme.colorScheme.error
                                         else
@@ -819,7 +848,7 @@ fun GuidedIntakeScreen(
                                 ) {
                                     Icon(
                                         if (isSpeaking) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                                        contentDescription = if (isSpeaking) "Stop reading" else "Read aloud",
+                                        contentDescription = if (isSpeaking) stringResource(R.string.stop_reading) else stringResource(R.string.read_aloud),
                                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                                     )
                                 }
@@ -853,7 +882,7 @@ fun GuidedIntakeScreen(
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(52.dp)
                 ) {
-                    Icon(Icons.Default.Chat, contentDescription = "Open conversation history")
+                    Icon(Icons.Default.Chat, contentDescription = stringResource(R.string.open_conversation_history))
                 }
                 // Badge showing message count
                 if (unreadCount > 0) {
@@ -909,7 +938,7 @@ fun GuidedIntakeScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Conversation",
+                                text = stringResource(R.string.conversation),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.weight(1f)
@@ -919,7 +948,7 @@ fun GuidedIntakeScreen(
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.Close, "Close",
+                                    Icons.Default.Close, stringResource(R.string.close),
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -959,7 +988,7 @@ fun GuidedIntakeScreen(
                                 value = chatText,
                                 onValueChange = { chatText = it },
                                 modifier = Modifier.weight(1f),
-                                placeholder = { Text("Ask a question...") },
+                                placeholder = { Text(stringResource(R.string.ask_question)) },
                                 enabled = !state.isLoadingResponse,
                                 maxLines = 3,
                                 textStyle = MaterialTheme.typography.bodyMedium,
@@ -981,7 +1010,7 @@ fun GuidedIntakeScreen(
                                 },
                                 enabled = chatText.isNotBlank() && !state.isLoadingResponse
                             ) {
-                                Icon(Icons.Default.Send, "Send")
+                                Icon(Icons.Default.Send, stringResource(R.string.voice_send))
                             }
                         }
                     }
@@ -1081,7 +1110,7 @@ private fun TypeformTextInput(
                 ) {
                     if (value.isEmpty()) {
                         Text(
-                            text = "Type your answer...",
+                            text = stringResource(R.string.type_answer),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Light,
                                 fontSize = 24.sp,
@@ -1426,48 +1455,86 @@ private fun VoiceEditField(
     }
 }
 
-// ─── Radio / dropdown chips (inline, Typeform letter-keyed) ───────────────────
+// ─── Big option buttons (radio / dropdown) ────────────────────────────────────
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * One large, tappable option button. Fills the width given to it (via weight)
+ * and is tall and clean, sized for kiosk touch. Highlights when [selected].
+ */
 @Composable
-private fun RadioChipsInline(
-    field: com.medpull.kiosk.data.models.FormField,
-    onSelect: (String) -> Unit
+private fun BigOptionButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier.heightIn(min = 88.dp)
     ) {
-        field.options.forEachIndexed { index, option ->
-            val letter = ('A' + index).toString()
-            FilterChip(
-                selected = false,
-                onClick = { onSelect(option) },
-                label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = letter,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            ),
-                            modifier = Modifier.padding(end = 6.dp)
-                        )
-                        Text(option, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Medium,
+                color = if (selected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
-// ─── Multi-select chips (inline, toggleable) ──────────────────────────────────
-
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Lays option buttons out as large, equal-width buttons that fill the row.
+ * Few options sit in a single row; more wrap into a clean 2-column grid.
+ */
 @Composable
-private fun MultiSelectInline(
+private fun BigOptionButtons(
+    options: List<String>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val cols = if (options.size <= 3) options.size.coerceAtLeast(1) else 2
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        options.chunked(cols).forEach { rowOptions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowOptions.forEach { option ->
+                    BigOptionButton(
+                        text = option,
+                        selected = false,
+                        onClick = { onSelect(option) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                // Keep buttons uniformly sized when the last row is partial.
+                repeat(cols - rowOptions.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+// ─── Big multi-select (toggleable) ────────────────────────────────────────────
+
+@Composable
+private fun BigMultiSelect(
     field: com.medpull.kiosk.data.models.FormField,
-    viewModel: GuidedIntakeViewModel
+    viewModel: GuidedIntakeViewModel,
+    modifier: Modifier = Modifier
 ) {
     val currentSelections = remember(field.id, field.value) {
         mutableStateOf(
@@ -1479,42 +1546,59 @@ private fun MultiSelectInline(
                 ?: mutableSetOf()
         )
     }
+    val cols = if (field.options.size <= 3) field.options.size.coerceAtLeast(1) else 2
 
-    Column {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Select all that apply:",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            text = stringResource(R.string.select_all_apply),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(12.dp))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            field.options.forEach { option ->
-                val selected = option in currentSelections.value
-                FilterChip(
-                    selected = selected,
-                    onClick = {
-                        val updated = currentSelections.value.toMutableSet()
-                        if (selected) updated.remove(option) else updated.add(option)
-                        currentSelections.value = updated
-                        viewModel.updateMultiSelectField(field.id, updated.joinToString(", "))
-                    },
-                    label = { Text(option, style = MaterialTheme.typography.bodyMedium) }
-                )
+        field.options.chunked(cols).forEach { rowOptions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowOptions.forEach { option ->
+                    val selected = option in currentSelections.value
+                    BigOptionButton(
+                        text = option,
+                        selected = selected,
+                        onClick = {
+                            val updated = currentSelections.value.toMutableSet()
+                            if (selected) updated.remove(option) else updated.add(option)
+                            currentSelections.value = updated
+                            viewModel.updateMultiSelectField(field.id, updated.joinToString(", "))
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                repeat(cols - rowOptions.size) { Spacer(Modifier.weight(1f)) }
             }
         }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { viewModel.sendMessage("None") }) { Text("None") }
-            if (currentSelections.value.isNotEmpty()) {
-                Button(
-                    onClick = { viewModel.sendMessage(currentSelections.value.joinToString(", ")) },
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text("Confirm (${currentSelections.value.size})")
-                }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = { viewModel.sendMessage("None") },
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) { Text(stringResource(R.string.none)) }
+            Button(
+                onClick = {
+                    if (currentSelections.value.isNotEmpty())
+                        viewModel.sendMessage(currentSelections.value.joinToString(", "))
+                },
+                enabled = currentSelections.value.isNotEmpty(),
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                val n = currentSelections.value.size
+                Text(if (n == 0) stringResource(R.string.confirm) else stringResource(R.string.confirm_with_count, n))
             }
         }
     }
@@ -1545,13 +1629,13 @@ private fun ConsentBatchPanel(
         ) {
             Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 Text(
-                    text = "Consent & Authorizations",
+                    text = stringResource(R.string.consent_authorizations),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Please review each item and select your preference.",
+                    text = stringResource(R.string.consent_review_prompt),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
                 )
@@ -1578,7 +1662,7 @@ private fun ConsentBatchPanel(
                 ) {
                     Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Agree to All")
+                    Text(stringResource(R.string.agree_to_all))
                 }
             }
         }
@@ -1614,7 +1698,11 @@ private fun ConsentBatchPanel(
             ) {
                 if (!allAnswered) {
                     Text(
-                        text = "${fields.count { it.id in selections }} of ${fields.size} answered",
+                        text = stringResource(
+                            R.string.consent_progress,
+                            fields.count { it.id in selections },
+                            fields.size
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                         modifier = Modifier.weight(1f)
@@ -1631,7 +1719,7 @@ private fun ConsentBatchPanel(
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text("Continue")
+                    Text(stringResource(R.string.continue_action))
                     Spacer(Modifier.width(4.dp))
                     Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(18.dp))
                 }
@@ -1689,7 +1777,7 @@ private fun LoadingState() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
             Spacer(Modifier.height(16.dp))
-            Text("Loading form...", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.loading_form), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -1737,79 +1825,59 @@ private fun ConfirmPrefillPanel(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 32.dp, vertical = 24.dp),
+            .padding(horizontal = 48.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
-        Surface(
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(36.dp)
-                )
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Welcome back!",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Text(
-                        text = "We found your information from your last visit. Please confirm it's still correct.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                    )
-                }
-            }
-        }
+        Text(
+            text = stringResource(R.string.welcome_back),
+            style = MaterialTheme.typography.displaySmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
 
-        // Editable field list
+        Text(
+            text = stringResource(R.string.prefill_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(32.dp))
+
         LazyColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            items(fields) { field ->
+            items(fields.size) { index ->
+                val field = fields[index]
                 val isEditing = editingFieldId == field.id
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isEditing)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant
-                    )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 14.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = field.fieldName,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                             )
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(Modifier.height(6.dp))
                             if (isEditing) {
                                 OutlinedTextField(
                                     value = editingValue,
                                     onValueChange = { editingValue = it },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
-                                    textStyle = MaterialTheme.typography.bodyMedium,
+                                    textStyle = MaterialTheme.typography.titleMedium,
+                                    shape = MaterialTheme.shapes.large,
                                     keyboardActions = KeyboardActions(onDone = {
                                         onFieldEdit(field.id, editingValue)
                                         editingFieldId = null
@@ -1818,8 +1886,8 @@ private fun ConfirmPrefillPanel(
                             } else {
                                 Text(
                                     text = field.value ?: "—",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
                         }
@@ -1828,7 +1896,11 @@ private fun ConfirmPrefillPanel(
                                 onFieldEdit(field.id, editingValue)
                                 editingFieldId = null
                             }) {
-                                Icon(Icons.Default.Check, "Save", tint = MaterialTheme.colorScheme.primary)
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = stringResource(R.string.save),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         } else {
                             IconButton(onClick = {
@@ -1836,36 +1908,53 @@ private fun ConfirmPrefillPanel(
                                 editingValue = field.value ?: ""
                             }) {
                                 Icon(
-                                    Icons.Default.Edit, "Edit",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(18.dp)
+                                    Icons.Default.Edit,
+                                    contentDescription = stringResource(R.string.enter_value),
+                                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f),
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
                     }
                 }
+
+                if (index < fields.lastIndex) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Action buttons
         Button(
             onClick = onConfirm,
-            modifier = Modifier.fillMaxWidth().height(52.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp),
+            shape = MaterialTheme.shapes.large
         ) {
-            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Looks good — continue", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.prefill_confirm),
+                style = MaterialTheme.typography.titleLarge
+            )
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
-        TextButton(onClick = onStartFresh) {
+        OutlinedButton(
+            onClick = onStartFresh,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+            shape = MaterialTheme.shapes.large
+        ) {
             Text(
-                text = "Enter my info fresh",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                text = stringResource(R.string.prefill_start_fresh),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
         }
     }

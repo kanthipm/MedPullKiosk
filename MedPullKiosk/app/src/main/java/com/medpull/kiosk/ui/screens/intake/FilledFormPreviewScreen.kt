@@ -16,9 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.medpull.kiosk.R
 import com.medpull.kiosk.ui.components.BackButton
 import com.medpull.kiosk.ui.components.InteractivePdfViewer
 
@@ -35,6 +37,11 @@ fun FilledFormPreviewScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current  // still needed for print
+    val filledFormFallback = stringResource(R.string.filled_form)
+    val patientIntakeFormTitle = stringResource(R.string.patient_intake_form)
+    val previousPageLabel = stringResource(R.string.previous_page)
+    val nextPageLabel = stringResource(R.string.next_page)
+    val resetZoomLabel = stringResource(R.string.reset_zoom)
 
     var currentPage by remember { mutableIntStateOf(0) }
     var pageCount by remember { mutableIntStateOf(1) }
@@ -48,13 +55,13 @@ fun FilledFormPreviewScreen(
                 title = {
                     Column {
                         Text(
-                            state.formName.ifBlank { "Filled Form" },
+                            state.formName.ifBlank { filledFormFallback },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         if (!state.isLoading && state.pdfFile != null) {
                             Text(
-                                "Page ${currentPage + 1} of $pageCount",
+                                stringResource(R.string.page_of, currentPage + 1, pageCount),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -78,11 +85,11 @@ fun FilledFormPreviewScreen(
                         IconButton(
                             onClick = { if (currentPage > 0) { currentPage--; userScale = 1f; userOffsetX = 0f; userOffsetY = 0f } },
                             enabled = currentPage > 0
-                        ) { Icon(Icons.Default.ChevronLeft, "Previous page") }
+                        ) { Icon(Icons.Default.ChevronLeft, previousPageLabel) }
                         IconButton(
                             onClick = { if (currentPage < pageCount - 1) { currentPage++; userScale = 1f; userOffsetX = 0f; userOffsetY = 0f } },
                             enabled = currentPage < pageCount - 1
-                        ) { Icon(Icons.Default.ChevronRight, "Next page") }
+                        ) { Icon(Icons.Default.ChevronRight, nextPageLabel) }
                     }
                 }
             )
@@ -102,7 +109,7 @@ fun FilledFormPreviewScreen(
                             val file = state.pdfFile ?: return@OutlinedButton
                             try {
                                 val printManager = context.getSystemService(android.content.Context.PRINT_SERVICE) as PrintManager
-                                val jobName = state.formName.ifBlank { "Patient Intake Form" }
+                                val jobName = state.formName.ifBlank { patientIntakeFormTitle }
                                 val webView = WebView(context).apply {
                                     webViewClient = WebViewClient()
                                     loadUrl("file://${file.absolutePath}")
@@ -126,7 +133,7 @@ fun FilledFormPreviewScreen(
                     ) {
                         Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Print")
+                        Text(stringResource(R.string.print))
                     }
 
                     // Send to clinic button
@@ -147,11 +154,11 @@ fun FilledFormPreviewScreen(
                         } else if (state.isSent) {
                             Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Sent!")
+                            Text(stringResource(R.string.sent))
                         } else {
                             Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Send to Clinic")
+                            Text(stringResource(R.string.send_to_clinic))
                         }
                     }
 
@@ -162,7 +169,7 @@ fun FilledFormPreviewScreen(
                     ) {
                         Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Done")
+                        Text(stringResource(R.string.done))
                     }
                 }
             }
@@ -182,7 +189,7 @@ fun FilledFormPreviewScreen(
                     ) {
                         CircularProgressIndicator()
                         Text(
-                            "Filling in your answers…",
+                            stringResource(R.string.filling_answers),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -205,7 +212,7 @@ fun FilledFormPreviewScreen(
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        Button(onClick = onDone) { Text("Go Back") }
+                        Button(onClick = onDone) { Text(stringResource(R.string.go_back)) }
                     }
                 }
 
@@ -220,7 +227,7 @@ fun FilledFormPreviewScreen(
                             onClick = { userScale = 1f; userOffsetX = 0f; userOffsetY = 0f },
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                         ) {
-                            Icon(Icons.Default.ZoomOut, "Reset zoom", modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.ZoomOut, resetZoomLabel, modifier = Modifier.size(18.dp))
                         }
                     }
 

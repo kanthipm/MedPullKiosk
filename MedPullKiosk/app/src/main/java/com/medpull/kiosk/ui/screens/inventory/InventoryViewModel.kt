@@ -2,8 +2,10 @@ package com.medpull.kiosk.ui.screens.inventory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.InventoryItem
 import com.medpull.kiosk.data.repository.InventoryRepository
+import com.medpull.kiosk.utils.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +30,8 @@ data class InventoryState(
 
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
-    private val inventoryRepository: InventoryRepository
+    private val inventoryRepository: InventoryRepository,
+    private val appStrings: AppStrings
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(InventoryState())
@@ -57,7 +60,7 @@ class InventoryViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _state.update {
-                        it.copy(isLoading = false, error = e.message ?: "Failed to load inventory")
+                        it.copy(isLoading = false, error = e.message ?: appStrings.get(R.string.err_failed_load_inventory))
                     }
                 }
         }
@@ -82,7 +85,7 @@ class InventoryViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _state.update {
-                        it.copy(isRefreshing = false, error = e.message ?: "Failed to refresh")
+                        it.copy(isRefreshing = false, error = e.message ?: appStrings.get(R.string.err_failed_refresh))
                     }
                 }
         }

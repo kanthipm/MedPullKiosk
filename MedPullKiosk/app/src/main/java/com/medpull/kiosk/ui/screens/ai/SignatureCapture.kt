@@ -24,8 +24,10 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import com.medpull.kiosk.R
 
 /**
  * Signature capture canvas.
@@ -124,7 +126,7 @@ fun SignatureCapture(
 
             if (!hasStrokes && currentStroke.isEmpty()) {
                 Text(
-                    text = "Sign here",
+                    text = stringResource(R.string.sign_here),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 )
@@ -155,7 +157,7 @@ fun SignatureCapture(
             ) {
                 Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Clear")
+                Text(stringResource(R.string.clear))
             }
 
             Button(
@@ -169,7 +171,7 @@ fun SignatureCapture(
             ) {
                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Done")
+                Text(stringResource(R.string.done))
             }
         }
     }

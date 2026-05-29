@@ -66,7 +66,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Create your account",
+            text = stringResource(R.string.register_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
@@ -78,11 +78,11 @@ fun RegisterScreen(
         OutlinedTextField(
             value = uiState.firstName,
             onValueChange = { viewModel.onFirstNameChanged(it) },
-            label = { Text("First Name (Optional)") },
+            label = { Text(stringResource(R.string.first_name_optional)) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Person,
-                    contentDescription = "First Name"
+                    contentDescription = stringResource(R.string.first_name)
                 )
             },
             singleLine = true,
@@ -105,11 +105,11 @@ fun RegisterScreen(
         OutlinedTextField(
             value = uiState.lastName,
             onValueChange = { viewModel.onLastNameChanged(it) },
-            label = { Text("Last Name (Optional)") },
+            label = { Text(stringResource(R.string.last_name_optional)) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Person,
-                    contentDescription = "Last Name"
+                    contentDescription = stringResource(R.string.last_name)
                 )
             },
             singleLine = true,
@@ -136,7 +136,7 @@ fun RegisterScreen(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Email,
-                    contentDescription = "Email"
+                    contentDescription = stringResource(R.string.email)
                 )
             },
             singleLine = true,
@@ -163,14 +163,18 @@ fun RegisterScreen(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Password"
+                    contentDescription = stringResource(R.string.password)
                 )
             },
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                        contentDescription = if (passwordVisible) {
+                            stringResource(R.string.hide_password)
+                        } else {
+                            stringResource(R.string.show_password)
+                        }
                     )
                 }
             },
@@ -187,7 +191,7 @@ fun RegisterScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 32.dp),
             enabled = !uiState.isLoading,
-            supportingText = { Text("Min 12 chars: uppercase, lowercase, number, special char") }
+            supportingText = { Text(stringResource(R.string.password_requirements)) }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -200,14 +204,18 @@ fun RegisterScreen(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Confirm Password"
+                    contentDescription = stringResource(R.string.confirm_password)
                 )
             },
             trailingIcon = {
                 IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                     Icon(
                         imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password"
+                        contentDescription = if (confirmPasswordVisible) {
+                            stringResource(R.string.hide_password)
+                        } else {
+                            stringResource(R.string.show_password)
+                        }
                     )
                 }
             },
@@ -285,7 +293,7 @@ fun RegisterScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Verification Required",
+                        text = stringResource(R.string.verification_required),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )

@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -69,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.UploadStatus
 import com.medpull.kiosk.ui.components.BackButton
@@ -196,14 +198,14 @@ private fun DocumentUploadHeader(onNavigateBack: () -> Unit) {
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Supporting Documents",
+                    text = stringResource(R.string.supporting_documents),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Upload photos or files below. Required items must be uploaded or skipped before continuing.",
+                    text = stringResource(R.string.supporting_documents_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -263,7 +265,7 @@ private fun DocumentCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = type.displayName,
+                        text = type.localizedDisplayName(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -273,7 +275,7 @@ private fun DocumentCard(
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "Optional",
+                                text = stringResource(R.string.optional_label),
                                 style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -285,7 +287,7 @@ private fun DocumentCard(
 
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = type.reason,
+                    text = type.localizedReason(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -294,13 +296,13 @@ private fun DocumentCard(
 
                 // Accepted docs
                 Text(
-                    text = "Accepted:",
+                    text = stringResource(R.string.accepted_label),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(2.dp))
-                type.examples.forEach { example ->
+                type.localizedExamples().forEach { example ->
                     Text(
                         text = "• $example",
                         style = MaterialTheme.typography.bodySmall,
@@ -310,7 +312,7 @@ private fun DocumentCard(
 
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Please upload a clear photo with all corners visible.",
+                    text = stringResource(R.string.upload_clear_photo),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
@@ -327,7 +329,7 @@ private fun DocumentCard(
                         ) {
                             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Replace", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.action_replace), style = MaterialTheme.typography.labelMedium)
                         }
                         OutlinedButton(
                             onClick = onDelete,
@@ -338,7 +340,7 @@ private fun DocumentCard(
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Remove", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.action_remove), style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 } else {
@@ -349,7 +351,7 @@ private fun DocumentCard(
                         ) {
                             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Take Photo", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.take_photo), style = MaterialTheme.typography.labelMedium)
                         }
                         OutlinedButton(
                             onClick = onPickFile,
@@ -357,7 +359,7 @@ private fun DocumentCard(
                         ) {
                             Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Upload File", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.action_upload_file), style = MaterialTheme.typography.labelMedium)
                         }
                         if (!isSkipped) {
                             TextButton(
@@ -365,7 +367,7 @@ private fun DocumentCard(
                                 modifier = Modifier.height(36.dp)
                             ) {
                                 Text(
-                                    "Skip",
+                                    stringResource(R.string.action_skip),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -376,7 +378,7 @@ private fun DocumentCard(
                                 modifier = Modifier.height(36.dp)
                             ) {
                                 Text(
-                                    "Undo Skip",
+                                    stringResource(R.string.action_undo_skip),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -413,7 +415,7 @@ private fun DocumentThumbnail(slot: DocumentSlot) {
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            "PDF",
+                            stringResource(R.string.pdf_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -421,7 +423,10 @@ private fun DocumentThumbnail(slot: DocumentSlot) {
                 } else {
                     AsyncImage(
                         model = File(slot.filePath),
-                        contentDescription = "Uploaded ${slot.type.displayName}",
+                        contentDescription = stringResource(
+                            R.string.uploaded_document,
+                            slot.type.localizedDisplayName()
+                        ),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -436,7 +441,7 @@ private fun DocumentThumbnail(slot: DocumentSlot) {
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "Skipped",
+                        stringResource(R.string.status_skipped),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -451,7 +456,7 @@ private fun DocumentThumbnail(slot: DocumentSlot) {
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                     Text(
-                        "No file",
+                        stringResource(R.string.status_no_file),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
@@ -467,7 +472,7 @@ private fun StatusBadge(status: UploadStatus) {
         UploadStatus.UPLOADED -> {
             Icon(
                 Icons.Default.CheckCircle,
-                contentDescription = "Uploaded",
+                contentDescription = stringResource(R.string.status_uploaded),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -478,7 +483,7 @@ private fun StatusBadge(status: UploadStatus) {
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Text(
-                    "Skipped",
+                    stringResource(R.string.status_skipped),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -520,7 +525,7 @@ private fun DocumentUploadFooter(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "Upload or skip all required documents to continue.",
+                        stringResource(R.string.upload_continue_warning),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -541,7 +546,7 @@ private fun DocumentUploadFooter(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Continue to Review", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.continue_to_review), style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.width(6.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                 }

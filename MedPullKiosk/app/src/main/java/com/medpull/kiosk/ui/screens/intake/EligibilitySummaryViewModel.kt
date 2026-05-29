@@ -11,7 +11,9 @@ import com.medpull.kiosk.data.models.UploadStatus
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.data.repository.DocumentRepository
 import com.medpull.kiosk.data.repository.FormRepository
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
+import com.medpull.kiosk.utils.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -66,6 +68,7 @@ class EligibilitySummaryViewModel @Inject constructor(
     private val intakeRepository: GuidedIntakeRepository,
     private val documentRepository: DocumentRepository,
     private val authRepository: AuthRepository,
+    private val appStrings: AppStrings,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -87,7 +90,7 @@ class EligibilitySummaryViewModel @Inject constructor(
                 ) { form, flow -> Pair(form, flow) }
                     .collect { (form, flow) ->
                         if (form == null) {
-                            _state.update { it.copy(isLoading = false, error = "Form not found") }
+                            _state.update { it.copy(isLoading = false, error = appStrings.get(R.string.form_not_found)) }
                             return@collect
                         }
                         val skipped = flow?.skippedFieldIds ?: emptySet()
@@ -134,7 +137,7 @@ class EligibilitySummaryViewModel @Inject constructor(
                 _state.update { it.copy(isSubmitted = true) }
             } catch (e: Exception) {
                 Log.e("EligibilitySummaryVM", "Submit error", e)
-                _state.update { it.copy(error = "Failed to submit: ${e.message}") }
+                _state.update { it.copy(error = appStrings.get(R.string.err_failed_submit, e.message ?: "")) }
             }
         }
     }

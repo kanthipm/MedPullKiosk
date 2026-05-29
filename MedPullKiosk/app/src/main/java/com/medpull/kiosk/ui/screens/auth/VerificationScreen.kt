@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,7 +50,7 @@ fun VerificationScreen(
         // Icon
         Icon(
             imageVector = Icons.Default.VerifiedUser,
-            contentDescription = "Verification",
+            contentDescription = stringResource(R.string.verification),
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.primary
         )
@@ -58,7 +59,7 @@ fun VerificationScreen(
 
         // Title
         Text(
-            text = "Verify Your Email",
+            text = stringResource(R.string.verify_email_title),
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center
@@ -67,7 +68,7 @@ fun VerificationScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Enter the verification code sent to:",
+            text = stringResource(R.string.verification_code_sent),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
@@ -88,7 +89,7 @@ fun VerificationScreen(
         OutlinedTextField(
             value = uiState.code,
             onValueChange = { viewModel.onCodeChanged(it) },
-            label = { Text("Verification Code") },
+            label = { Text(stringResource(R.string.verification_code)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
@@ -123,7 +124,7 @@ fun VerificationScreen(
                 )
             } else {
                 Text(
-                    text = "Verify",
+                    text = stringResource(R.string.verify),
                     style = MaterialTheme.typography.titleLarge
                 )
             }
@@ -141,7 +142,11 @@ fun VerificationScreen(
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Text(
-                text = if (uiState.isResending) "Sending..." else "Resend Code",
+                text = if (uiState.isResending) {
+                    stringResource(R.string.sending)
+                } else {
+                    stringResource(R.string.resend_code)
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -152,7 +157,7 @@ fun VerificationScreen(
         // Back to login button
         TextButton(onClick = onNavigateToLogin) {
             Text(
-                text = "Back to Login",
+                text = stringResource(R.string.back_to_login),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary
             )

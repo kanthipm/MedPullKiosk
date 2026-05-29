@@ -4,6 +4,23 @@
   "version": "2.0",
   "ai_instructions": "You are conducting a patient intake at Coastal Gateway Health Center (CGHC). Work through all 4 sections in order: Registration, Health History, HIPAA Consent, General Consents. Ask one question at a time. Follow all skip_if rules. Be warm and concise. Never display ai_note content to the patient — use it only to guide your responses.",
 
+  "skip_during_intake": ["name_confirmation", "telehealth_notice_acknowledged"],
+  "consent_batch_fields": ["hipaa_consent", "sliding_fee_acknowledgment", "ghhc_data_sharing", "photo_consent"],
+  "skip_rules": [
+    { "when_field": "physical_same_as_mailing", "equals": "Yes", "skip": ["physical_address_street", "physical_city", "physical_state", "physical_zip"] },
+    { "when_field": "has_insurance", "equals": "No", "skip": ["primary_insurance_provider", "primary_insurance_id", "primary_insurance_group", "policyholder_is_self", "policyholder_name", "policyholder_dob", "policyholder_relationship", "has_secondary_insurance", "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"] },
+    { "when_field": "policyholder_is_self", "equals": "Yes", "skip": ["policyholder_name", "policyholder_dob", "policyholder_relationship"] },
+    { "when_field": "has_secondary_insurance", "equals": "No", "skip": ["secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"] },
+    { "when_field": "family_history_any", "equals": "No", "skip": ["family_history_conditions", "family_history_members"] },
+    { "when_field": "tobacco_use", "equals": "No", "skip": ["tobacco_type", "tobacco_frequency"] },
+    { "when_field": "alcohol_use", "equals": "No", "skip": ["alcohol_frequency"] },
+    { "when_field": "surgeries_any", "equals": "No", "skip": ["surgeries_list"] },
+    { "when_field": "medications_any", "equals": "No", "skip": ["medications_list"] },
+    { "when_field": "allergies_any", "equals": "No", "skip": ["allergies_list"] },
+    { "when_field": "authorized_phi_contacts_any", "equals": "No", "skip": ["authorized_phi_contact_1_name", "authorized_phi_contact_1_relationship", "authorized_phi_contact_2_name", "authorized_phi_contact_2_relationship"] },
+    { "when_field": "filling_for_self", "equals": "Myself", "skip": ["representative_name", "representative_relationship"] }
+  ],
+
   "sections": [
     {
       "id": "registration",
