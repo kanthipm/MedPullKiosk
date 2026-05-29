@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.R
+import com.medpull.kiosk.ui.components.BackButton
 
 /**
  * Registration screen for new users
@@ -35,7 +36,8 @@ fun RegisterScreen(
     viewModel: RegisterViewModel = hiltViewModel(),
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    onNavigateToVerification: (String) -> Unit
+    onNavigateToVerification: (String) -> Unit,
+    onBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -43,6 +45,8 @@ fun RegisterScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        BackButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -325,5 +329,6 @@ fun RegisterScreen(
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
         )
+    }
     }
 }

@@ -71,11 +71,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.medpull.kiosk.data.models.DocumentType
 import com.medpull.kiosk.data.models.UploadStatus
+import com.medpull.kiosk.ui.components.BackButton
 import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
-@Suppress("UNUSED_PARAMETER")
 fun DocumentUploadScreen(
     onNavigateBack: () -> Unit,
     onContinue: () -> Unit,
@@ -144,7 +144,7 @@ fun DocumentUploadScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // ── Header ────────────────────────────────────────────────────
-            DocumentUploadHeader()
+            DocumentUploadHeader(onNavigateBack = onNavigateBack)
 
             // ── Document cards ────────────────────────────────────────────
             Column(
@@ -181,28 +181,33 @@ fun DocumentUploadScreen(
 // ── Header ─────────────────────────────────────────────────────────────────
 
 @Composable
-private fun DocumentUploadHeader() {
+private fun DocumentUploadHeader(onNavigateBack: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 20.dp)
+                .padding(start = 8.dp, end = 32.dp, top = 12.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Supporting Documents",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Upload photos or files below. Required items must be uploaded or skipped before continuing.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            BackButton(onClick = onNavigateBack)
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Supporting Documents",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Upload photos or files below. Required items must be uploaded or skipped before continuing.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

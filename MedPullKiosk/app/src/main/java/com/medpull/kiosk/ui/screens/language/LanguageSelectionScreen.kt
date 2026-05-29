@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.medpull.kiosk.ui.components.BackButton
 import com.medpull.kiosk.utils.LanguageOption
 
 /**
@@ -37,14 +38,17 @@ import com.medpull.kiosk.utils.LanguageOption
 @Composable
 fun LanguageSelectionScreen(
     viewModel: LanguageSelectionViewModel = hiltViewModel(),
-    onLanguageSelected: () -> Unit
+    onLanguageSelected: () -> Unit,
+    onBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     if (uiState.availableLanguages.size < 8) {
         // Languages not loaded yet (or unexpectedly short); render an empty
         // surface so the screen still fills cleanly during the brief load.
-        Box(modifier = Modifier.fillMaxSize())
+        Box(modifier = Modifier.fillMaxSize()) {
+            BackButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
+        }
         return
     }
 
@@ -52,30 +56,42 @@ fun LanguageSelectionScreen(
     // canonical picker order defined in Constants.Languages.ALL.
     val rows = uiState.availableLanguages.chunked(2)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        rows.forEach { rowLanguages ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                rowLanguages.forEach { language ->
-                    LanguageCard(
-                        language = language,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        onClick = {
-                            viewModel.selectLanguage(language.code)
-                            viewModel.confirmLanguage(onLanguageSelected)
-                        }
-                    )
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Back arrow sits in its own top bar above the grid (no overlap).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BackButton(onClick = onBack)
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            rows.forEach { rowLanguages ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    rowLanguages.forEach { language ->
+                        LanguageCard(
+                            language = language,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            onClick = {
+                                viewModel.selectLanguage(language.code)
+                                viewModel.confirmLanguage(onLanguageSelected)
+                            }
+                        )
+                    }
                 }
             }
         }

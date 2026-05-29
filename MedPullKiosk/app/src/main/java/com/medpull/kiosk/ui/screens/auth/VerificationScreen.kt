@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.R
+import com.medpull.kiosk.ui.components.BackButton
 
 /**
  * Email verification screen
@@ -25,7 +26,8 @@ fun VerificationScreen(
     email: String,
     viewModel: VerificationViewModel = hiltViewModel(),
     onVerificationSuccess: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -35,6 +37,8 @@ fun VerificationScreen(
         viewModel.setEmail(email)
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        BackButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -195,5 +199,6 @@ fun VerificationScreen(
                 )
             }
         }
+    }
     }
 }

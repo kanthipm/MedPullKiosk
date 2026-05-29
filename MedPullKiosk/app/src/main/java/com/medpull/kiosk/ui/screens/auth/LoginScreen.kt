@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.R
+import com.medpull.kiosk.ui.components.BackButton
 
 /**
  * Login screen for existing users
@@ -32,12 +33,15 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    onNavigateToVerification: (String) -> Unit
+    onNavigateToVerification: (String) -> Unit,
+    onBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     var passwordVisible by remember { mutableStateOf(false) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        BackButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(4.dp))
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -199,5 +203,6 @@ fun LoginScreen(
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
         )
+    }
     }
 }

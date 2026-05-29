@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.medpull.kiosk.ui.components.BackButton
 import com.medpull.kiosk.ui.components.InteractivePdfViewer
 
 /**
@@ -29,6 +30,7 @@ import com.medpull.kiosk.ui.components.InteractivePdfViewer
 @Composable
 fun FilledFormPreviewScreen(
     onDone: () -> Unit,
+    onBack: () -> Unit = {},
     viewModel: FilledFormPreviewViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -61,8 +63,15 @@ fun FilledFormPreviewScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
+                navigationIcon = {
+                    BackButton(
+                        onClick = onBack,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                },
                 actions = {
                     // Page navigation
                     if (!state.isLoading && pageCount > 1) {

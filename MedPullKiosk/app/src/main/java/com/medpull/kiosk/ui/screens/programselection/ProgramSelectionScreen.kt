@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.IntakeProgramType
+import com.medpull.kiosk.ui.components.BackButton
 
 /**
  * Entry screen: patient picks which program they are here for.
@@ -22,9 +23,14 @@ import com.medpull.kiosk.data.models.IntakeProgramType
 @Composable
 fun ProgramSelectionScreen(
     onProgramSelected: (IntakeProgramType) -> Unit,
-    onStaffView: () -> Unit = {}
+    onStaffView: () -> Unit = {},
+    onBack: () -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
+        BackButton(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()

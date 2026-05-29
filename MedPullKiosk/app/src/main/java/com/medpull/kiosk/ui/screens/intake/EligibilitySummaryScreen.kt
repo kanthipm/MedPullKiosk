@@ -74,6 +74,7 @@ fun EligibilitySummaryScreen(
     onEditInfo: () -> Unit,
     onReuploadDocs: () -> Unit,
     onSubmitted: () -> Unit,
+    onBack: () -> Unit = {},
     viewModel: EligibilitySummaryViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -96,7 +97,7 @@ fun EligibilitySummaryScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onEditInfo) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },

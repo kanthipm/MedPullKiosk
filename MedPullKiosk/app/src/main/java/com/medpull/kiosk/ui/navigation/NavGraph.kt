@@ -132,6 +132,12 @@ fun NavGraph(
                 },
                 onStaffView = {
                     navController.navigate(Screen.StaffPortal.route)
+                },
+                // Reverse flow: ProgramSelection ← Language
+                onBack = {
+                    navController.navigate(Screen.Language.route) {
+                        popUpTo(Screen.ProgramSelection.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -140,6 +146,12 @@ fun NavGraph(
             LanguageSelectionScreen(
                 onLanguageSelected = {
                     navController.navigate(Screen.ProgramSelection.route) {
+                        popUpTo(Screen.Language.route) { inclusive = true }
+                    }
+                },
+                // Reverse flow: Language ← Welcome
+                onBack = {
+                    navController.navigate(Screen.Welcome.route) {
                         popUpTo(Screen.Language.route) { inclusive = true }
                     }
                 }
@@ -159,6 +171,11 @@ fun NavGraph(
                 },
                 onNavigateToVerification = { email ->
                     navController.navigate(Screen.Verification.createRoute(email))
+                },
+                onBack = {
+                    navController.navigate(Screen.Welcome.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -176,7 +193,8 @@ fun NavGraph(
                 },
                 onNavigateToVerification = { email ->
                     navController.navigate(Screen.Verification.createRoute(email))
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -197,7 +215,8 @@ fun NavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = false }
                     }
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -216,7 +235,9 @@ fun NavGraph(
                 },
                 onNavigateToInventory = {
                     navController.navigate(Screen.Inventory.route)
-                }
+                },
+                // Reverse flow: FormSelection ← ProgramSelection
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -264,8 +285,13 @@ fun NavGraph(
         ) { backStackEntry ->
             val formId = backStackEntry.arguments?.getString("formId") ?: ""
             DocumentUploadScreen(
+                // Reverse flow: DocumentUpload ← GuidedIntake (re-open last field)
                 onNavigateBack = {
-                    navController.popBackStack()
+                    navController.navigate(
+                        Screen.GuidedIntake.createRoute(formId, editLast = true)
+                    ) {
+                        popUpTo(Screen.ProgramSelection.route)
+                    }
                 },
                 onContinue = {
                     navController.navigate(Screen.EligibilitySummary.createRoute(formId)) {
@@ -297,6 +323,12 @@ fun NavGraph(
                     navController.navigate(Screen.FilledFormPreview.createRoute(formId)) {
                         popUpTo(Screen.ProgramSelection.route)
                     }
+                },
+                // Reverse flow: EligibilitySummary ← DocumentUpload
+                onBack = {
+                    navController.navigate(Screen.DocumentUpload.createRoute(formId)) {
+                        popUpTo(Screen.ProgramSelection.route)
+                    }
                 }
             )
         }
@@ -323,11 +355,24 @@ fun NavGraph(
         composable(
             route = Screen.FilledFormPreview.route,
             arguments = listOf(navArgument("formId") { type = NavType.StringType })
-        ) {
+        ) { backStackEntry ->
+            val formId = backStackEntry.arguments?.getString("formId") ?: ""
             FilledFormPreviewScreen(
                 onDone = {
                     navController.navigate(Screen.ProgramSelection.route) {
                         popUpTo(Screen.ProgramSelection.route) { inclusive = true }
+                    }
+                },
+                // Reverse flow: FilledFormPreview ← review screen for this path
+                onBack = {
+                    if (formId == GuidedIntakeViewModel.SLIDING_FEE_ID) {
+                        navController.navigate(Screen.EligibilitySummary.createRoute(formId)) {
+                            popUpTo(Screen.ProgramSelection.route)
+                        }
+                    } else {
+                        navController.navigate(Screen.IntakeReview.createRoute(formId)) {
+                            popUpTo(Screen.FormSelection.route)
+                        }
                     }
                 }
             )

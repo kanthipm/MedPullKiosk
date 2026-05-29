@@ -23,6 +23,7 @@ import com.medpull.kiosk.data.models.FormStatus
 import java.io.File
 import java.io.FileOutputStream
 import com.medpull.kiosk.ui.components.ActivityTracker
+import com.medpull.kiosk.ui.components.BackButton
 import com.medpull.kiosk.utils.SessionManager
 import java.text.SimpleDateFormat
 import java.util.*
@@ -40,6 +41,7 @@ fun FormSelectionScreen(
     onLogout: () -> Unit,
     onFormSelected: (String) -> Unit = {},
     onNavigateToInventory: () -> Unit = {},
+    onBack: () -> Unit = {},
     viewModel: FormSelectionViewModel = hiltViewModel()
 ) {
     // Track activity for session management
@@ -89,6 +91,12 @@ fun FormSelectionScreen(
                     Text(
                         text = stringResource(R.string.app_title),
                         style = MaterialTheme.typography.headlineMedium
+                    )
+                },
+                navigationIcon = {
+                    BackButton(
+                        onClick = onBack,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 },
                 actions = {
