@@ -99,7 +99,7 @@
     <string name="voice_edit">Редактировать</string>
     <string name="voice_type_response">Введите свой ответ</string>
     <string name="voice_listening">Слушаю...</string>
-    <string name="voice_tap_to_speak">Нажмите, чтобы говорить</string>
+    <string name="voice_tap_to_speak">Нажмите в любом месте, чтобы говорить</string>
     <string name="voice_send">Отправить</string>
     <string name="voice_speaking">Говоря...</string>
 

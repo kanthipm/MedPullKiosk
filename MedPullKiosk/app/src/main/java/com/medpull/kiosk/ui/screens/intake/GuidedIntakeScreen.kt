@@ -32,6 +32,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -72,6 +73,7 @@ import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.ui.screens.ai.HandwritingInput
 import com.medpull.kiosk.ui.screens.ai.SignatureCapture
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.PI
@@ -302,14 +304,26 @@ fun GuidedIntakeScreen(
         TextToSpeech(context) { status -> ttsReady = status == TextToSpeech.SUCCESS }
     }
     DisposableEffect(Unit) { onDispose { tts.shutdown() } }
-    // Whether, once a question finishes being read aloud, the mic should start
-    // automatically (voice-first + permission already granted).
-    val canAutoListenRef = rememberUpdatedState(
-        voiceFirstActive && speechAvailable &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-            PackageManager.PERMISSION_GRANTED
-    )
-    val startListeningRef = rememberUpdatedState(startListening)
+
+    // Leave the spoken-question phase: open the mic hands-free if we can, else
+    // fall back to tap-to-speak. Guarded so it only acts while still "Speaking",
+    // making it safe to call from the TTS callbacks AND the watchdog below.
+    // rememberUpdatedState keeps the set-once TTS listener pointed at the latest.
+    val proceedAfterQuestionRef = rememberUpdatedState<() -> Unit> {
+        if (voiceActiveRef.value && voicePhase == VoicePhase.Speaking) {
+            val granted = speechAvailable && ContextCompat.checkSelfPermission(
+                context, Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                liveTranscript = ""; finalTranscript = ""
+                voicePhase = VoicePhase.Listening
+                startListening()
+            } else {
+                voicePhase = VoicePhase.Prompt
+            }
+        }
+    }
+
     LaunchedEffect(state.userLanguage, ttsReady) {
         if (ttsReady) {
             val locale = when (state.userLanguage) {
@@ -327,27 +341,28 @@ fun GuidedIntakeScreen(
                 override fun onDone(utteranceId: String?) {
                     mainHandler.post {
                         isSpeaking = false
-                        // When the question finishes, auto-open the mic for hands-free use.
-                        if (utteranceId == "question" && voicePhase == VoicePhase.Speaking) {
-                            if (canAutoListenRef.value) {
-                                liveTranscript = ""; finalTranscript = ""
-                                voicePhase = VoicePhase.Listening
-                                startListeningRef.value()
-                            } else if (voiceActiveRef.value) {
-                                voicePhase = VoicePhase.Prompt
-                            }
-                        }
+                        if (utteranceId == "question") proceedAfterQuestionRef.value()
                     }
                 }
                 @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) {
-                    mainHandler.post { isSpeaking = false }
+                    // A TTS failure must NOT strand the user on "Speaking" — advance.
+                    mainHandler.post {
+                        isSpeaking = false
+                        proceedAfterQuestionRef.value()
+                    }
                 }
             })
         }
     }
 
-    // Auto-speak each new question; reset the voice flow for the new field.
+    // Auto-speak each new question, then open the mic once it finishes.
+    //
+    // The mic is opened by the TTS onDone/onError callbacks (right when speech
+    // ends). The delay below is ONLY a safety net for engines that never call
+    // back — and it is sized to the estimated speech length so we never open the
+    // mic while TTS is still talking (doing so made the mic capture the speaker,
+    // which both broke recognition and pinned the waveform at max).
     LaunchedEffect(currentQuestion?.text, voiceFirstActive, ttsReady) {
         if (voiceFirstActive && currentQuestion != null) {
             liveTranscript = ""
@@ -356,11 +371,20 @@ fun GuidedIntakeScreen(
             micAmplitude = 0f
             val q = currentQuestion.text
                 .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
-            if (ttsReady && q.isNotBlank()) {
-                voicePhase = VoicePhase.Speaking
-                tts.speak(q, TextToSpeech.QUEUE_FLUSH, null, "question")
+            voicePhase = VoicePhase.Speaking
+            val spokeOk = ttsReady && q.isNotBlank() &&
+                tts.speak(q, TextToSpeech.QUEUE_FLUSH, null, "question") == TextToSpeech.SUCCESS
+
+            if (!spokeOk) {
+                // TTS won't speak at all — go to the mic almost immediately.
+                delay(300L)
+                if (voicePhase == VoicePhase.Speaking) proceedAfterQuestionRef.value()
             } else {
-                voicePhase = VoicePhase.Prompt
+                // Backstop only. ~90ms/char + 1.5s buffer roughly matches speech
+                // length; onDone normally fires first and advances us.
+                val estimateMs = (q.length * 90L + 1500L).coerceIn(2500L, 12000L)
+                delay(estimateMs)
+                if (voicePhase == VoicePhase.Speaking) proceedAfterQuestionRef.value()
             }
         }
     }
@@ -1106,8 +1130,22 @@ private fun VoiceFirstQuestion(
     modifier: Modifier = Modifier
 ) {
     val blue = MaterialTheme.colorScheme.primary
+    val tapAnywhereSource = remember { MutableInteractionSource() }
 
-    Box(modifier = modifier) {
+    Box(
+        modifier = modifier.then(
+            // Tap ANYWHERE on the screen to start speaking while idle. No ripple
+            // (it would flash the whole screen); the Type button still takes its
+            // own taps. Only active in the Prompt phase so it never hijacks the
+            // Accept/Re-record/Edit buttons or the keyboard.
+            if (phase == VoicePhase.Prompt)
+                Modifier.clickable(
+                    interactionSource = tapAnywhereSource,
+                    indication = null
+                ) { onTapToSpeak() }
+            else Modifier
+        )
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1130,9 +1168,9 @@ private fun VoiceFirstQuestion(
 
             Spacer(Modifier.height(28.dp))
 
-            // Animated blue arch — reacts to the mic; tappable to (re)start.
-            // The whole padded band is the tap target (not just the thin line).
-            val archTappable = phase == VoicePhase.Prompt || phase == VoicePhase.Review
+            // Animated blue arch — reacts to the mic. In Review, tapping it
+            // re-records; in Prompt the whole screen is the tap target.
+            val archTappable = phase == VoicePhase.Review
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1190,13 +1228,6 @@ private fun VoiceFirstQuestion(
                             textAlign = TextAlign.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    // The labeled "Tap to speak" affordance must itself
-                                    // be tappable, not just the arch above it.
-                                    if (phase == VoicePhase.Prompt)
-                                        Modifier.clickable { onTapToSpeak() }
-                                    else Modifier
-                                )
                                 .padding(vertical = 8.dp)
                         )
                     }

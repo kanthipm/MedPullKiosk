@@ -99,7 +99,7 @@
     <string name="voice_edit">تحرير</string>
     <string name="voice_type_response">اكتب إجابتك</string>
     <string name="voice_listening">الاستماع...</string>
-    <string name="voice_tap_to_speak">انقر للتحدث</string>
+    <string name="voice_tap_to_speak">انقر في أي مكان للتحدث</string>
     <string name="voice_send">أرسل</string>
     <string name="voice_speaking">يتحدث...</string>
 

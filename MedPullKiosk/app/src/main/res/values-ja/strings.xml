@@ -99,7 +99,7 @@
     <string name="voice_edit">[編集]</string>
     <string name="voice_type_response">返答を入力</string>
     <string name="voice_listening">聞いている...</string>
-    <string name="voice_tap_to_speak">タップして話す</string>
+    <string name="voice_tap_to_speak">どこでもタップして話す</string>
     <string name="voice_send">送信</string>
     <string name="voice_speaking">スピーキング...</string>
 

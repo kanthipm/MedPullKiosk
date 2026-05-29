@@ -99,7 +99,7 @@
     <string name="voice_edit">Modifier</string>
     <string name="voice_type_response">Tapez votre réponse</string>
     <string name="voice_listening">À l\'écoute...</string>
-    <string name="voice_tap_to_speak">Touchez pour parler</string>
+    <string name="voice_tap_to_speak">Touchez n\'importe où pour parler</string>
     <string name="voice_send">Envoyer</string>
     <string name="voice_speaking">En parlant...</string>
 

@@ -99,7 +99,7 @@
     <string name="voice_edit">编辑</string>
     <string name="voice_type_response">键入您的回复</string>
     <string name="voice_listening">听着...</string>
-    <string name="voice_tap_to_speak">点按即可说话</string>
+    <string name="voice_tap_to_speak">点按任意位置说话</string>
     <string name="voice_send">发送</string>
     <string name="voice_speaking">说话...</string>
 
