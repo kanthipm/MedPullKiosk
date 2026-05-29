@@ -1,19 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Info -->
-    <string name="app_name">MedPull Kiosk</string>
-    <string name="app_title">MedPull</string>
+    <string name="app_name" translatable="false">MedPull Kiosk</string>
+    <string name="app_title" translatable="false">MedPull</string>
     <string name="app_tagline">Atención médica simplificada</string>
+    <string name="app_subtitle">Asistente de formularios médicos</string>
 
     <!-- Welcome Screen -->
     <string name="welcome_back">¡Bienvenido de nuevo!</string>
     <string name="get_started">Comenzar</string>
     <string name="welcome_message">¡Bienvenido! Toque a continuación para comenzar a completar sus formularios médicos.</string>
     <string name="features_text">Disponible en 6 idiomas | Cumple con HIPAA | Seguro</string>
+    <string name="staff_view">Vista del personal</string>
 
     <!-- Language Selection -->
     <string name="select_language">Idioma</string>
     <string name="choose_language">Elige tu idioma</string>
+
+    <!-- Program Selection -->
+    <string name="program_question">¿Por qué estás aquí hoy?</string>
+    <string name="program_subtitle">Selecciona la opción que mejor describa tu visita.</string>
+    <string name="program_sliding_fee_title">Solicite una tarifa variable</string>
+    <string name="program_sliding_fee_desc">Descuento basado en los ingresos en los costos de atención médica</string>
+    <string name="program_medical_intake_title">Ingesta médica completa</string>
+    <string name="program_medical_intake_desc">Registro de pacientes nuevos e historial médico</string>
+    <string name="program_snf_title">Copiloto de admisiones de SNF</string>
+    <string name="program_snf_desc">Admisión a un centro de enfermería especializada asistido por IA</string>
+    <string name="program_secure_footer">Cumple con la HIPAA | Seguro</string>
 
     <!-- Authentication -->
     <string name="login">Iniciar sesión</string>
@@ -39,6 +52,47 @@
     <string name="choose_from_files">Elegir desde archivos</string>
     <string name="choose_from_files_sub">Seleccione un documento PDF</string>
 
+    <!-- Document Upload -->
+    <string name="supporting_documents">Documentos justificativos</string>
+    <string name="supporting_documents_subtitle">Sube fotos o archivos a continuación. Los elementos obligatorios deben cargarse u omitirse antes de continuar.</string>
+    <string name="optional_label">Opcional</string>
+    <string name="accepted_label">Aceptado:</string>
+    <string name="upload_clear_photo">Sube una foto nítida con todas las esquinas visibles.</string>
+    <string name="action_replace">Reemplazar</string>
+    <string name="action_remove">Eliminar</string>
+    <string name="action_upload_file">Cargar archivo</string>
+    <string name="action_skip">Saltar</string>
+    <string name="action_undo_skip">Deshacer omisión</string>
+    <string name="status_skipped">Omitido</string>
+    <string name="status_uploaded">Subido</string>
+    <string name="status_no_file">Sin archivo</string>
+    <string name="status_missing_required">Falta: obligatorio</string>
+    <string name="status_not_provided">No se proporciona</string>
+    <string name="upload_continue_warning">Sube u omite todos los documentos necesarios para continuar.</string>
+    <string name="continue_to_review">Continuar con la revisión</string>
+
+    <!-- Intake Review -->
+    <string name="review_title">Revisa tus respuestas</string>
+    <string name="review_required_field_warning">Rellene antes de enviar</string>
+    <string name="review_required_label">Necesario</string>
+    <string name="review_tap_to_enter">Pulsa para introducir...</string>
+    <string name="review_not_applicable">No aplicable</string>
+    <string name="review_loading">Cargando tus respuestas...</string>
+    <string name="review_generating">Generando...</string>
+    <string name="review_submit">Enviar</string>
+    <string name="review_share_or_print">Compartir o imprimir formulario</string>
+    <string name="section_personal_information">Información personal</string>
+    <string name="section_address">Dirección</string>
+    <string name="section_household">Hogar</string>
+    <string name="section_income">Ingresos</string>
+    <string name="section_employment_insurance">Empleo y seguro</string>
+    <string name="section_registration">Inscripción</string>
+    <string name="section_health_history">Historial de salud</string>
+    <string name="section_hipaa_consent">Consentimiento de HIPAA</string>
+    <string name="section_general_consents">Consentimientos generales</string>
+    <string name="section_supporting_documents">Documentos justificativos</string>
+    <string name="section_other">Otros</string>
+
     <!-- Form Filling -->
     <string name="fill_out_extracted_fields">Complete los campos extraídos</string>
     <string name="form_fields_label">Campos del formulario:</string>
@@ -54,7 +108,7 @@
     <string name="export_success">Formulario exportado correctamente</string>
 
     <!-- AI Assistance -->
-    <string name="ai_copilot">Mira</string>
+    <string name="ai_copilot" translatable="false">Mira</string>
     <string name="ai_subtitle">Tu asistente de formularios</string>
     <string name="ask_ai_chat">Preguntar a Mira</string>
     <string name="ai_greeting">¡Hola, soy Mira! Estoy aquí para ayudarte a completar tus formularios. Pregúntame sobre cualquier campo y te guiaré.</string>
@@ -91,8 +145,24 @@
 
     <!-- Session -->
     <string name="session_timeout_warning">Su sesión expirará pronto debido a la inactividad</string>
+    <string name="session_timeout_warning_title">Advertencia de tiempo de espera de sesión</string>
+    <string name="session_timeout_warning_message">Su sesión caducará pronto debido a la inactividad. ¿Desea continuar?</string>
     <string name="session_expired">Sesión expirada</string>
     <string name="session_expired_message">Su sesión ha expirado. Por favor, inicie sesión de nuevo.</string>
+    <string name="time_remaining">Tiempo restante</string>
+    <string name="continue_session">Continuar sesión</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Inventario</string>
+    <string name="inventory_refresh">Refrescar</string>
+    <string name="inventory_search">Buscar artículos...</string>
+    <string name="inventory_clear_search">Borrar búsqueda</string>
+    <string name="inventory_low_stock">Bajo stock</string>
+    <string name="inventory_category">Categoría</string>
+    <string name="inventory_location">Ubicación</string>
+    <string name="inventory_all_categories">Todas las categorías</string>
+    <string name="inventory_all_locations">Todas las ubicaciones</string>
+    <string name="inventory_empty">No se ha encontrado ningún artículo de inventario</string>
 
     <!-- Common -->
     <string name="ok">Aceptar</string>

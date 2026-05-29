@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Info -->
+    <string name="app_name" translatable="false">MedPull Kiosk</string>
+    <string name="app_title" translatable="false">MedPull</string>
+    <string name="app_tagline">Здравоохранение стало проще</string>
+    <string name="app_subtitle">Ассистент по медицинской форме</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_back">С возвращением!</string>
+    <string name="get_started">Начните</string>
+    <string name="welcome_message">Добро пожаловать! Нажмите ниже, чтобы начать заполнять медицинские формы.</string>
+    <string name="features_text">Доступно на 8 языках | Соответствует требованиям HIPAA | Безопасно</string>
+    <string name="staff_view">Вид персонала</string>
+
+    <!-- Language Selection -->
+    <string name="select_language">Язык</string>
+    <string name="choose_language">Выберите свой язык</string>
+
+    <!-- Program Selection -->
+    <string name="program_question">Зачем ты сегодня здесь?</string>
+    <string name="program_subtitle">Выберите вариант, который лучше всего описывает ваш визит.</string>
+    <string name="program_sliding_fee_title">Подайте заявку на получение платы за скольжение</string>
+    <string name="program_sliding_fee_desc">Скидка на расходы на здравоохранение, основанная на доходах</string>
+    <string name="program_medical_intake_title">Полный прием медицинских препаратов</string>
+    <string name="program_medical_intake_desc">Регистрация новых пациентов и история болезни</string>
+    <string name="program_snf_title">Второй пилот приемной комиссии SNF</string>
+    <string name="program_snf_desc">Поступление в учреждения квалифицированной медицинской помощи с использованием искусственного интеллекта</string>
+    <string name="program_secure_footer">Соответствует требованиям HIPAA | Безопасно</string>
+
+    <!-- Authentication -->
+    <string name="login">Войти</string>
+    <string name="register">Создать аккаунт</string>
+    <string name="logout">Выйти из системы</string>
+    <string name="email">Электронная почта</string>
+    <string name="password">Пароль</string>
+    <string name="confirm_password">Подтвердить пароль</string>
+    <string name="forgot_password">Забыли пароль?</string>
+    <string name="already_have_account">У вас уже есть учетная запись?</string>
+    <string name="dont_have_account">У вас нет учетной записи?</string>
+
+    <!-- Form Management -->
+    <string name="upload_form">Загрузить форму</string>
+    <string name="upload_header">Загрузить</string>
+    <string name="upload_document_title">Загрузить документ</string>
+    <string name="select_document_subtitle">Выберите медицинскую форму или документ для загрузки</string>
+    <string name="previous_forms">Предыдущие формы</string>
+    <string name="view_previous_forms">Просмотрите загруженные формы</string>
+    <string name="start_processing">Начните обработку документов</string>
+    <string name="take_photo">Сфотографировать</string>
+    <string name="take_photo_sub">Используйте камеру</string>
+    <string name="choose_from_files">Выберите из файлов</string>
+    <string name="choose_from_files_sub">Выберите PDF-документ</string>
+
+    <!-- Document Upload -->
+    <string name="supporting_documents">Сопроводительные документы</string>
+    <string name="supporting_documents_subtitle">Загрузите фотографии или файлы ниже. Необходимые элементы необходимо загрузить или пропустить, прежде чем продолжить.</string>
+    <string name="optional_label">Опционально</string>
+    <string name="accepted_label">Принято:</string>
+    <string name="upload_clear_photo">Загрузите четкую фотографию, на которой видны все углы.</string>
+    <string name="action_replace">Заменить</string>
+    <string name="action_remove">Удалить</string>
+    <string name="action_upload_file">Загрузить файл</string>
+    <string name="action_skip">Пропустить</string>
+    <string name="action_undo_skip">Отменить пропуск</string>
+    <string name="status_skipped">Пропущено</string>
+    <string name="status_uploaded">Загружено</string>
+    <string name="status_no_file">Нет файла</string>
+    <string name="status_missing_required">Отсутствует — обязательно</string>
+    <string name="status_not_provided">Не предоставлено</string>
+    <string name="upload_continue_warning">Загрузите или пропустите все необходимые документы, чтобы продолжить.</string>
+    <string name="continue_to_review">Продолжить обзор</string>
+
+    <!-- Intake Review -->
+    <string name="review_title">Просмотрите свои ответы</string>
+    <string name="review_required_field_warning">Пожалуйста, заполните перед отправкой</string>
+    <string name="review_required_label">Требуется</string>
+    <string name="review_tap_to_enter">Нажмите, чтобы войти...</string>
+    <string name="review_not_applicable">Не применимо</string>
+    <string name="review_loading">Загрузка ответов...</string>
+    <string name="review_generating">Генерация...</string>
+    <string name="review_submit">Отправить</string>
+    <string name="review_share_or_print">Отправить или распечатать форму</string>
+    <string name="section_personal_information">Персональная информация</string>
+    <string name="section_address">Адрес</string>
+    <string name="section_household">Домашнее хозяйство</string>
+    <string name="section_income">Доход</string>
+    <string name="section_employment_insurance">Занятость и страхование</string>
+    <string name="section_registration">Регистрация</string>
+    <string name="section_health_history">История здоровья</string>
+    <string name="section_hipaa_consent">Согласие HIPAA</string>
+    <string name="section_general_consents">Общие согласия</string>
+    <string name="section_supporting_documents">Сопроводительные документы</string>
+    <string name="section_other">Другой</string>
+
+    <!-- Form Filling -->
+    <string name="fill_out_extracted_fields">Заполните извлеченные поля</string>
+    <string name="form_fields_label">Поля формы:</string>
+    <string name="field_name">Имя поля</string>
+    <string name="field_value">Значение поля</string>
+    <string name="enter_value">Введите</string>
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отменить</string>
+
+    <!-- PDF Export -->
+    <string name="generate_filled_pdf">Создать заполненный PDF-файл</string>
+    <string name="export_pdf">Экспорт PDF</string>
+    <string name="export_success">Форма успешно экспортирована</string>
+
+    <!-- AI Assistance -->
+    <string name="ai_copilot" translatable="false">Mira</string>
+    <string name="ai_subtitle">Ваш помощник по заполнению форм</string>
+    <string name="ask_ai_chat">Спросите Миру</string>
+    <string name="ai_greeting">Привет, я Мира! Я здесь, чтобы помочь вам заполнить ваши формы. Спросите меня о любом поле, и я помогу вам в этом.</string>
+
+    <!-- Security & Compliance -->
+    <string name="hipaa_secure">Соответствует требованиям HIPAA и безопасна</string>
+    <string name="secure_note_upload">Файлы безопасно загружаются в ваше хранилище, соответствующее требованиям HIPAA</string>
+
+    <!-- Autofill -->
+    <string name="manage_autofill">Управление данными автозаполнения</string>
+    <string name="secure_autofill">Безопасное автозаполнение</string>
+    <string name="autofill_info">Данные автозаполнения зашифрованы и надежно хранятся в хранилище AWS, совместимом с HIPAA. Эта информация будет использована для интеллектуального предварительного заполнения форм.</string>
+    <string name="your_autofill_info">Ваша информация об автозаполнении</string>
+    <string name="no_autofill_yet">Данных автозаполнения пока нет</string>
+
+    <!-- Errors -->
+    <string name="error">Ошибка</string>
+    <string name="failed_to_take_photo">Не удалось сфотографировать. Пожалуйста, попробуйте еще раз.</string>
+    <string name="failed_to_pick_document">Не удалось выбрать документ</string>
+    <string name="camera_permission_required">Требуется разрешение камеры</string>
+    <string name="camera_permission_body">Пожалуйста, разрешите доступ к камере для фотографирования документов.</string>
+    <string name="invalid_input_title">Неверный ввод</string>
+    <string name="invalid_input_body">Пожалуйста, введите имя и значение поля</string>
+
+    <!-- Success Messages -->
+    <string name="save_success_title">Успех</string>
+    <string name="save_success_body">Информация об автозаполнении надежно сохранена.</string>
+    <string name="save_error_body">Не удалось сохранить информацию. Пожалуйста, попробуйте еще раз.</string>
+
+    <!-- Loading -->
+    <string name="loading">Загрузка...</string>
+    <string name="loading_autofill">Загрузка данных автозаполнения...</string>
+    <string name="processing">Обработка...</string>
+
+    <!-- Session -->
+    <string name="session_timeout_warning">Ваш сеанс скоро закончится из-за бездействия</string>
+    <string name="session_timeout_warning_title">Предупреждение об истечении времени ожидания сеанса</string>
+    <string name="session_timeout_warning_message">Ваш сеанс скоро закончится из-за бездействия. Хотите продолжить?</string>
+    <string name="session_expired">Сеанс истек</string>
+    <string name="session_expired_message">Ваш сеанс истек. Пожалуйста, войдите снова.</string>
+    <string name="time_remaining">Оставшееся время</string>
+    <string name="continue_session">Продолжить сеанс</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Инвентарь</string>
+    <string name="inventory_refresh">Обновить</string>
+    <string name="inventory_search">Искать товары...</string>
+    <string name="inventory_clear_search">Очистить поиск</string>
+    <string name="inventory_low_stock">Низкий запас</string>
+    <string name="inventory_category">Категория</string>
+    <string name="inventory_location">Местоположение</string>
+    <string name="inventory_all_categories">Все категории</string>
+    <string name="inventory_all_locations">Все локации</string>
+    <string name="inventory_empty">Инвентарь не найден</string>
+
+    <!-- Common -->
+    <string name="ok">ХОРОШО</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="delete">Удалить</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="back">Назад</string>
+    <string name="next">Следующий</string>
+    <string name="done">Готово</string>
+</resources>

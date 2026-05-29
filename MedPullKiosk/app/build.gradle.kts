@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -49,8 +50,8 @@ android {
         // Session timeout in milliseconds (15 minutes)
         buildConfigField("long", "SESSION_TIMEOUT_MS", "900000L")
 
-        // Supported languages
-        buildConfigField("String[]", "SUPPORTED_LANGUAGES", "{\"en\", \"es\", \"zh\", \"fr\", \"hi\", \"ar\"}")
+        // Supported languages (must mirror Constants.Languages.ALL)
+        buildConfigField("String[]", "SUPPORTED_LANGUAGES", "{\"en\", \"es\", \"zh\", \"fr\", \"ja\", \"pt\", \"ar\", \"ru\"}")
     }
 
     buildTypes {
@@ -204,3 +205,37 @@ dependencies {
 }
 
 // kapt block removed — Hilt migrated to KSP
+
+// ─── Localization ───────────────────────────────────────────────────────────
+// `./gradlew translateStrings` regenerates `values-{locale}/strings.xml` for
+// every supported locale by feeding the canonical English `values/strings.xml`
+// through AWS Translate. The Python helper is idempotent and incremental — it
+// only translates keys that are missing from each target locale, so any
+// hand-edited translations stay intact.
+//
+// Requirements:
+//   * Python 3 on PATH
+//   * boto3 installed (`pip3 install --user --break-system-packages boto3`)
+//   * AWS credentials with translate:TranslateText permission
+//
+// Useful flags forwarded via `-Pargs="…"`:
+//   ./gradlew translateStrings -Pargs="--locales es,fr"
+//   ./gradlew translateStrings -Pargs="--force"
+//   ./gradlew translateStrings -Pargs="--dry-run"
+tasks.register<Exec>("translateStrings") {
+    group = "localization"
+    description = "Bulk-translate values/strings.xml into every supported locale via AWS Translate."
+    // Script lives at <module-root>/scripts/translate_strings.py, one level
+    // above the :app project directory. Use the root project's directory so
+    // running this from any subproject still resolves correctly.
+    workingDir = rootProject.projectDir
+    val python = System.getenv("PYTHON3")
+        ?: listOf("/opt/homebrew/bin/python3", "/usr/local/bin/python3")
+            .firstOrNull { File(it).canExecute() }
+        ?: "python3"
+    val extraArgs = (project.findProperty("args") as? String)
+        ?.split(" ")
+        ?.filter { it.isNotBlank() }
+        ?: emptyList()
+    commandLine(listOf(python, "scripts/translate_strings.py") + extraArgs)
+}

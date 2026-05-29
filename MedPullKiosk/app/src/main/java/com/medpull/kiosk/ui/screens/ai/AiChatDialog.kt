@@ -74,8 +74,10 @@ fun AiChatDialog(
             "es" -> "es-ES"
             "zh" -> "zh-CN"
             "fr" -> "fr-FR"
-            "hi" -> "hi-IN"
+            "ja" -> "ja-JP"
+            "pt" -> "pt-BR"
             "ar" -> "ar-SA"
+            "ru" -> "ru-RU"
             else -> "en-US"
         }
     }
@@ -131,8 +133,10 @@ fun AiChatDialog(
                 "es" -> Locale("es")
                 "zh" -> Locale.CHINESE
                 "fr" -> Locale.FRENCH
-                "hi" -> Locale("hi")
+                "ja" -> Locale.JAPANESE
+                "pt" -> Locale("pt")
                 "ar" -> Locale("ar")
+                "ru" -> Locale("ru")
                 else -> Locale.ENGLISH
             }
             tts.language = locale

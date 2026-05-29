@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Info -->
+    <string name="app_name" translatable="false">MedPull Kiosk</string>
+    <string name="app_title" translatable="false">MedPull</string>
+    <string name="app_tagline">Cuidados de saúde simplificados</string>
+    <string name="app_subtitle">Assistente de formulário médico</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_back">Bem-vindo de volta!</string>
+    <string name="get_started">Comece</string>
+    <string name="welcome_message">Bem-vindo! Toque abaixo para começar a preencher seus formulários médicos.</string>
+    <string name="features_text">Disponível em 8 idiomas | Compatível com HIPAA | Seguro</string>
+    <string name="staff_view">Visão da equipe</string>
+
+    <!-- Language Selection -->
+    <string name="select_language">Idioma</string>
+    <string name="choose_language">Escolha seu idioma</string>
+
+    <!-- Program Selection -->
+    <string name="program_question">Por que você está aqui hoje?</string>
+    <string name="program_subtitle">Selecione a opção que melhor descreve sua visita.</string>
+    <string name="program_sliding_fee_title">Inscreva-se para receber uma taxa deslizante</string>
+    <string name="program_sliding_fee_desc">Desconto baseado em renda nos custos de saúde</string>
+    <string name="program_medical_intake_title">Ingestão médica completa</string>
+    <string name="program_medical_intake_desc">Novo registro de pacientes e histórico de saúde</string>
+    <string name="program_snf_title">Copiloto de admissões da SNF</string>
+    <string name="program_snf_desc">Entrada em instalações de enfermagem qualificadas assistida por IA</string>
+    <string name="program_secure_footer">Compatível com HIPAA | Seguro</string>
+
+    <!-- Authentication -->
+    <string name="login">Faça o login</string>
+    <string name="register">Criar conta</string>
+    <string name="logout">Sair</string>
+    <string name="email">E-mail</string>
+    <string name="password">Senha</string>
+    <string name="confirm_password">Confirme a senha</string>
+    <string name="forgot_password">Esqueceu a senha?</string>
+    <string name="already_have_account">Já tem uma conta?</string>
+    <string name="dont_have_account">Não tem uma conta?</string>
+
+    <!-- Form Management -->
+    <string name="upload_form">Carregar um formulário</string>
+    <string name="upload_header">Carregar</string>
+    <string name="upload_document_title">Carregar documento</string>
+    <string name="select_document_subtitle">Selecione um formulário médico ou documento para fazer o upload</string>
+    <string name="previous_forms">Formulários anteriores</string>
+    <string name="view_previous_forms">Visualize seus formulários enviados</string>
+    <string name="start_processing">Comece a processar documentos</string>
+    <string name="take_photo">Tirar foto</string>
+    <string name="take_photo_sub">Use sua câmera</string>
+    <string name="choose_from_files">Escolha entre arquivos</string>
+    <string name="choose_from_files_sub">Selecione um documento PDF</string>
+
+    <!-- Document Upload -->
+    <string name="supporting_documents">Documentos de apoio</string>
+    <string name="supporting_documents_subtitle">Faça upload de fotos ou arquivos abaixo. Os itens necessários devem ser enviados ou ignorados antes de continuar.</string>
+    <string name="optional_label">Opcional</string>
+    <string name="accepted_label">Aceito:</string>
+    <string name="upload_clear_photo">Faça upload de uma foto nítida com todos os cantos visíveis.</string>
+    <string name="action_replace">Substituir</string>
+    <string name="action_remove">Remover</string>
+    <string name="action_upload_file">Carregar arquivo</string>
+    <string name="action_skip">Ignorar</string>
+    <string name="action_undo_skip">Desfazer Skip</string>
+    <string name="status_skipped">Ignorado</string>
+    <string name="status_uploaded">Carregado</string>
+    <string name="status_no_file">Nenhum arquivo</string>
+    <string name="status_missing_required">Ausente — obrigatório</string>
+    <string name="status_not_provided">Não fornecido</string>
+    <string name="upload_continue_warning">Faça upload ou pule todos os documentos necessários para continuar.</string>
+    <string name="continue_to_review">Continuar a revisar</string>
+
+    <!-- Intake Review -->
+    <string name="review_title">Revise suas respostas</string>
+    <string name="review_required_field_warning">Por favor, preencha antes de enviar</string>
+    <string name="review_required_label">Obrigatório</string>
+    <string name="review_tap_to_enter">Toque para entrar...</string>
+    <string name="review_not_applicable">Não aplicável</string>
+    <string name="review_loading">Carregando suas respostas...</string>
+    <string name="review_generating">Gerando...</string>
+    <string name="review_submit">Enviar</string>
+    <string name="review_share_or_print">Compartilhar ou imprimir formulário</string>
+    <string name="section_personal_information">Informações pessoais</string>
+    <string name="section_address">Endereço</string>
+    <string name="section_household">Domicílio</string>
+    <string name="section_income">Renda</string>
+    <string name="section_employment_insurance">Emprego e seguros</string>
+    <string name="section_registration">Registro</string>
+    <string name="section_health_history">História da saúde</string>
+    <string name="section_hipaa_consent">Consentimento da HIPAA</string>
+    <string name="section_general_consents">Consentimentos gerais</string>
+    <string name="section_supporting_documents">Documentos de apoio</string>
+    <string name="section_other">Outros</string>
+
+    <!-- Form Filling -->
+    <string name="fill_out_extracted_fields">Preencha os campos extraídos</string>
+    <string name="form_fields_label">Campos do formulário:</string>
+    <string name="field_name">Nome do campo</string>
+    <string name="field_value">Valor do campo</string>
+    <string name="enter_value">Entrar</string>
+    <string name="save">Salvar</string>
+    <string name="cancel">Cancelar</string>
+
+    <!-- PDF Export -->
+    <string name="generate_filled_pdf">Gerar PDF preenchido</string>
+    <string name="export_pdf">Exportar PDF</string>
+    <string name="export_success">Formulário exportado com sucesso</string>
+
+    <!-- AI Assistance -->
+    <string name="ai_copilot" translatable="false">Mira</string>
+    <string name="ai_subtitle">Seu assistente de formulários</string>
+    <string name="ask_ai_chat">Pergunte à Mira</string>
+    <string name="ai_greeting">Oi, eu sou Mira! Estou aqui para ajudá-lo a preencher seus formulários. Pergunte-me sobre qualquer campo e eu o guiarei por ele.</string>
+
+    <!-- Security & Compliance -->
+    <string name="hipaa_secure">Compatível e seguro com HIPAA</string>
+    <string name="secure_note_upload">Os arquivos são enviados com segurança para seu armazenamento compatível com HIPAA</string>
+
+    <!-- Autofill -->
+    <string name="manage_autofill">Gerenciar dados de preenchimento automático</string>
+    <string name="secure_autofill">Preenchimento automático seguro</string>
+    <string name="autofill_info">Seus dados de preenchimento automático são criptografados e armazenados com segurança em um armazenamento da AWS compatível com HIPAA. Essas informações serão usadas para preencher formulários de forma inteligente.</string>
+    <string name="your_autofill_info">Suas informações de preenchimento automático</string>
+    <string name="no_autofill_yet">Ainda não há dados de preenchimento automático</string>
+
+    <!-- Errors -->
+    <string name="error">Erro</string>
+    <string name="failed_to_take_photo">Falha ao tirar a foto. Por favor, tente novamente.</string>
+    <string name="failed_to_pick_document">Falha ao selecionar o documento</string>
+    <string name="camera_permission_required">Permissão de câmera necessária</string>
+    <string name="camera_permission_body">Permita o acesso à câmera para tirar fotos de documentos.</string>
+    <string name="invalid_input_title">Entrada inválida</string>
+    <string name="invalid_input_body">Insira o nome e o valor do campo</string>
+
+    <!-- Success Messages -->
+    <string name="save_success_title">Sucesso</string>
+    <string name="save_success_body">Suas informações de preenchimento automático foram salvas com segurança.</string>
+    <string name="save_error_body">Falha ao salvar suas informações. Por favor, tente novamente.</string>
+
+    <!-- Loading -->
+    <string name="loading">Carregando...</string>
+    <string name="loading_autofill">Carregando dados de preenchimento automático...</string>
+    <string name="processing">Processando...</string>
+
+    <!-- Session -->
+    <string name="session_timeout_warning">Sua sessão expirará em breve devido à inatividade</string>
+    <string name="session_timeout_warning_title">Aviso de tempo limite da sessão</string>
+    <string name="session_timeout_warning_message">Sua sessão expirará em breve devido à inatividade. Você gostaria de continuar?</string>
+    <string name="session_expired">Sessão expirada</string>
+    <string name="session_expired_message">Sua sessão expirou. Por favor, faça login novamente.</string>
+    <string name="time_remaining">Tempo restante</string>
+    <string name="continue_session">Continuar sessão</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Inventário</string>
+    <string name="inventory_refresh">Atualizar</string>
+    <string name="inventory_search">Pesquisar itens...</string>
+    <string name="inventory_clear_search">Limpar pesquisa</string>
+    <string name="inventory_low_stock">Estoque baixo</string>
+    <string name="inventory_category">Categoria</string>
+    <string name="inventory_location">Localização</string>
+    <string name="inventory_all_categories">Todas as categorias</string>
+    <string name="inventory_all_locations">Todas as localizações</string>
+    <string name="inventory_empty">Nenhum item de inventário encontrado</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="yes">sim</string>
+    <string name="no">Não</string>
+    <string name="delete">Excluir</string>
+    <string name="confirm">Confirme</string>
+    <string name="back">Voltar</string>
+    <string name="next">Próximo</string>
+    <string name="done">Feito</string>
+</resources>

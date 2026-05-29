@@ -385,7 +385,8 @@ class GuidedIntakeViewModel @Inject constructor(
         // Pre-fill preferred_language from app locale
         val languageLabel = when (language) {
             "es" -> "Español"; "zh" -> "中文"; "fr" -> "Français"
-            "hi" -> "हिन्दी"; "ar" -> "Arabic"; else -> "English"
+            "ja" -> "日本語"; "pt" -> "Português"
+            "ar" -> "العربية"; "ru" -> "Русский"; else -> "English"
         }
         val withLanguage = form.fields.map { f ->
             if (f.id == "preferred_language") f.copy(value = languageLabel) else f

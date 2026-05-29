@@ -662,7 +662,8 @@ class IntakeConversationEngine @Inject constructor(
 
     private fun languageName(code: String) = when (code) {
         "es" -> "Spanish"; "zh" -> "Chinese"; "fr" -> "French"
-        "hi" -> "Hindi"; "ar" -> "Arabic"; else -> "English"
+        "ja" -> "Japanese"; "pt" -> "Portuguese"
+        "ar" -> "Arabic"; "ru" -> "Russian"; else -> "English"
     }
 
     // ─── Audit Logging ────────────────────────────────────────────────────────

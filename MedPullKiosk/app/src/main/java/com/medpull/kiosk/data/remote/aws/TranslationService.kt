@@ -205,8 +205,10 @@ class TranslationService @Inject constructor(
             Constants.Languages.SPANISH -> "es"
             Constants.Languages.CHINESE -> "zh" // AWS uses 'zh' for simplified Chinese
             Constants.Languages.FRENCH -> "fr"
-            Constants.Languages.HINDI -> "hi"
+            Constants.Languages.JAPANESE -> "ja"
+            Constants.Languages.PORTUGUESE -> "pt"
             Constants.Languages.ARABIC -> "ar"
+            Constants.Languages.RUSSIAN -> "ru"
             else -> "en" // Default to English
         }
     }
@@ -215,7 +217,7 @@ class TranslationService @Inject constructor(
      * Check if translation is supported for language pair
      */
     fun isTranslationSupported(sourceCode: String, targetCode: String): Boolean {
-        val supportedCodes = listOf("en", "es", "zh", "fr", "hi", "ar")
+        val supportedCodes = listOf("en", "es", "zh", "fr", "ja", "pt", "ar", "ru")
         val awsSource = mapLanguageCode(sourceCode)
         val awsTarget = mapLanguageCode(targetCode)
 

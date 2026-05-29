@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.IntakeProgramType
 
 /**
@@ -31,7 +33,7 @@ fun ProgramSelectionScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "What are you here for today?",
+                text = stringResource(R.string.program_question),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
@@ -40,7 +42,7 @@ fun ProgramSelectionScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Select the option that best describes your visit.",
+                text = stringResource(R.string.program_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
@@ -61,12 +63,12 @@ fun ProgramSelectionScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Apply for Sliding Fee",
+                        text = stringResource(R.string.program_sliding_fee_title),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Income-based discount on healthcare costs",
+                        text = stringResource(R.string.program_sliding_fee_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                     )
@@ -86,13 +88,13 @@ fun ProgramSelectionScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Complete Medical Intake",
+                        text = stringResource(R.string.program_medical_intake_title),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "New patient registration and health history",
+                        text = stringResource(R.string.program_medical_intake_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
@@ -122,12 +124,12 @@ fun ProgramSelectionScreen(
                 )
                 Column(horizontalAlignment = Alignment.Start) {
                     Text(
-                        text = "SNF Admissions Copilot",
+                        text = stringResource(R.string.program_snf_title),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "AI-assisted skilled nursing facility intake",
+                        text = stringResource(R.string.program_snf_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.75f)
                     )
@@ -137,7 +139,7 @@ fun ProgramSelectionScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             Text(
-                text = "HIPAA Compliant | Secure",
+                text = stringResource(R.string.program_secure_footer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center
@@ -157,7 +159,7 @@ fun ProgramSelectionScreen(
                 modifier = Modifier.padding(end = 8.dp)
             )
             Text(
-                text = "Staff View",
+                text = stringResource(R.string.staff_view),
                 style = MaterialTheme.typography.labelLarge
             )
         }

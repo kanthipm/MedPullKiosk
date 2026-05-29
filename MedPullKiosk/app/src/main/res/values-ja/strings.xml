@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Info -->
+    <string name="app_name" translatable="false">MedPull Kiosk</string>
+    <string name="app_title" translatable="false">MedPull</string>
+    <string name="app_tagline">ヘルスケアをシンプルに</string>
+    <string name="app_subtitle">メディカルフォームアシスタント</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_back">おかえり！</string>
+    <string name="get_started">始めよう</string>
+    <string name="welcome_message">ようこそ!以下をタップして医療フォームへの記入を開始してください。</string>
+    <string name="features_text">8言語で利用可能 | HIPAA準拠 | 安全</string>
+    <string name="staff_view">スタッフビュー</string>
+
+    <!-- Language Selection -->
+    <string name="select_language">言語</string>
+    <string name="choose_language">言語を選択してください</string>
+
+    <!-- Program Selection -->
+    <string name="program_question">今日は何のためにここにいるの？</string>
+    <string name="program_subtitle">訪問内容に最も近いオプションを選択してください。</string>
+    <string name="program_sliding_fee_title">スライディングフィーの申請</string>
+    <string name="program_sliding_fee_desc">収入に基づく医療費の割引</string>
+    <string name="program_medical_intake_title">完全医療摂取</string>
+    <string name="program_medical_intake_desc">新規患者登録と健康履歴</string>
+    <string name="program_snf_title">SNF アドミッションズ・コパイロット</string>
+    <string name="program_snf_desc">AIを活用した熟練介護施設の入所</string>
+    <string name="program_secure_footer">HIPAA 準拠 | セキュア</string>
+
+    <!-- Authentication -->
+    <string name="login">ログイン</string>
+    <string name="register">アカウント作成</string>
+    <string name="logout">ログアウト</string>
+    <string name="email">電子メール</string>
+    <string name="password">[パスワード]</string>
+    <string name="confirm_password">[パスワードを確認]</string>
+    <string name="forgot_password">パスワードをお忘れですか？</string>
+    <string name="already_have_account">すでにアカウントをお持ちですか？</string>
+    <string name="dont_have_account">アカウントを持っていない?</string>
+
+    <!-- Form Management -->
+    <string name="upload_form">フォームをアップロード</string>
+    <string name="upload_header">アップロード</string>
+    <string name="upload_document_title">文書をアップロード</string>
+    <string name="select_document_subtitle">アップロードする医療フォームまたは書類を選択してください</string>
+    <string name="previous_forms">以前のフォーム</string>
+    <string name="view_previous_forms">アップロードしたフォームを表示する</string>
+    <string name="start_processing">文書の処理を開始する</string>
+    <string name="take_photo">写真を撮る</string>
+    <string name="take_photo_sub">カメラを使う</string>
+    <string name="choose_from_files">[ファイルから選択]</string>
+    <string name="choose_from_files_sub">PDF ドキュメントを選択する</string>
+
+    <!-- Document Upload -->
+    <string name="supporting_documents">サポート文書</string>
+    <string name="supporting_documents_subtitle">以下に写真またはファイルをアップロードしてください。続行する前に、必須項目をアップロードするかスキップする必要があります。</string>
+    <string name="optional_label">[オプション]</string>
+    <string name="accepted_label">承認済み:</string>
+    <string name="upload_clear_photo">四隅が見えるクリアな写真をアップロードしてください。</string>
+    <string name="action_replace">置換</string>
+    <string name="action_remove">[削除]</string>
+    <string name="action_upload_file">[ファイルをアップロード]</string>
+    <string name="action_skip">スキップ</string>
+    <string name="action_undo_skip">スキップを取り消す</string>
+    <string name="status_skipped">スキップされました</string>
+    <string name="status_uploaded">アップロード済み</string>
+    <string name="status_no_file">ファイルなし</string>
+    <string name="status_missing_required">行方不明 — 必須</string>
+    <string name="status_not_provided">提供なし</string>
+    <string name="upload_continue_warning">必要な書類をすべてアップロードするか、スキップして続行してください。</string>
+    <string name="continue_to_review">レビューを続ける</string>
+
+    <!-- Intake Review -->
+    <string name="review_title">回答を確認</string>
+    <string name="review_required_field_warning">送信前に記入してください</string>
+    <string name="review_required_label">必須</string>
+    <string name="review_tap_to_enter">入力するにはタップしてください...</string>
+    <string name="review_not_applicable">該当なし</string>
+    <string name="review_loading">回答をロード中...</string>
+    <string name="review_generating">生成中...</string>
+    <string name="review_submit">送信</string>
+    <string name="review_share_or_print">フォームの共有または印刷</string>
+    <string name="section_personal_information">個人情報</string>
+    <string name="section_address">住所</string>
+    <string name="section_household">世帯</string>
+    <string name="section_income">収入</string>
+    <string name="section_employment_insurance">雇用と保険</string>
+    <string name="section_registration">登録</string>
+    <string name="section_health_history">健康履歴</string>
+    <string name="section_hipaa_consent">HIPAA の同意</string>
+    <string name="section_general_consents">一般同意</string>
+    <string name="section_supporting_documents">サポート文書</string>
+    <string name="section_other">その他</string>
+
+    <!-- Form Filling -->
+    <string name="fill_out_extracted_fields">抽出されたフィールドへの入力</string>
+    <string name="form_fields_label">フォームフィールド:</string>
+    <string name="field_name">[フィールド名]</string>
+    <string name="field_value">フィールド値</string>
+    <string name="enter_value">入る</string>
+    <string name="save">[保存]</string>
+    <string name="cancel">[キャンセル]</string>
+
+    <!-- PDF Export -->
+    <string name="generate_filled_pdf">塗りつぶされた PDF を生成</string>
+    <string name="export_pdf">PDF をエクスポート</string>
+    <string name="export_success">フォームは正常にエクスポートされました</string>
+
+    <!-- AI Assistance -->
+    <string name="ai_copilot" translatable="false">Mira</string>
+    <string name="ai_subtitle">あなたのフォームアシスタント</string>
+    <string name="ask_ai_chat">ミラに聞く</string>
+    <string name="ai_greeting">こんにちは、私はミラです！フォームに記入するお手伝いをします。どんな分野でも私に聞いてください。ご案内します。</string>
+
+    <!-- Security & Compliance -->
+    <string name="hipaa_secure">HIPAA 準拠かつ安全</string>
+    <string name="secure_note_upload">ファイルはHIPAA準拠のストレージに安全にアップロードされます</string>
+
+    <!-- Autofill -->
+    <string name="manage_autofill">自動入力データを管理</string>
+    <string name="secure_autofill">安全な自動入力</string>
+    <string name="autofill_info">自動入力データは暗号化され、HIPAA 準拠の AWS ストレージに安全に保存されます。この情報はフォームをインテリジェントに事前入力するために使用されます。</string>
+    <string name="your_autofill_info">自動入力情報</string>
+    <string name="no_autofill_yet">自動入力データはまだありません</string>
+
+    <!-- Errors -->
+    <string name="error">[エラー]</string>
+    <string name="failed_to_take_photo">写真を撮ることができませんでした。もう一度試してください。</string>
+    <string name="failed_to_pick_document">ドキュメントを選択できませんでした</string>
+    <string name="camera_permission_required">カメラの許可が必要です</string>
+    <string name="camera_permission_body">書類の写真を撮るには、カメラへのアクセスを許可してください。</string>
+    <string name="invalid_input_title">入力が無効です</string>
+    <string name="invalid_input_body">フィールド名と値の両方を入力してください</string>
+
+    <!-- Success Messages -->
+    <string name="save_success_title">成功</string>
+    <string name="save_success_body">自動入力情報は安全に保存されました。</string>
+    <string name="save_error_body">情報を保存できませんでした。もう一度試してください。</string>
+
+    <!-- Loading -->
+    <string name="loading">読み込み中...</string>
+    <string name="loading_autofill">自動入力データを読み込んでいます...</string>
+    <string name="processing">処理中...</string>
+
+    <!-- Session -->
+    <string name="session_timeout_warning">非アクティブ状態のため、セッションはまもなく期限切れになります</string>
+    <string name="session_timeout_warning_title">セッションタイムアウト警告</string>
+    <string name="session_timeout_warning_message">非アクティブ状態のため、セッションはまもなく期限切れになります。続けますか?</string>
+    <string name="session_expired">セッションの期限切れ</string>
+    <string name="session_expired_message">セッションの有効期限が切れました。もう一度ログインしてください。</string>
+    <string name="time_remaining">残り時間</string>
+    <string name="continue_session">セッションを続行</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">インベントリ</string>
+    <string name="inventory_refresh">リフレッシュ</string>
+    <string name="inventory_search">アイテムを検索する...</string>
+    <string name="inventory_clear_search">検索をクリア</string>
+    <string name="inventory_low_stock">ローストック</string>
+    <string name="inventory_category">カテゴリー</string>
+    <string name="inventory_location">ロケーション</string>
+    <string name="inventory_all_categories">全カテゴリー</string>
+    <string name="inventory_all_locations">すべての場所</string>
+    <string name="inventory_empty">インベントリアイテムが見つかりません</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="yes">はい</string>
+    <string name="no">いいえ</string>
+    <string name="delete">[削除]</string>
+    <string name="confirm">確認</string>
+    <string name="back">戻る</string>
+    <string name="next">[次へ]</string>
+    <string name="done">完了</string>
+</resources>

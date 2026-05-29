@@ -35,18 +35,27 @@ object Constants {
         const val SPANISH = "es"
         const val CHINESE = "zh"
         const val FRENCH = "fr"
-        const val HINDI = "hi"
+        const val JAPANESE = "ja"
+        const val PORTUGUESE = "pt"
         const val ARABIC = "ar"
+        const val RUSSIAN = "ru"
 
-        val ALL = listOf(ENGLISH, SPANISH, CHINESE, FRENCH, HINDI, ARABIC)
+        // Display order on the 2x4 picker grid (left-to-right, top-to-bottom):
+        // English  | Español
+        // 中文     | Français
+        // 日本語   | Português
+        // العربية | Русский
+        val ALL = listOf(ENGLISH, SPANISH, CHINESE, FRENCH, JAPANESE, PORTUGUESE, ARABIC, RUSSIAN)
 
         fun getLanguageName(code: String): String = when (code) {
             ENGLISH -> "English"
             SPANISH -> "Español"
             CHINESE -> "中文"
             FRENCH -> "Français"
-            HINDI -> "हिन्दी"
+            JAPANESE -> "日本語"
+            PORTUGUESE -> "Português"
             ARABIC -> "العربية"
+            RUSSIAN -> "Русский"
             else -> "English"
         }
     }

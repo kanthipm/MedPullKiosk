@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Info -->
+    <string name="app_name" translatable="false">MedPull Kiosk</string>
+    <string name="app_title" translatable="false">MedPull</string>
+    <string name="app_tagline">الرعاية الصحية أصبحت بسيطة</string>
+    <string name="app_subtitle">مساعد النموذج الطبي</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_back">مرحبًا بك مرة أخرى!</string>
+    <string name="get_started">ابدأ</string>
+    <string name="welcome_message">أهلا بك! انقر أدناه للبدء في ملء النماذج الطبية الخاصة بك.</string>
+    <string name="features_text">متوفر بـ 8 لغات | متوافق مع HIPAA | آمن</string>
+    <string name="staff_view">عرض الموظفين</string>
+
+    <!-- Language Selection -->
+    <string name="select_language">اللغة</string>
+    <string name="choose_language">اختر لغتك</string>
+
+    <!-- Program Selection -->
+    <string name="program_question">لماذا أنت هنا اليوم؟</string>
+    <string name="program_subtitle">حدد الخيار الذي يصف زيارتك بشكل أفضل.</string>
+    <string name="program_sliding_fee_title">تقدم بطلب للحصول على الرسوم المنزلقة</string>
+    <string name="program_sliding_fee_desc">خصم على أساس الدخل على تكاليف الرعاية الصحية</string>
+    <string name="program_medical_intake_title">المدخول الطبي الكامل</string>
+    <string name="program_medical_intake_desc">تسجيل المريض الجديد والتاريخ الصحي</string>
+    <string name="program_snf_title">مساعد القبول في SNF</string>
+    <string name="program_snf_desc">استيعاب مرافق التمريض الماهرة بمساعدة الذكاء الاصطناعي</string>
+    <string name="program_secure_footer">متوافق مع HIPAA | آمن</string>
+
+    <!-- Authentication -->
+    <string name="login">تسجيل الدخول</string>
+    <string name="register">إنشاء حساب</string>
+    <string name="logout">تسجيل الخروج</string>
+    <string name="email">البريد الإلكتروني</string>
+    <string name="password">كلمة المرور</string>
+    <string name="confirm_password">تأكيد كلمة المرور</string>
+    <string name="forgot_password">هل نسيت كلمة المرور؟</string>
+    <string name="already_have_account">لديك حساب بالفعل؟</string>
+    <string name="dont_have_account">ليس لديك حساب؟</string>
+
+    <!-- Form Management -->
+    <string name="upload_form">قم بتحميل نموذج</string>
+    <string name="upload_header">رفع</string>
+    <string name="upload_document_title">تحميل المستند</string>
+    <string name="select_document_subtitle">حدد نموذجًا طبيًا أو مستندًا لتحميله</string>
+    <string name="previous_forms">النماذج السابقة</string>
+    <string name="view_previous_forms">عرض النماذج التي تم تحميلها</string>
+    <string name="start_processing">ابدأ معالجة المستندات</string>
+    <string name="take_photo">التقط صورة</string>
+    <string name="take_photo_sub">استخدم الكاميرا</string>
+    <string name="choose_from_files">اختر من الملفات</string>
+    <string name="choose_from_files_sub">حدد وثيقة PDF</string>
+
+    <!-- Document Upload -->
+    <string name="supporting_documents">المستندات الداعمة</string>
+    <string name="supporting_documents_subtitle">قم بتحميل الصور أو الملفات أدناه. يجب تحميل العناصر المطلوبة أو تخطيها قبل المتابعة.</string>
+    <string name="optional_label">اختياري</string>
+    <string name="accepted_label">تم قبولها:</string>
+    <string name="upload_clear_photo">يرجى تحميل صورة واضحة مع رؤية جميع الزوايا.</string>
+    <string name="action_replace">استبدل</string>
+    <string name="action_remove">إزالة</string>
+    <string name="action_upload_file">رفع ملف</string>
+    <string name="action_skip">سكيب</string>
+    <string name="action_undo_skip">التراجع عن التخطي</string>
+    <string name="status_skipped">تم تخطيه</string>
+    <string name="status_uploaded">تم تحميلها</string>
+    <string name="status_no_file">لا يوجد ملف</string>
+    <string name="status_missing_required">مفقود - مطلوب</string>
+    <string name="status_not_provided">لم يتم توفيره</string>
+    <string name="upload_continue_warning">قم بتحميل أو تخطي جميع المستندات المطلوبة للمتابعة.</string>
+    <string name="continue_to_review">استمر في المراجعة</string>
+
+    <!-- Intake Review -->
+    <string name="review_title">راجع إجاباتك</string>
+    <string name="review_required_field_warning">يرجى ملء البيانات قبل الإرسال</string>
+    <string name="review_required_label">مطلوب</string>
+    <string name="review_tap_to_enter">انقر للدخول...</string>
+    <string name="review_not_applicable">لا ينطبق</string>
+    <string name="review_loading">جاري تحميل إجاباتك...</string>
+    <string name="review_generating">توليد...</string>
+    <string name="review_submit">أرسل</string>
+    <string name="review_share_or_print">مشاركة النموذج أو طباعته</string>
+    <string name="section_personal_information">معلومات شخصية</string>
+    <string name="section_address">العنوان</string>
+    <string name="section_household">الأسرة</string>
+    <string name="section_income">الدخل</string>
+    <string name="section_employment_insurance">التوظيف والتأمين</string>
+    <string name="section_registration">التسجيل</string>
+    <string name="section_health_history">التاريخ الصحي</string>
+    <string name="section_hipaa_consent">موافقة HIPAA</string>
+    <string name="section_general_consents">موافقات عامة</string>
+    <string name="section_supporting_documents">المستندات الداعمة</string>
+    <string name="section_other">أخرى</string>
+
+    <!-- Form Filling -->
+    <string name="fill_out_extracted_fields">املأ الحقول المستخرجة</string>
+    <string name="form_fields_label">حقول النموذج:</string>
+    <string name="field_name">اسم الحقل</string>
+    <string name="field_value">قيمة الحقل</string>
+    <string name="enter_value">أدخل</string>
+    <string name="save">وفر</string>
+    <string name="cancel">إلغاء</string>
+
+    <!-- PDF Export -->
+    <string name="generate_filled_pdf">إنشاء ملف PDF معبأ</string>
+    <string name="export_pdf">تصدير ملف PDF</string>
+    <string name="export_success">تم تصدير النموذج بنجاح</string>
+
+    <!-- AI Assistance -->
+    <string name="ai_copilot" translatable="false">Mira</string>
+    <string name="ai_subtitle">مساعد النموذج الخاص بك</string>
+    <string name="ask_ai_chat">اسأل ميرا</string>
+    <string name="ai_greeting">مرحبا، أنا ميرا! أنا هنا لمساعدتك في ملء النماذج الخاصة بك. اسألني عن أي مجال وسأرشدك خلاله.</string>
+
+    <!-- Security & Compliance -->
+    <string name="hipaa_secure">متوافق وآمن مع HIPAA</string>
+    <string name="secure_note_upload">يتم تحميل الملفات بأمان إلى وحدة التخزين المتوافقة مع HIPAA</string>
+
+    <!-- Autofill -->
+    <string name="manage_autofill">إدارة بيانات الملء التلقائي</string>
+    <string name="secure_autofill">الملء التلقائي الآمن</string>
+    <string name="autofill_info">يتم تشفير بيانات الملء التلقائي الخاصة بك وتخزينها بأمان في وحدة تخزين AWS المتوافقة مع HIPAA. سيتم استخدام هذه المعلومات لملء النماذج مسبقًا بذكاء.</string>
+    <string name="your_autofill_info">معلومات الملء التلقائي الخاصة بك</string>
+    <string name="no_autofill_yet">لا توجد بيانات الملء التلقائي حتى الآن</string>
+
+    <!-- Errors -->
+    <string name="error">خطأ</string>
+    <string name="failed_to_take_photo">فشلت عملية التقاط الصورة. يرجى المحاولة مرة أخرى.</string>
+    <string name="failed_to_pick_document">فشل اختيار المستند</string>
+    <string name="camera_permission_required">إذن الكاميرا مطلوب</string>
+    <string name="camera_permission_body">يرجى السماح بالوصول إلى الكاميرا لالتقاط صور للمستندات.</string>
+    <string name="invalid_input_title">إدخال غير صالح</string>
+    <string name="invalid_input_body">يرجى إدخال كل من اسم الحقل والقيمة</string>
+
+    <!-- Success Messages -->
+    <string name="save_success_title">نجاح</string>
+    <string name="save_success_body">تم حفظ معلومات الملء التلقائي الخاصة بك بأمان.</string>
+    <string name="save_error_body">فشلت عملية حفظ المعلومات الخاصة بك. يرجى المحاولة مرة أخرى.</string>
+
+    <!-- Loading -->
+    <string name="loading">جاري التحميل...</string>
+    <string name="loading_autofill">جاري تحميل بيانات الملء التلقائي...</string>
+    <string name="processing">جاري المعالجة...</string>
+
+    <!-- Session -->
+    <string name="session_timeout_warning">ستنتهي جلستك قريبًا بسبب عدم النشاط</string>
+    <string name="session_timeout_warning_title">تحذير حول مهلة الجلسة</string>
+    <string name="session_timeout_warning_message">ستنتهي جلستك قريبًا بسبب عدم النشاط. هل ترغب في الاستمرار؟</string>
+    <string name="session_expired">انتهت الجلسة</string>
+    <string name="session_expired_message">لقد انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى.</string>
+    <string name="time_remaining">الوقت المتبقي</string>
+    <string name="continue_session">متابعة الجلسة</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">المخزون</string>
+    <string name="inventory_refresh">قم بتحديث</string>
+    <string name="inventory_search">عناصر البحث...</string>
+    <string name="inventory_clear_search">مسح البحث</string>
+    <string name="inventory_low_stock">مخزون منخفض</string>
+    <string name="inventory_category">الفئة</string>
+    <string name="inventory_location">الموقع</string>
+    <string name="inventory_all_categories">جميع الفئات</string>
+    <string name="inventory_all_locations">جميع المواقع</string>
+    <string name="inventory_empty">لم يتم العثور على عناصر المخزون</string>
+
+    <!-- Common -->
+    <string name="ok">حسنا</string>
+    <string name="yes">نعم</string>
+    <string name="no">لا</string>
+    <string name="delete">حذف</string>
+    <string name="confirm">قم بالتأكيد</string>
+    <string name="back">إلى الخلف</string>
+    <string name="next">التالي</string>
+    <string name="done">تم</string>
+</resources>

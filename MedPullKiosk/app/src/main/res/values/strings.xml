@@ -1,19 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Info -->
-    <string name="app_name">MedPull Kiosk</string>
-    <string name="app_title">MedPull</string>
+    <string name="app_name" translatable="false">MedPull Kiosk</string>
+    <string name="app_title" translatable="false">MedPull</string>
     <string name="app_tagline">Healthcare Made Simple</string>
+    <string name="app_subtitle">Medical Form Assistant</string>
 
     <!-- Welcome Screen -->
     <string name="welcome_back">Welcome back!</string>
     <string name="get_started">Get Started</string>
     <string name="welcome_message">Welcome! Tap below to get started filling out your medical forms.</string>
-    <string name="features_text">Available in 6 languages | HIPAA Compliant | Secure</string>
+    <string name="features_text">Available in 8 languages | HIPAA Compliant | Secure</string>
+    <string name="staff_view">Staff View</string>
 
     <!-- Language Selection -->
     <string name="select_language">Language</string>
     <string name="choose_language">Choose your language</string>
+
+    <!-- Program Selection -->
+    <string name="program_question">What are you here for today?</string>
+    <string name="program_subtitle">Select the option that best describes your visit.</string>
+    <string name="program_sliding_fee_title">Apply for Sliding Fee</string>
+    <string name="program_sliding_fee_desc">Income-based discount on healthcare costs</string>
+    <string name="program_medical_intake_title">Complete Medical Intake</string>
+    <string name="program_medical_intake_desc">New patient registration and health history</string>
+    <string name="program_snf_title">SNF Admissions Copilot</string>
+    <string name="program_snf_desc">AI-assisted skilled nursing facility intake</string>
+    <string name="program_secure_footer">HIPAA Compliant | Secure</string>
 
     <!-- Authentication -->
     <string name="login">Log In</string>
@@ -39,6 +52,47 @@
     <string name="choose_from_files">Choose from Files</string>
     <string name="choose_from_files_sub">Select a PDF document</string>
 
+    <!-- Document Upload -->
+    <string name="supporting_documents">Supporting Documents</string>
+    <string name="supporting_documents_subtitle">Upload photos or files below. Required items must be uploaded or skipped before continuing.</string>
+    <string name="optional_label">Optional</string>
+    <string name="accepted_label">Accepted:</string>
+    <string name="upload_clear_photo">Please upload a clear photo with all corners visible.</string>
+    <string name="action_replace">Replace</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_upload_file">Upload File</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_undo_skip">Undo Skip</string>
+    <string name="status_skipped">Skipped</string>
+    <string name="status_uploaded">Uploaded</string>
+    <string name="status_no_file">No file</string>
+    <string name="status_missing_required">Missing — required</string>
+    <string name="status_not_provided">Not provided</string>
+    <string name="upload_continue_warning">Upload or skip all required documents to continue.</string>
+    <string name="continue_to_review">Continue to Review</string>
+
+    <!-- Intake Review -->
+    <string name="review_title">Review Your Answers</string>
+    <string name="review_required_field_warning">Please fill in before submitting</string>
+    <string name="review_required_label">Required</string>
+    <string name="review_tap_to_enter">Tap to enter…</string>
+    <string name="review_not_applicable">Not applicable</string>
+    <string name="review_loading">Loading your answers...</string>
+    <string name="review_generating">Generating…</string>
+    <string name="review_submit">Submit</string>
+    <string name="review_share_or_print">Share or Print Form</string>
+    <string name="section_personal_information">Personal Information</string>
+    <string name="section_address">Address</string>
+    <string name="section_household">Household</string>
+    <string name="section_income">Income</string>
+    <string name="section_employment_insurance">Employment &amp; Insurance</string>
+    <string name="section_registration">Registration</string>
+    <string name="section_health_history">Health History</string>
+    <string name="section_hipaa_consent">HIPAA Consent</string>
+    <string name="section_general_consents">General Consents</string>
+    <string name="section_supporting_documents">Supporting Documents</string>
+    <string name="section_other">Other</string>
+
     <!-- Form Filling -->
     <string name="fill_out_extracted_fields">Fill Out Extracted Fields</string>
     <string name="form_fields_label">Form Fields:</string>
@@ -54,7 +108,7 @@
     <string name="export_success">Form exported successfully</string>
 
     <!-- AI Assistance -->
-    <string name="ai_copilot">Mira</string>
+    <string name="ai_copilot" translatable="false">Mira</string>
     <string name="ai_subtitle">Your form assistant</string>
     <string name="ask_ai_chat">Ask Mira</string>
     <string name="ai_greeting">Hi, I\'m Mira! I\'m here to help you fill out your forms. Ask me about any field and I\'ll guide you through it.</string>

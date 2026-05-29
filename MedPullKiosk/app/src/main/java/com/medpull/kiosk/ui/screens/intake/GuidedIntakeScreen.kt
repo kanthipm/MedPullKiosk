@@ -123,7 +123,8 @@ fun GuidedIntakeScreen(
     val speechLocale = remember(state.userLanguage) {
         when (state.userLanguage) {
             "es" -> "es-ES"; "zh" -> "zh-CN"; "fr" -> "fr-FR"
-            "hi" -> "hi-IN"; "ar" -> "ar-SA"; else -> "en-US"
+            "ja" -> "ja-JP"; "pt" -> "pt-BR"
+            "ar" -> "ar-SA"; "ru" -> "ru-RU"; else -> "en-US"
         }
     }
     val startListening: () -> Unit = {
@@ -171,7 +172,9 @@ fun GuidedIntakeScreen(
         if (ttsReady) {
             val locale = when (state.userLanguage) {
                 "es" -> Locale("es"); "zh" -> Locale.CHINESE
-                "fr" -> Locale.FRENCH; "hi" -> Locale("hi"); "ar" -> Locale("ar")
+                "fr" -> Locale.FRENCH; "ja" -> Locale.JAPANESE
+                "pt" -> Locale("pt"); "ar" -> Locale("ar")
+                "ru" -> Locale("ru")
                 else -> Locale.ENGLISH
             }
             tts.language = locale

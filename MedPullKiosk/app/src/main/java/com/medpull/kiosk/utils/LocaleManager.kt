@@ -41,20 +41,28 @@ class LocaleManager @Inject constructor() {
     }
 
     /**
-     * Get current language as Flow
+     * Get current language as Flow.
+     *
+     * Mirrors the same stale-code migration safety as [getCurrentLanguage].
      */
     fun getLanguageFlow(context: Context): Flow<String> {
         return context.dataStore.data.map { preferences ->
-            preferences[LANGUAGE_KEY] ?: Constants.Languages.ENGLISH
+            val saved = preferences[LANGUAGE_KEY] ?: Constants.Languages.ENGLISH
+            if (saved in Constants.Languages.ALL) saved else Constants.Languages.ENGLISH
         }
     }
 
     /**
-     * Get current language synchronously (use sparingly)
+     * Get current language synchronously (use sparingly).
+     *
+     * Migration safety: if the persisted code isn't in the current supported set
+     * (e.g. a stale "hi" left over from a prior install), fall back to English so
+     * downstream code never sees an unsupported value.
      */
     fun getCurrentLanguage(context: Context): String = runBlocking {
         context.dataStore.data.map { preferences ->
-            preferences[LANGUAGE_KEY] ?: Constants.Languages.ENGLISH
+            val saved = preferences[LANGUAGE_KEY] ?: Constants.Languages.ENGLISH
+            if (saved in Constants.Languages.ALL) saved else Constants.Languages.ENGLISH
         }.first()
     }
 
@@ -96,8 +104,10 @@ class LocaleManager @Inject constructor() {
             Constants.Languages.SPANISH -> Locale("es")
             Constants.Languages.CHINESE -> Locale.SIMPLIFIED_CHINESE
             Constants.Languages.FRENCH -> Locale.FRENCH
-            Constants.Languages.HINDI -> Locale("hi")
+            Constants.Languages.JAPANESE -> Locale.JAPANESE
+            Constants.Languages.PORTUGUESE -> Locale("pt")
             Constants.Languages.ARABIC -> Locale("ar")
+            Constants.Languages.RUSSIAN -> Locale("ru")
             else -> Locale.ENGLISH
         }
     }
@@ -110,14 +120,20 @@ class LocaleManager @Inject constructor() {
     }
 
     /**
-     * Get all supported languages
+     * Get all supported languages.
+     *
+     * Both [LanguageOption.displayName] and [LanguageOption.nativeName] return the
+     * language's name written in its own script (e.g. "中文", "العربية", "Русский").
+     * The 2x4 picker grid relies on this so each card renders in its own writing
+     * system regardless of the currently active locale.
      */
     fun getSupportedLanguages(): List<LanguageOption> {
         return Constants.Languages.ALL.map { code ->
+            val nativeName = getLanguageDisplayName(code)
             LanguageOption(
                 code = code,
-                displayName = getLanguageDisplayName(code),
-                nativeName = getLocaleFromCode(code).displayName
+                displayName = nativeName,
+                nativeName = nativeName
             )
         }
     }

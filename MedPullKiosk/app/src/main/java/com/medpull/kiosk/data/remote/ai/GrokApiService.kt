@@ -166,8 +166,10 @@ class GrokApiService @Inject constructor(
             "es" -> "Spanish"
             "zh" -> "Chinese"
             "fr" -> "French"
-            "hi" -> "Hindi"
+            "ja" -> "Japanese"
+            "pt" -> "Portuguese"
             "ar" -> "Arabic"
+            "ru" -> "Russian"
             else -> "English"
         }
 

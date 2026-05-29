@@ -423,8 +423,10 @@ private fun FieldInputDialog(
             "es" -> "es-ES"
             "zh" -> "zh-CN"
             "fr" -> "fr-FR"
-            "hi" -> "hi-IN"
+            "ja" -> "ja-JP"
+            "pt" -> "pt-BR"
             "ar" -> "ar-SA"
+            "ru" -> "ru-RU"
             else -> "en-US"
         }
     }

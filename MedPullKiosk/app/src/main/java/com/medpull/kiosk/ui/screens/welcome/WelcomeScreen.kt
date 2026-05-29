@@ -18,18 +18,24 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material3.Icon
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.medpull.kiosk.R
 import kotlinx.coroutines.delay
 
 private data class WelcomeTranslation(val buttonText: String, val welcomeMessage: String)
 
+// Cycles through the 8 supported languages. Order matches the picker grid:
+// English, Español, 中文, Français, 日本語, Português, العربية, Русский.
 private val welcomeTranslations = listOf(
     WelcomeTranslation("Get Started", "Welcome! Tap below to get started."),
     WelcomeTranslation("Comenzar", "¡Bienvenido! Toque abajo para comenzar."),
     WelcomeTranslation("开始", "欢迎！点击下方开始填写您的医疗表格。"),
     WelcomeTranslation("Commencer", "Bienvenue ! Appuyez ci-dessous pour commencer."),
-    WelcomeTranslation("शुरू करें", "स्वागत है! शुरू करने के लिए नीचे टैप करें।"),
+    WelcomeTranslation("はじめる", "ようこそ！下をタップして始めてください。"),
+    WelcomeTranslation("Começar", "Bem-vindo! Toque abaixo para começar."),
     WelcomeTranslation("ابدأ", "!مرحبًا! انقر أدناه للبدء"),
+    WelcomeTranslation("Начать", "Добро пожаловать! Нажмите ниже, чтобы начать."),
 )
 
 /**
@@ -66,7 +72,7 @@ fun WelcomeScreen(
     ) {
         // App logo/branding
         Text(
-            text = "MedPull Kiosk",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.displayLarge,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center
@@ -75,7 +81,7 @@ fun WelcomeScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Medical Form Assistant",
+            text = stringResource(R.string.app_subtitle),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
@@ -126,7 +132,7 @@ fun WelcomeScreen(
 
         // Help text
         Text(
-            text = "Available in 6 languages | HIPAA Compliant | Secure",
+            text = stringResource(R.string.features_text),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
@@ -147,7 +153,7 @@ fun WelcomeScreen(
             modifier = Modifier.padding(end = 8.dp)
         )
         Text(
-            text = "Staff View",
+            text = stringResource(R.string.staff_view),
             style = MaterialTheme.typography.labelLarge
         )
     }

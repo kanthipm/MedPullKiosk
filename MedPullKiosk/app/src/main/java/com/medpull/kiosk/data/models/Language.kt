@@ -10,8 +10,10 @@ enum class Language(val code: String, val displayName: String, val nativeName: S
     SPANISH(Constants.Languages.SPANISH, "Spanish", "Español"),
     CHINESE(Constants.Languages.CHINESE, "Chinese", "中文"),
     FRENCH(Constants.Languages.FRENCH, "French", "Français"),
-    HINDI(Constants.Languages.HINDI, "Hindi", "हिन्दी"),
-    ARABIC(Constants.Languages.ARABIC, "Arabic", "العربية");
+    JAPANESE(Constants.Languages.JAPANESE, "Japanese", "日本語"),
+    PORTUGUESE(Constants.Languages.PORTUGUESE, "Portuguese", "Português"),
+    ARABIC(Constants.Languages.ARABIC, "Arabic", "العربية"),
+    RUSSIAN(Constants.Languages.RUSSIAN, "Russian", "Русский");
 
     companion object {
         fun fromCode(code: String): Language {

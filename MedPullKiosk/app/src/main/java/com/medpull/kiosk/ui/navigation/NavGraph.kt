@@ -99,7 +99,7 @@ fun NavGraph(
         composable(Screen.Welcome.route) {
             WelcomeScreen(
                 onContinue = {
-                    navController.navigate(Screen.ProgramSelection.route) {
+                    navController.navigate(Screen.Language.route) {
                         popUpTo(Screen.Welcome.route) { inclusive = true }
                     }
                 },
@@ -139,7 +139,9 @@ fun NavGraph(
         composable(Screen.Language.route) {
             LanguageSelectionScreen(
                 onLanguageSelected = {
-                    navController.navigate(Screen.Login.route)
+                    navController.navigate(Screen.ProgramSelection.route) {
+                        popUpTo(Screen.Language.route) { inclusive = true }
+                    }
                 }
             )
         }

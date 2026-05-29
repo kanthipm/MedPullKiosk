@@ -62,8 +62,10 @@ fun HandwritingInput(
             "es" -> "es-ES"
             "zh" -> "zh-Hans-CN"
             "fr" -> "fr-FR"
-            "hi" -> "hi-IN"
+            "ja" -> "ja"
+            "pt" -> "pt-BR"
             "ar" -> "ar"
+            "ru" -> "ru-RU"
             else -> "en-US"
         }
     }
