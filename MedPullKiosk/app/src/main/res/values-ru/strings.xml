@@ -93,6 +93,16 @@
     <string name="section_supporting_documents">Сопроводительные документы</string>
     <string name="section_other">Другой</string>
 
+    <!-- Voice Intake -->
+    <string name="voice_accept">Принять</string>
+    <string name="voice_rerecord">Перезаписать</string>
+    <string name="voice_edit">Редактировать</string>
+    <string name="voice_type_response">Введите свой ответ</string>
+    <string name="voice_listening">Слушаю...</string>
+    <string name="voice_tap_to_speak">Нажмите, чтобы говорить</string>
+    <string name="voice_send">Отправить</string>
+    <string name="voice_speaking">Говоря...</string>
+
     <!-- Form Filling -->
     <string name="fill_out_extracted_fields">Заполните извлеченные поля</string>
     <string name="form_fields_label">Поля формы:</string>

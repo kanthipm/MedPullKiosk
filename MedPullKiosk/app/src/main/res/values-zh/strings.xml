@@ -93,6 +93,16 @@
     <string name="section_supporting_documents">支持文件</string>
     <string name="section_other">其他</string>
 
+    <!-- Voice Intake -->
+    <string name="voice_accept">接受</string>
+    <string name="voice_rerecord">重新录制</string>
+    <string name="voice_edit">编辑</string>
+    <string name="voice_type_response">键入您的回复</string>
+    <string name="voice_listening">听着...</string>
+    <string name="voice_tap_to_speak">点按即可说话</string>
+    <string name="voice_send">发送</string>
+    <string name="voice_speaking">说话...</string>
+
     <!-- Form Filling -->
     <string name="fill_out_extracted_fields">填写提取的字段</string>
     <string name="form_fields_label">表单字段：</string>

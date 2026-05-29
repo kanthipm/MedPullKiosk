@@ -93,6 +93,16 @@
     <string name="section_supporting_documents">Documents justificatifs</string>
     <string name="section_other">Autres</string>
 
+    <!-- Voice Intake -->
+    <string name="voice_accept">Accepter</string>
+    <string name="voice_rerecord">Réenregistrer</string>
+    <string name="voice_edit">Modifier</string>
+    <string name="voice_type_response">Tapez votre réponse</string>
+    <string name="voice_listening">À l\'écoute...</string>
+    <string name="voice_tap_to_speak">Touchez pour parler</string>
+    <string name="voice_send">Envoyer</string>
+    <string name="voice_speaking">En parlant...</string>
+
     <!-- Form Filling -->
     <string name="fill_out_extracted_fields">Remplissez les champs extraits</string>
     <string name="form_fields_label">Champs du formulaire :</string>

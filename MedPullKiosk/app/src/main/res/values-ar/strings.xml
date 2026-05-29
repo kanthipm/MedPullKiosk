@@ -93,6 +93,16 @@
     <string name="section_supporting_documents">المستندات الداعمة</string>
     <string name="section_other">أخرى</string>
 
+    <!-- Voice Intake -->
+    <string name="voice_accept">اقبل</string>
+    <string name="voice_rerecord">إعادة التسجيل</string>
+    <string name="voice_edit">تحرير</string>
+    <string name="voice_type_response">اكتب إجابتك</string>
+    <string name="voice_listening">الاستماع...</string>
+    <string name="voice_tap_to_speak">انقر للتحدث</string>
+    <string name="voice_send">أرسل</string>
+    <string name="voice_speaking">يتحدث...</string>
+
     <!-- Form Filling -->
     <string name="fill_out_extracted_fields">املأ الحقول المستخرجة</string>
     <string name="form_fields_label">حقول النموذج:</string>

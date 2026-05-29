@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -13,6 +15,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -20,7 +29,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,8 +51,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
@@ -56,6 +74,19 @@ import com.medpull.kiosk.ui.screens.ai.HandwritingInput
 import com.medpull.kiosk.ui.screens.ai.SignatureCapture
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.sin
+
+/**
+ * Phases of the voice-first answer flow used by the sliding-fee intake.
+ *
+ * Speaking  → the question is being read aloud (mic off)
+ * Listening → mic is open; the arch animates and the live transcript streams in
+ * Review    → speech ended; show Accept / Re-record / Edit
+ * Editing   → keyboard is open to edit the transcript (or type from scratch)
+ * Prompt    → idle/ready; tap the arch to start speaking
+ */
+private enum class VoicePhase { Idle, Speaking, Listening, Review, Editing, Prompt }
 
 /**
  * Typeform-style guided intake screen.
@@ -63,6 +94,11 @@ import java.util.Locale
  * One question at a time, vertically centered. The answer input lives directly
  * below the question text — not in a separate bottom bar. Slide-up animation
  * between questions. "press Enter ↵" affordance. Thin progress line at top.
+ *
+ * Sliding-fee free-text questions use a dedicated voice-first layout: the
+ * question is spoken aloud, an animated blue arch reacts to the microphone, the
+ * spoken answer streams in beneath the arch, and the patient confirms with
+ * Accept / Re-record / Edit or falls back to typing.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -114,12 +150,36 @@ fun GuidedIntakeScreen(
         }
     }
 
+    val currentQuestion: ChatMessage? = remember(state.chatMessages) {
+        state.chatMessages.lastOrNull { !it.isFromUser && !it.isClarification }
+    }
+
+    // ── Voice-first mode (sliding fee, free-text questions only) ────────────────
+    // Voice-first replaces the typed input with: auto-spoken question, an animated
+    // blue arch that reacts to the mic, a live blue transcript, and an
+    // accept / re-record / edit confirmation step. Choice-chip, multi-select and
+    // signature questions keep their specialized inputs (but are still spoken).
+    val isSlidingFee = state.form?.id == GuidedIntakeViewModel.SLIDING_FEE_ID
+    val activeField = state.currentAskingField
+    val isFreeTextField = activeField == null ||
+        (activeField.options.isEmpty() &&
+            activeField.fieldType != FieldType.SIGNATURE &&
+            activeField.fieldType != FieldType.MULTI_SELECT)
+    val voiceFirstActive = isSlidingFee && isFreeTextField &&
+        currentQuestion != null && !state.isLoadingResponse &&
+        state.consentBatchFields == null && state.pendingConfirmFields == null
+
+    var voicePhase by remember { mutableStateOf(VoicePhase.Idle) }
+    var liveTranscript by remember { mutableStateOf("") }
+    var finalTranscript by remember { mutableStateOf("") }
+    var micAmplitude by remember { mutableFloatStateOf(0f) }
+    var voiceEditText by remember { mutableStateOf("") }
+    val voiceEditFocus = remember { FocusRequester() }
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+
     // ── Speech-to-text ────────────────────────────────────────────────────────
     val speechAvailable = remember { SpeechRecognizer.isRecognitionAvailable(context) }
     var isListening by remember { mutableStateOf(false) }
-    val speechRecognizer = remember {
-        if (speechAvailable) SpeechRecognizer.createSpeechRecognizer(context) else null
-    }
     val speechLocale = remember(state.userLanguage) {
         when (state.userLanguage) {
             "es" -> "es-ES"; "zh" -> "zh-CN"; "fr" -> "fr-FR"
@@ -127,38 +187,112 @@ fun GuidedIntakeScreen(
             "ar" -> "ar-SA"; "ru" -> "ru-RU"; else -> "en-US"
         }
     }
-    val startListening: () -> Unit = {
+
+    // Mode-aware callbacks read by the recognition listener.
+    val voiceActiveRef = rememberUpdatedState(voiceFirstActive)
+    val onRms = rememberUpdatedState<(Float) -> Unit> { db ->
+        if (voiceActiveRef.value) micAmplitude = ((db + 2f) / 12f).coerceIn(0f, 1f)
+    }
+    val onPartial = rememberUpdatedState<(String) -> Unit> { text ->
+        if (voiceActiveRef.value && text.isNotBlank()) liveTranscript = text
+    }
+    val onFinal = rememberUpdatedState<(String) -> Unit> { text ->
+        if (voiceActiveRef.value) {
+            if (text.isNotBlank()) {
+                liveTranscript = text
+                finalTranscript = text
+                voicePhase = VoicePhase.Review
+            } else {
+                voicePhase = VoicePhase.Prompt
+            }
+        } else if (text.isNotBlank()) {
+            messageText = if (messageText.isBlank()) text else "$messageText $text"
+        }
+        isListening = false
+        micAmplitude = 0f
+    }
+    val onSpeechError = rememberUpdatedState<() -> Unit> {
+        isListening = false
+        micAmplitude = 0f
+        if (voiceActiveRef.value && finalTranscript.isBlank()) voicePhase = VoicePhase.Prompt
+    }
+
+    // IMPORTANT: a single SpeechRecognizer instance becomes unreliable after a
+    // timeout/no-match error — the next startListening() can silently no-op or
+    // report ERROR_RECOGNIZER_BUSY. That's why "tap to speak" stopped working
+    // after the first timeout. We therefore create a FRESH recognizer for every
+    // listening session and tear the previous one down first.
+    val recognizerHolder = remember { mutableStateOf<SpeechRecognizer?>(null) }
+    val buildListener: () -> RecognitionListener = {
+        object : RecognitionListener {
+            override fun onResults(results: Bundle?) {
+                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                onFinal.value(text ?: "")
+            }
+            override fun onPartialResults(partialResults: Bundle?) {
+                val text = partialResults
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                if (!text.isNullOrBlank()) onPartial.value(text)
+            }
+            override fun onRmsChanged(rmsdB: Float) { onRms.value(rmsdB) }
+            override fun onError(error: Int) { onSpeechError.value() }
+            override fun onReadyForSpeech(params: Bundle?) {
+                if (voiceActiveRef.value) voicePhase = VoicePhase.Listening
+            }
+            override fun onBeginningOfSpeech() {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        }
+    }
+    val startListening: () -> Unit = start@{
+        if (!speechAvailable) return@start
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocale)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         }
-        speechRecognizer?.startListening(intent)
-        isListening = true
+        // Tear down any prior session and start with a clean recognizer.
+        recognizerHolder.value?.let { old ->
+            try { old.cancel(); old.destroy() } catch (_: Exception) {}
+        }
+        val sr = SpeechRecognizer.createSpeechRecognizer(context)
+        sr.setRecognitionListener(buildListener())
+        recognizerHolder.value = sr
+        try {
+            sr.startListening(intent)
+            isListening = true
+        } catch (_: Exception) {
+            isListening = false
+            if (voiceActiveRef.value) voicePhase = VoicePhase.Prompt
+        }
     }
+    val cancelListening: () -> Unit = {
+        recognizerHolder.value?.let { try { it.cancel() } catch (_: Exception) {} }
+        isListening = false
+        micAmplitude = 0f
+    }
+
     val micPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> if (granted) startListening() }
-
-    DisposableEffect(speechRecognizer) {
-        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onResults(results: Bundle?) {
-                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                if (!text.isNullOrBlank()) {
-                    messageText = if (messageText.isBlank()) text else "$messageText $text"
-                }
-                isListening = false
+    ) { granted ->
+        if (granted) {
+            if (voiceActiveRef.value) {
+                liveTranscript = ""; finalTranscript = ""
+                voicePhase = VoicePhase.Listening
             }
-            override fun onError(error: Int) { isListening = false }
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-        onDispose { speechRecognizer?.destroy() }
+            startListening()
+        } else if (voiceActiveRef.value) {
+            voicePhase = VoicePhase.Prompt
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            recognizerHolder.value?.let { try { it.destroy() } catch (_: Exception) {} }
+            recognizerHolder.value = null
+        }
     }
 
     // ── Text-to-speech ────────────────────────────────────────────────────────
@@ -168,6 +302,14 @@ fun GuidedIntakeScreen(
         TextToSpeech(context) { status -> ttsReady = status == TextToSpeech.SUCCESS }
     }
     DisposableEffect(Unit) { onDispose { tts.shutdown() } }
+    // Whether, once a question finishes being read aloud, the mic should start
+    // automatically (voice-first + permission already granted).
+    val canAutoListenRef = rememberUpdatedState(
+        voiceFirstActive && speechAvailable &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+    )
+    val startListeningRef = rememberUpdatedState(startListening)
     LaunchedEffect(state.userLanguage, ttsReady) {
         if (ttsReady) {
             val locale = when (state.userLanguage) {
@@ -179,19 +321,121 @@ fun GuidedIntakeScreen(
             }
             tts.language = locale
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) { isSpeaking = true }
-                override fun onDone(utteranceId: String?) { isSpeaking = false }
+                override fun onStart(utteranceId: String?) {
+                    mainHandler.post { isSpeaking = true }
+                }
+                override fun onDone(utteranceId: String?) {
+                    mainHandler.post {
+                        isSpeaking = false
+                        // When the question finishes, auto-open the mic for hands-free use.
+                        if (utteranceId == "question" && voicePhase == VoicePhase.Speaking) {
+                            if (canAutoListenRef.value) {
+                                liveTranscript = ""; finalTranscript = ""
+                                voicePhase = VoicePhase.Listening
+                                startListeningRef.value()
+                            } else if (voiceActiveRef.value) {
+                                voicePhase = VoicePhase.Prompt
+                            }
+                        }
+                    }
+                }
                 @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) { isSpeaking = false }
+                override fun onError(utteranceId: String?) {
+                    mainHandler.post { isSpeaking = false }
+                }
             })
         }
     }
 
-    LaunchedEffect(state.isComplete) { if (state.isComplete) onComplete() }
-
-    val currentQuestion: ChatMessage? = remember(state.chatMessages) {
-        state.chatMessages.lastOrNull { !it.isFromUser && !it.isClarification }
+    // Auto-speak each new question; reset the voice flow for the new field.
+    LaunchedEffect(currentQuestion?.text, voiceFirstActive, ttsReady) {
+        if (voiceFirstActive && currentQuestion != null) {
+            liveTranscript = ""
+            finalTranscript = ""
+            voiceEditText = ""
+            micAmplitude = 0f
+            val q = currentQuestion.text
+                .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+            if (ttsReady && q.isNotBlank()) {
+                voicePhase = VoicePhase.Speaking
+                tts.speak(q, TextToSpeech.QUEUE_FLUSH, null, "question")
+            } else {
+                voicePhase = VoicePhase.Prompt
+            }
+        }
     }
+
+    // Auto-speak the choice-chip / signature questions too (sliding fee), so every
+    // question is read aloud — these keep their specialized inputs (no mic flow).
+    LaunchedEffect(currentQuestion?.text, voiceFirstActive, ttsReady, state.consentBatchFields) {
+        if (isSlidingFee && !voiceFirstActive && ttsReady && currentQuestion != null &&
+            state.consentBatchFields == null && state.pendingConfirmFields == null &&
+            !state.isLoadingResponse
+        ) {
+            val q = currentQuestion.text
+                .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+            if (q.isNotBlank()) tts.speak(q, TextToSpeech.QUEUE_FLUSH, null, "q")
+        }
+    }
+
+    // Request mic permission up front so hands-free auto-listen can work.
+    LaunchedEffect(voiceFirstActive) {
+        if (voiceFirstActive && speechAvailable &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    // Bring up the keyboard whenever we enter the edit/type phase.
+    LaunchedEffect(voicePhase) {
+        if (voicePhase == VoicePhase.Editing) {
+            try { voiceEditFocus.requestFocus() } catch (_: Exception) {}
+        }
+    }
+
+    // ── Voice action handlers ───────────────────────────────────────────────────
+    val voiceStartListening: () -> Unit = {
+        if (speechAvailable) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                if (isSpeaking) { tts.stop(); isSpeaking = false }
+                liveTranscript = ""
+                voicePhase = VoicePhase.Listening
+                startListening()
+            } else {
+                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+    val onVoiceAccept: () -> Unit = {
+        val t = finalTranscript.trim()
+        if (t.isNotBlank() && !state.isLoadingResponse) viewModel.sendMessage(t)
+    }
+    val onVoiceRerecord: () -> Unit = {
+        finalTranscript = ""
+        liveTranscript = ""
+        voiceStartListening()
+    }
+    val onVoiceEdit: () -> Unit = {
+        if (isListening) cancelListening()
+        voiceEditText = finalTranscript
+        voicePhase = VoicePhase.Editing
+    }
+    val onVoiceStartTyping: () -> Unit = {
+        if (isListening) cancelListening()
+        if (isSpeaking) { tts.stop(); isSpeaking = false }
+        voiceEditText = ""
+        voicePhase = VoicePhase.Editing
+    }
+    val onVoiceSendEdit: () -> Unit = {
+        val t = voiceEditText.trim()
+        if (t.isNotBlank() && !state.isLoadingResponse) viewModel.sendMessage(t)
+    }
+
+    LaunchedEffect(state.isComplete) { if (state.isComplete) onComplete() }
 
     val sendMessage: () -> Unit = {
         if (messageText.isNotBlank() && !state.isLoadingResponse) {
@@ -317,6 +561,29 @@ fun GuidedIntakeScreen(
                         }
                     }
                 }
+
+                if (voiceFirstActive) {
+                    VoiceFirstQuestion(
+                        questionText = (currentQuestion?.text ?: "")
+                            .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim(),
+                        phase = voicePhase,
+                        liveTranscript = liveTranscript,
+                        finalTranscript = finalTranscript,
+                        amplitude = micAmplitude,
+                        editText = voiceEditText,
+                        onEditTextChange = { voiceEditText = it },
+                        editFocusRequester = voiceEditFocus,
+                        onAccept = onVoiceAccept,
+                        onRerecord = onVoiceRerecord,
+                        onEdit = onVoiceEdit,
+                        onSendEdit = onVoiceSendEdit,
+                        onStartTyping = onVoiceStartTyping,
+                        onTapToSpeak = voiceStartListening,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 52.dp)
+                    )
+                } else {
 
                 // Center: animated question + inline answer
                 Box(
@@ -489,8 +756,7 @@ fun GuidedIntakeScreen(
                                 IconButton(
                                     onClick = {
                                         if (isListening) {
-                                            speechRecognizer?.stopListening()
-                                            isListening = false
+                                            cancelListening()
                                         } else if (ContextCompat.checkSelfPermission(
                                                 context, Manifest.permission.RECORD_AUDIO
                                             ) == PackageManager.PERMISSION_GRANTED
@@ -536,6 +802,7 @@ fun GuidedIntakeScreen(
                             }
                         }
                     }
+                }
                 }
             }
         }
@@ -808,6 +1075,324 @@ private fun TypeformTextInput(
             }
         }
     )
+}
+
+// ─── Voice-first question (sliding fee) ───────────────────────────────────────
+
+/**
+ * Full-screen voice-first layout for a single free-text question.
+ *
+ * The question sits BIG and centered, slightly above the vertical middle. An
+ * animated blue arch below it reacts to the microphone; the recognized speech
+ * streams in beneath the arch in blue. Once speech ends, Accept / Re-record /
+ * Edit appear. A low-key "Type your response" button sits at the bottom.
+ */
+@Composable
+private fun VoiceFirstQuestion(
+    questionText: String,
+    phase: VoicePhase,
+    liveTranscript: String,
+    finalTranscript: String,
+    amplitude: Float,
+    editText: String,
+    onEditTextChange: (String) -> Unit,
+    editFocusRequester: FocusRequester,
+    onAccept: () -> Unit,
+    onRerecord: () -> Unit,
+    onEdit: () -> Unit,
+    onSendEdit: () -> Unit,
+    onStartTyping: () -> Unit,
+    onTapToSpeak: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val blue = MaterialTheme.colorScheme.primary
+
+    Box(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Bias the question block slightly above vertical center
+            Spacer(Modifier.weight(0.85f))
+
+            Text(
+                text = questionText,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 46.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(28.dp))
+
+            // Animated blue arch — reacts to the mic; tappable to (re)start.
+            // The whole padded band is the tap target (not just the thin line).
+            val archTappable = phase == VoicePhase.Prompt || phase == VoicePhase.Review
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (archTappable) Modifier.clickable { onTapToSpeak() }
+                        else Modifier
+                    )
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                VoiceArch(
+                    amplitude = amplitude,
+                    active = phase == VoicePhase.Listening,
+                    color = blue,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            when (phase) {
+                VoicePhase.Editing -> {
+                    VoiceEditField(
+                        value = editText,
+                        onValueChange = onEditTextChange,
+                        onSend = onSendEdit,
+                        focusRequester = editFocusRequester,
+                        accentColor = blue
+                    )
+                }
+                else -> {
+                    val transcript = if (phase == VoicePhase.Review) finalTranscript else liveTranscript
+                    if (transcript.isNotBlank()) {
+                        Text(
+                            text = transcript,
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = blue,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        val hint = when (phase) {
+                            VoicePhase.Speaking -> stringResource(R.string.voice_speaking)
+                            VoicePhase.Listening -> stringResource(R.string.voice_listening)
+                            else -> stringResource(R.string.voice_tap_to_speak)
+                        }
+                        Text(
+                            text = hint,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = blue.copy(alpha = 0.5f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    // The labeled "Tap to speak" affordance must itself
+                                    // be tappable, not just the arch above it.
+                                    if (phase == VoicePhase.Prompt)
+                                        Modifier.clickable { onTapToSpeak() }
+                                    else Modifier
+                                )
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            // Accept / Re-record / Edit — after speech ends
+            if (phase == VoicePhase.Review && finalTranscript.isNotBlank()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = onAccept,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp)
+                    ) {
+                        Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.voice_accept), fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedButton(
+                        onClick = onRerecord,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp)
+                    ) {
+                        Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.voice_rerecord))
+                    }
+                    OutlinedButton(
+                        onClick = onEdit,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.voice_edit))
+                    }
+                }
+            }
+
+            Spacer(Modifier.weight(1.15f))
+        }
+
+        // Low-key "Type your response" — out of the way but easy to tap
+        if (phase != VoicePhase.Editing) {
+            TextButton(
+                onClick = onStartTyping,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 20.dp)
+            ) {
+                Icon(
+                    Icons.Default.Keyboard, null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.voice_type_response),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The blue arch waveform. A gentle upward bow whose middle shimmers with a
+ * traveling sine wave; the wave's amplitude tracks the microphone level so the
+ * line visibly "moves" while the patient speaks.
+ */
+@Composable
+private fun VoiceArch(
+    amplitude: Float,
+    active: Boolean,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val infinite = rememberInfiniteTransition(label = "voiceArch")
+    val phase by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "phase"
+    )
+    // Noise-gate the mic level: ambient/silence maps to ~0 so the line stays
+    // still while the mic is open, and louder speech drives a bigger wave.
+    val gatedAmp = ((amplitude - 0.2f) / 0.8f).coerceIn(0f, 1f)
+    val animatedAmp by animateFloatAsState(
+        targetValue = if (active) gatedAmp else 0.12f,
+        animationSpec = tween(90),
+        label = "amp"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val midY = h / 2f
+        val archHeight = h * 0.13f
+        val maxWave = h * 0.34f
+        // Idle keeps a faint constant shimmer; while listening there is NO floor,
+        // so the wave only appears when real audio is being picked up and scales
+        // with how loud the voice is.
+        val idleFloor = if (active) 0f else h * 0.05f
+        val ampPx = idleFloor + animatedAmp * maxWave
+        val steps = 80
+        val path = Path()
+        for (i in 0..steps) {
+            val t = i.toFloat() / steps              // 0..1 across the width
+            val x = w * t
+            val envelope = sin(t * PI).toFloat()     // 0 at the ends, 1 in the middle
+            val arch = -archHeight * envelope        // gentle upward bow
+            val wave = sin(t * PI.toFloat() * 5f + phase) * envelope * ampPx
+            val y = midY + arch + wave
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+        )
+    }
+}
+
+/**
+ * Centered, underlined editor used by the Edit / Type-your-response paths.
+ * Auto-focused by the caller so the keyboard appears immediately.
+ */
+@Composable
+private fun VoiceEditField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit,
+    focusRequester: FocusRequester,
+    accentColor: Color
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
+            textStyle = MaterialTheme.typography.headlineSmall.copy(
+                color = accentColor,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
+            ),
+            cursorBrush = SolidColor(accentColor),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = { onSend() }),
+            maxLines = 4,
+            decorationBox = { inner ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.voice_type_response),
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                                    textAlign = TextAlign.Center
+                                )
+                            )
+                        }
+                        inner()
+                    }
+                    HorizontalDivider(color = accentColor.copy(alpha = 0.6f), thickness = 2.dp)
+                }
+            }
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = onSend,
+            enabled = value.isNotBlank(),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+        ) {
+            Text(stringResource(R.string.voice_send), fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(6.dp))
+            Icon(Icons.Default.Send, null, modifier = Modifier.size(16.dp))
+        }
+    }
 }
 
 // ─── Radio / dropdown chips (inline, Typeform letter-keyed) ───────────────────

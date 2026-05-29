@@ -93,6 +93,16 @@
     <string name="section_supporting_documents">Supporting Documents</string>
     <string name="section_other">Other</string>
 
+    <!-- Voice Intake -->
+    <string name="voice_accept">Accept</string>
+    <string name="voice_rerecord">Re-record</string>
+    <string name="voice_edit">Edit</string>
+    <string name="voice_type_response">Type your response</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_tap_to_speak">Tap to speak</string>
+    <string name="voice_send">Send</string>
+    <string name="voice_speaking">Speaking…</string>
+
     <!-- Form Filling -->
     <string name="fill_out_extracted_fields">Fill Out Extracted Fields</string>
     <string name="form_fields_label">Form Fields:</string>
