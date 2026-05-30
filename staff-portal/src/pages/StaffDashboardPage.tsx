@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useSubmissions } from "../hooks/useSubmissions";
 import { ApplicationTable } from "../components/ApplicationTable";
 import { SlidingScaleCalculator } from "../components/SlidingScaleCalculator";
+import { PhoneIntakePanel } from "../components/PhoneIntakePanel";
 import { assessRisk, isUninsured, PRIORITY_CONFIG, type PriorityLevel } from "../lib/risk";
 import { SLIDING_FEE_TIERS } from "../lib/slidingScale";
 
@@ -213,6 +214,9 @@ export function StaffDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* AI phone intake */}
+        <PhoneIntakePanel />
 
         {/* Applications table */}
         <section>
