@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ApplicationStatus, PatientApplication } from "../types";
+import { assessRisk, type PriorityLevel } from "../lib/risk";
 import { StatusBadge } from "./StatusBadge";
+import { PriorityBadge } from "./PriorityBadge";
+import { FeeTierBadge } from "./FeeTierBadge";
+import { ProgramBadge } from "./ProgramBadge";
 
 interface ApplicationTableProps {
   applications: PatientApplication[];
@@ -11,40 +15,55 @@ function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 const STATUS_OPTIONS: { value: ApplicationStatus | "ALL"; label: string }[] = [
   { value: "ALL", label: "All Statuses" },
   { value: "READY_FOR_REVIEW", label: "Ready for Review" },
-  { value: "INCOMPLETE_APPLICATION", label: "Incomplete Application" },
+  { value: "INCOMPLETE_APPLICATION", label: "Incomplete" },
   { value: "NEEDS_FOLLOW_UP", label: "Needs Follow-Up" },
 ];
+
+const PRIORITY_OPTIONS: { value: PriorityLevel | "ALL"; label: string }[] = [
+  { value: "ALL", label: "All Priorities" },
+  { value: "HIGH", label: "High Priority" },
+  { value: "MEDIUM", label: "Medium Priority" },
+  { value: "LOW", label: "Low Priority" },
+];
+
+const PRIORITY_RANK: Record<PriorityLevel, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+
+const SELECT_CLASS =
+  "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent";
 
 export function ApplicationTable({ applications }: ApplicationTableProps) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "ALL">("ALL");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityLevel | "ALL">("ALL");
 
-  const filtered = applications.filter((app) => {
+  // Assess once per application, then filter + sort (highest priority first).
+  const rows = useMemo(() => {
+    return applications
+      .map((app) => ({ app, risk: assessRisk(app) }))
+      .sort((a, b) => {
+        const byPriority = PRIORITY_RANK[a.risk.level] - PRIORITY_RANK[b.risk.level];
+        if (byPriority !== 0) return byPriority;
+        return new Date(b.app.submittedAt).getTime() - new Date(a.app.submittedAt).getTime();
+      });
+  }, [applications]);
+
+  const filtered = rows.filter(({ app, risk }) => {
     const matchesSearch = app.personal.fullName
       .toLowerCase()
       .includes(search.toLowerCase().trim());
-    const matchesStatus =
-      statusFilter === "ALL" || app.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesStatus = statusFilter === "ALL" || app.status === statusFilter;
+    const matchesPriority = priorityFilter === "ALL" || risk.level === priorityFilter;
+    return matchesSearch && matchesStatus && matchesPriority;
   });
 
   return (
@@ -58,12 +77,8 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
           <input
             type="text"
@@ -74,31 +89,36 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
           />
         </div>
         <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value as PriorityLevel | "ALL")}
+          className={SELECT_CLASS}
+        >
+          {PRIORITY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <select
           value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as ApplicationStatus | "ALL")
-          }
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+          onChange={(e) => setStatusFilter(e.target.value as ApplicationStatus | "ALL")}
+          className={SELECT_CLASS}
         >
           {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
       </div>
 
       {/* Result count */}
       <p className="text-xs text-slate-500">
-        Showing {filtered.length} of {applications.length} applications
+        Showing {filtered.length} of {applications.length} patients · sorted by care priority
       </p>
 
       {/* Table — desktop */}
-      <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="hidden lg:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-slate-100">
           <thead className="bg-slate-50">
             <tr>
-              {["Patient Name", "Submitted", "Status", "Missing Docs", "Household", "Monthly Income"].map(
+              {["Patient", "Form", "Care Priority", "Sliding Fee", "Status", "Submitted"].map(
                 (col) => (
                   <th
                     key={col}
@@ -113,45 +133,47 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 && (
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-5 py-10 text-center text-sm text-slate-400"
-                >
-                  No applications match your search.
+                <td colSpan={6} className="px-5 py-10 text-center text-sm text-slate-400">
+                  No patients match your filters.
                 </td>
               </tr>
             )}
-            {filtered.map((app) => (
+            {filtered.map(({ app, risk }) => (
               <tr
                 key={app.id}
                 onClick={() => navigate(`/staff/review/${app.id}`)}
-                className="cursor-pointer hover:bg-blue-50 transition-colors"
+                className="cursor-pointer hover:bg-brand-50/60 transition-colors"
               >
                 <td className="px-5 py-4">
-                  <span className="text-sm font-medium text-slate-800">
-                    {app.personal.fullName}
-                  </span>
+                  <div className="text-sm font-medium text-slate-800">{app.personal.fullName}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    Household of {app.household.householdSize}
+                    {app.household.dependents > 0 && ` · ${app.household.dependents} dependents`}
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  <ProgramBadge program={app.program} />
+                </td>
+                <td className="px-5 py-4">
+                  <PriorityBadge level={risk.level} size="sm" />
+                  {app.missingDocumentsCount > 0 && (
+                    <div className="text-xs text-red-500 mt-1">
+                      {app.missingDocumentsCount} missing doc{app.missingDocumentsCount > 1 ? "s" : ""}
+                    </div>
+                  )}
+                </td>
+                <td className="px-5 py-4">
+                  <FeeTierBadge
+                    tier={risk.slidingScale.tier}
+                    percentOfFpl={risk.slidingScale.percentOfFpl}
+                    size="sm"
+                  />
+                </td>
+                <td className="px-5 py-4">
+                  <StatusBadge status={app.status} size="sm" />
                 </td>
                 <td className="px-5 py-4 text-sm text-slate-500 whitespace-nowrap">
                   {formatDate(app.submittedAt)}
-                </td>
-                <td className="px-5 py-4">
-                  <StatusBadge status={app.status} />
-                </td>
-                <td className="px-5 py-4 text-sm text-center">
-                  {app.missingDocumentsCount > 0 ? (
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
-                      {app.missingDocumentsCount}
-                    </span>
-                  ) : (
-                    <span className="text-emerald-600 text-xs font-medium">All present</span>
-                  )}
-                </td>
-                <td className="px-5 py-4 text-sm text-slate-600 text-center">
-                  {app.household.householdSize}
-                </td>
-                <td className="px-5 py-4 text-sm text-slate-600 font-medium">
-                  {formatCurrency(app.financial.monthlyIncome)}/mo
                 </td>
               </tr>
             ))}
@@ -160,36 +182,41 @@ export function ApplicationTable({ applications }: ApplicationTableProps) {
       </div>
 
       {/* Card list — mobile/tablet */}
-      <div className="md:hidden space-y-3">
+      <div className="lg:hidden space-y-3">
         {filtered.length === 0 && (
           <p className="py-8 text-center text-sm text-slate-400">
-            No applications match your search.
+            No patients match your filters.
           </p>
         )}
-        {filtered.map((app) => (
+        {filtered.map(({ app, risk }) => (
           <div
             key={app.id}
             onClick={() => navigate(`/staff/review/${app.id}`)}
-            className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand-500 transition-colors"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand-300 transition-colors"
           >
             <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-sm font-semibold text-slate-800">
-                {app.personal.fullName}
-              </span>
+              <div>
+                <span className="text-sm font-semibold text-slate-800">{app.personal.fullName}</span>
+                <span className="block text-xs text-slate-400 mt-0.5">
+                  {formatDate(app.submittedAt)} · Household of {app.household.householdSize}
+                </span>
+              </div>
+              <PriorityBadge level={risk.level} size="sm" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <ProgramBadge program={app.program} />
               <StatusBadge status={app.status} size="sm" />
             </div>
-            <p className="text-xs text-slate-400 mb-3">
-              {formatDate(app.submittedAt)}
-            </p>
-            <div className="flex gap-4 text-xs text-slate-500">
-              <span>HH size: <strong className="text-slate-700">{app.household.householdSize}</strong></span>
-              <span>Income: <strong className="text-slate-700">{formatCurrency(app.financial.monthlyIncome)}/mo</strong></span>
-              {app.missingDocumentsCount > 0 && (
-                <span className="text-red-600 font-medium">
-                  {app.missingDocumentsCount} missing doc{app.missingDocumentsCount > 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
+            <FeeTierBadge
+              tier={risk.slidingScale.tier}
+              percentOfFpl={risk.slidingScale.percentOfFpl}
+              size="sm"
+            />
+            {app.missingDocumentsCount > 0 && (
+              <p className="text-xs text-red-600 font-medium mt-2">
+                {app.missingDocumentsCount} missing document{app.missingDocumentsCount > 1 ? "s" : ""}
+              </p>
+            )}
           </div>
         ))}
       </div>

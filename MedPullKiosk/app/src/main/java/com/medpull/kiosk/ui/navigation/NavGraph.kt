@@ -405,7 +405,11 @@ fun NavGraph(
 
         composable(Screen.StaffPortal.route) {
             StaffPortalScreen(
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    navController.navigate(Screen.Welcome.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
                 submissionStore = submissionStore
             )
         }

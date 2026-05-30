@@ -12,7 +12,9 @@
       "Bash(pkill -f \"vite --port 5173\")",
       "Bash(adb exec-out *)",
       "Bash(adb shell *)",
-      "Bash(adb pull *)"
+      "Bash(adb pull *)",
+      "Bash(rm -rf /Users/steve/Documents/GitHub/MedPullKioskKanthi/MedPullKiosk/app/src/main/assets/staff-portal/*)",
+      "Bash(cp -R /Users/steve/Documents/GitHub/MedPullKioskKanthi/staff-portal/dist/. /Users/steve/Documents/GitHub/MedPullKioskKanthi/MedPullKiosk/app/src/main/assets/staff-portal/)"
     ]
   }
 }

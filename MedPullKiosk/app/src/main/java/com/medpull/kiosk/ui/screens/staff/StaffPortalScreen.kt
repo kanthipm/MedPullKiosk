@@ -47,10 +47,7 @@ fun StaffPortalScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.staff_portal)) },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        val wv = webView
-                        if (wv != null && wv.canGoBack()) wv.goBack() else onBack()
-                    }) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }

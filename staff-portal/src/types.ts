@@ -5,6 +5,29 @@ export type ApplicationStatus =
   | "INCOMPLETE_APPLICATION"
   | "NEEDS_FOLLOW_UP";
 
+// ── Intake Program / Form ───────────────────────────────────────────────────
+
+export type IntakeProgram =
+  | "SLIDING_FEE"
+  | "MEDICAL_INTAKE"
+  | "NEW_PATIENT"
+  | "MEDICAID_RENEWAL";
+
+export const PROGRAM_LABELS: Record<IntakeProgram, string> = {
+  SLIDING_FEE: "Sliding Fee Eligibility",
+  MEDICAL_INTAKE: "Medical Intake",
+  NEW_PATIENT: "New Patient Intake",
+  MEDICAID_RENEWAL: "Medicaid Renewal",
+};
+
+// Submissions coming from the kiosk bridge don't yet carry a program; they are
+// all produced by the sliding-fee flow today.
+export const DEFAULT_PROGRAM: IntakeProgram = "SLIDING_FEE";
+
+export function programLabel(program: IntakeProgram | undefined): string {
+  return PROGRAM_LABELS[program ?? DEFAULT_PROGRAM];
+}
+
 // ── Document ────────────────────────────────────────────────────────────────
 
 export type DocumentUploadStatus = "uploaded" | "missing" | "skipped" | "processing";
@@ -45,6 +68,7 @@ export interface PatientApplication {
   id: string;
   submittedAt: string;       // ISO string
   status: ApplicationStatus;
+  program?: IntakeProgram;   // which intake form the patient completed
 
   personal: PersonalInfo;
   household: HouseholdInfo;

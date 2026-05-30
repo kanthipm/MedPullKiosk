@@ -3,9 +3,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSubmissions } from "../hooks/useSubmissions";
 import { SectionCard } from "../components/SectionCard";
 import { StatusBadge } from "../components/StatusBadge";
+import { PriorityBadge } from "../components/PriorityBadge";
+import { FeeTierBadge } from "../components/FeeTierBadge";
+import { ProgramBadge } from "../components/ProgramBadge";
+import { assessRisk, type FactorSeverity } from "../lib/risk";
 import type { ApplicationStatus, UploadedDocument } from "../types";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+const FACTOR_DOT: Record<FactorSeverity, string> = {
+  high: "bg-red-500",
+  medium: "bg-amber-500",
+  low: "bg-emerald-500",
+};
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleString("en-US", {
@@ -205,6 +215,8 @@ export function PatientReviewPage() {
   const badge = overallBadge(app.status);
   const hasFieldIssues = app.missingRequiredFields.length > 0;
   const hasDocIssues = app.missingDocumentsCount > 0;
+  const risk = assessRisk(app);
+  const { slidingScale } = risk;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -239,11 +251,15 @@ export function PatientReviewPage() {
                 </div>
                 <h1 className="text-xl font-bold text-slate-900">{app.personal.fullName}</h1>
               </div>
-              <p className="text-xs text-slate-400 ml-13 pl-[52px]">
-                Submitted {formatDate(app.submittedAt)} · App #{app.id}
-              </p>
+              <div className="ml-13 pl-[52px] flex flex-wrap items-center gap-2 mt-1">
+                <ProgramBadge program={app.program} />
+                <span className="text-xs text-slate-400">
+                  Submitted {formatDate(app.submittedAt)} · App #{app.id}
+                </span>
+              </div>
             </div>
             <div className="flex flex-col items-start sm:items-end gap-2">
+              <PriorityBadge level={risk.level} />
               <OverallBadge badge={badge} />
               {(hasFieldIssues || hasDocIssues) && (
                 <div className="text-right">
@@ -285,6 +301,68 @@ export function PatientReviewPage() {
             </div>
           </div>
         )}
+
+        {/* Sliding Fee & Care Priority Assessment */}
+        <SectionCard
+          title="Sliding Fee & Care Priority"
+          icon={
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          }
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
+              <p className="text-[11px] text-slate-400 uppercase tracking-wide">% of Poverty Level</p>
+              <p className="text-xl font-bold text-slate-800 mt-0.5">{slidingScale.percentOfFpl}%</p>
+            </div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
+              <p className="text-[11px] text-slate-400 uppercase tracking-wide">Annual Income</p>
+              <p className="text-xl font-bold text-slate-800 mt-0.5">
+                {formatCurrency(slidingScale.annualIncome)}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                FPL {formatCurrency(slidingScale.fplThreshold)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
+              <p className="text-[11px] text-slate-400 uppercase tracking-wide">Patient Pays</p>
+              <p className="text-xl font-bold text-slate-800 mt-0.5">
+                {slidingScale.tier.patientResponsibility}%
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {slidingScale.tier.discountPercent}% discount
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <FeeTierBadge tier={slidingScale.tier} />
+            <PriorityBadge level={risk.level} />
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+              Contributing factors
+            </p>
+            {risk.factors.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No elevated-need factors detected from intake responses.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {risk.factors.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className={`h-2 w-2 rounded-full flex-shrink-0 ${FACTOR_DOT[f.severity]}`} />
+                    <span className="font-medium">{f.label}</span>
+                    {f.detail && <span className="text-slate-400 text-xs">— {f.detail}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </SectionCard>
 
         {/* Personal Information */}
         <SectionCard
