@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.medpull.kiosk"
-        minSdk = 29
+        minSdk = 24
         targetSdk = 34
         versionCode = 3
         versionName = "1.2.0"
@@ -74,6 +74,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Back-port java.time and other Java 8+ APIs to API 24 (Android 7). Needed
+        // because minSdk dropped below 26 — our code and HAPI FHIR use java.time.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -113,6 +116,9 @@ android {
 }
 
 dependencies {
+    // Back-ports java.time / java.util.stream etc. to API 24 (see compileOptions).
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
+
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.webkit:webkit:1.11.0")

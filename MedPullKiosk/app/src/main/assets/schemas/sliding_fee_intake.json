@@ -10,14 +10,76 @@
           "label": "Full Name",
           "type": "text",
           "required": true,
-          "ai_note": "Patient's full legal name (first, middle, last)"
+          "ai_note": "Patient's full legal name (first, middle, last)",
+          "question": "What is your Full Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su nombre completo?",
+              "label": "Nombre completo"
+            },
+            "zh": {
+              "question": "你的全名是什么？",
+              "label": "全名"
+            },
+            "fr": {
+              "question": "Quel est ton nom complet ?",
+              "label": "Nom complet"
+            },
+            "ja": {
+              "question": "あなたのフルネームは何ですか?",
+              "label": "フルネーム"
+            },
+            "pt": {
+              "question": "Qual é o seu nome completo?",
+              "label": "Nome completo"
+            },
+            "ar": {
+              "question": "ما هو اسمك الكامل؟",
+              "label": "الاسم الكامل"
+            },
+            "ru": {
+              "question": "Какое у тебя полное имя?",
+              "label": "Полное имя"
+            }
+          }
         },
         {
           "id": "date_of_birth",
           "label": "Date of Birth",
           "type": "date",
           "required": true,
-          "ai_note": "Patient's date of birth in MM/DD/YYYY format"
+          "ai_note": "Patient's date of birth in MM/DD/YYYY format",
+          "question": "What is your Date of Birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su fecha de nacimiento?",
+              "label": "Fecha de nacimiento"
+            },
+            "zh": {
+              "question": "你的出生日期是哪一天？",
+              "label": "出生日期"
+            },
+            "fr": {
+              "question": "Quelle est votre date de naissance ?",
+              "label": "Date de naissance"
+            },
+            "ja": {
+              "question": "あなたの生年月日は？",
+              "label": "生年月日"
+            },
+            "pt": {
+              "question": "Qual é a sua data de nascimento?",
+              "label": "Data de nascimento"
+            },
+            "ar": {
+              "question": "ما هو تاريخ ميلادك؟",
+              "label": "تاريخ الميلاد"
+            },
+            "ru": {
+              "question": "Какая у тебя дата рождения?",
+              "label": "Дата рождения"
+            }
+          }
         }
       ]
     },
@@ -29,28 +91,152 @@
           "label": "Street Address",
           "type": "text",
           "required": true,
-          "ai_note": "Street number and name. If the patient types a full address, extract and fill city, state, and zip automatically."
+          "ai_note": "Street number and name. If the patient types a full address, extract and fill city, state, and zip automatically.",
+          "question": "What is your Street Address?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su dirección postal?",
+              "label": "Dirección postal"
+            },
+            "zh": {
+              "question": "你的街道地址是什么？",
+              "label": "街道地址"
+            },
+            "fr": {
+              "question": "Quelle est votre adresse postale ?",
+              "label": "Adresse de rue"
+            },
+            "ja": {
+              "question": "あなたの番地は何ですか？",
+              "label": "番地"
+            },
+            "pt": {
+              "question": "Qual é o seu endereço?",
+              "label": "Endereço da rua"
+            },
+            "ar": {
+              "question": "ما هو عنوان الشارع الخاص بك؟",
+              "label": "عنوان الشارع"
+            },
+            "ru": {
+              "question": "Какой у вас почтовый адрес?",
+              "label": "Адрес улицы"
+            }
+          }
         },
         {
           "id": "address_city",
           "label": "City",
           "type": "text",
           "required": true,
-          "ai_note": "City of residence"
+          "ai_note": "City of residence",
+          "question": "What is your City?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es tu ciudad?",
+              "label": "Ciudad"
+            },
+            "zh": {
+              "question": "你的城市是什么？",
+              "label": "城市"
+            },
+            "fr": {
+              "question": "Quelle est ta ville ?",
+              "label": "Ville"
+            },
+            "ja": {
+              "question": "あなたの街はどこですか？",
+              "label": "シティ"
+            },
+            "pt": {
+              "question": "Qual é a sua cidade?",
+              "label": "Cidade"
+            },
+            "ar": {
+              "question": "ما هي مدينتك؟",
+              "label": "المدينة"
+            },
+            "ru": {
+              "question": "Какой у вас город?",
+              "label": "Город"
+            }
+          }
         },
         {
           "id": "address_state",
           "label": "State",
           "type": "text",
           "required": true,
-          "ai_note": "Two-letter US state abbreviation (e.g. TX, CA)"
+          "ai_note": "Two-letter US state abbreviation (e.g. TX, CA)",
+          "question": "What is your State?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su estado?",
+              "label": "Estado"
+            },
+            "zh": {
+              "question": "你所在的州是什么？",
+              "label": "州"
+            },
+            "fr": {
+              "question": "Quel est votre État ?",
+              "label": "État"
+            },
+            "ja": {
+              "question": "あなたの州はどこですか？",
+              "label": "状態"
+            },
+            "pt": {
+              "question": "Qual é o seu estado?",
+              "label": "Estado"
+            },
+            "ar": {
+              "question": "ما هي ولايتك؟",
+              "label": "حالة"
+            },
+            "ru": {
+              "question": "Какой у вас штат?",
+              "label": "государство"
+            }
+          }
         },
         {
           "id": "address_zip",
           "label": "ZIP Code",
           "type": "zip",
           "required": true,
-          "ai_note": "5-digit ZIP code"
+          "ai_note": "5-digit ZIP code",
+          "question": "What is your ZIP Code?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su código postal?",
+              "label": "Código postal"
+            },
+            "zh": {
+              "question": "你的邮政编码是什么？",
+              "label": "邮政编码"
+            },
+            "fr": {
+              "question": "Quel est ton code postal ?",
+              "label": "Code postal"
+            },
+            "ja": {
+              "question": "あなたの郵便番号は何ですか？",
+              "label": "郵便番号"
+            },
+            "pt": {
+              "question": "Qual é o seu CEP?",
+              "label": "Código postal"
+            },
+            "ar": {
+              "question": "ما هو الرمز البريدي الخاص بك؟",
+              "label": "الرمز البريدي"
+            },
+            "ru": {
+              "question": "Какой у вас почтовый индекс?",
+              "label": "Почтовый индекс"
+            }
+          }
         }
       ]
     },
@@ -62,14 +248,76 @@
           "label": "Household Size",
           "type": "number",
           "required": true,
-          "ai_note": "Total number of people living in the household, including the patient"
+          "ai_note": "Total number of people living in the household, including the patient",
+          "question": "What is your Household Size?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el tamaño de su hogar?",
+              "label": "Tamaño del hogar"
+            },
+            "zh": {
+              "question": "你的家庭规模是多少？",
+              "label": "家庭规模"
+            },
+            "fr": {
+              "question": "Quelle est la taille de votre foyer ?",
+              "label": "Taille du ménage"
+            },
+            "ja": {
+              "question": "あなたの世帯規模はどのくらいですか？",
+              "label": "世帯規模"
+            },
+            "pt": {
+              "question": "Qual é o tamanho da sua casa?",
+              "label": "Tamanho do agregado familiar"
+            },
+            "ar": {
+              "question": "ما هو حجم أسرتك؟",
+              "label": "حجم الأسرة"
+            },
+            "ru": {
+              "question": "Каков размер вашей семьи?",
+              "label": "Размер домохозяйства"
+            }
+          }
         },
         {
           "id": "number_of_dependents",
           "label": "Number of Dependents",
           "type": "number",
           "required": true,
-          "ai_note": "Number of people the patient financially supports (children, elderly relatives, etc.)"
+          "ai_note": "Number of people the patient financially supports (children, elderly relatives, etc.)",
+          "question": "What is your Number of Dependents?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de dependientes?",
+              "label": "Número de dependientes"
+            },
+            "zh": {
+              "question": "你的受抚养人人数是多少？",
+              "label": "受抚养人人数"
+            },
+            "fr": {
+              "question": "Quel est le nombre de personnes à votre charge ?",
+              "label": "Nombre de personnes à charge"
+            },
+            "ja": {
+              "question": "あなたの扶養家族の数は？",
+              "label": "扶養家族数"
+            },
+            "pt": {
+              "question": "Qual é o seu número de dependentes?",
+              "label": "Número de dependentes"
+            },
+            "ar": {
+              "question": "ما هو عدد المعالين لديك؟",
+              "label": "عدد المعالين"
+            },
+            "ru": {
+              "question": "Какое у вас количество иждивенцев?",
+              "label": "Количество иждивенцев"
+            }
+          }
         }
       ]
     },
@@ -92,14 +340,153 @@
             "Other",
             "No Income"
           ],
-          "ai_note": "All sources from which the patient receives money. Select all that apply."
+          "ai_note": "All sources from which the patient receives money. Select all that apply.",
+          "question": "Income Sources — select all that apply.",
+          "i18n": {
+            "es": {
+              "question": "Fuentes de ingresos: seleccione todas las que correspondan.",
+              "label": "Fuentes de ingresos",
+              "options": [
+                "Empleo/Salarios",
+                "Trabajo por cuenta propia",
+                "Seguridad Social/SSI",
+                "Discapacidad (SSDI)",
+                "Prestaciones por desempleo",
+                "Manutención de niños/pensión alimenticia",
+                "Jubilación/Pensión",
+                "Otros",
+                "Sin ingresos"
+              ]
+            },
+            "zh": {
+              "question": "收入来源 — 选择所有适用的选项。",
+              "label": "收入来源",
+              "options": [
+                "就业/工资",
+                "自主就业",
+                "社会保障/SSI",
+                "残疾 (SSDI)",
+                "失业救济金",
+                "子女抚养费/抚养费",
+                "退休/养老金",
+                "其他",
+                "没有收入"
+              ]
+            },
+            "fr": {
+              "question": "Sources de revenus : sélectionnez toutes les réponses qui s'appliquent.",
+              "label": "Sources de revenus",
+              "options": [
+                "Emploi/Salaires",
+                "Le travail indépendant",
+                "Sécurité sociale/SSI",
+                "Handicap (SSDI)",
+                "Prestations de chômage",
+                "Pension alimentaire pour enfants/pension alimentaire",
+                "Retraite/Pension",
+                "Autres",
+                "Aucun revenu"
+              ]
+            },
+            "ja": {
+              "question": "収入源 — 当てはまるものをすべて選択してください。",
+              "label": "収入源",
+              "options": [
+                "雇用/賃金",
+                "自営業",
+                "社会保障/SSI",
+                "障がい (SSDI)",
+                "失業給付",
+                "養育費/扶養手当",
+                "退職/年金",
+                "その他",
+                "収入なし"
+              ]
+            },
+            "pt": {
+              "question": "Fontes de renda — selecione todas as que se aplicam.",
+              "label": "Fontes de renda",
+              "options": [
+                "Emprego/ Salários",
+                "Trabalho autônomo",
+                "Previdência Social//SSI",
+                "Deficiência (SSDI)",
+                "Benefícios de desemprego",
+                "Pensão alimentícia/pensão alimentícia",
+                "Aposentadoria/Pensão",
+                "Outros",
+                "Sem renda"
+              ]
+            },
+            "ar": {
+              "question": "مصادر الدخل - حدد كل ما ينطبق.",
+              "label": "مصادر الدخل",
+              "options": [
+                "التوظيف/الأجور",
+                "التوظيف الذاتي",
+                "الضمان الاجتماعي/ SSI",
+                "الإعاقة (SSDI)",
+                "إعانات البطالة",
+                "دعم الطفل/النفقة",
+                "التقاعد والمعاش",
+                "أخرى",
+                "لا يوجد دخل"
+              ]
+            },
+            "ru": {
+              "question": "Источники дохода — выберите все подходящие.",
+              "label": "Источники дохода",
+              "options": [
+                "Занятость и заработная плата",
+                "Самозанятость",
+                "Социальное обеспечение/SSI",
+                "Инвалидность (SSDI)",
+                "Пособия по безработице",
+                "Алименты на ребенка/Алименты",
+                "Пенсия и выход на пенсию",
+                "Другой",
+                "Нет дохода"
+              ]
+            }
+          }
         },
         {
           "id": "monthly_income",
           "label": "Total Monthly Income",
           "type": "text",
           "required": true,
-          "ai_note": "Patient's total gross monthly income from all sources combined. Accept natural language like 'about two thousand dollars' or '$2,400/month' and normalize to a dollar amount."
+          "ai_note": "Patient's total gross monthly income from all sources combined. Accept natural language like 'about two thousand dollars' or '$2,400/month' and normalize to a dollar amount.",
+          "question": "What is your Total Monthly Income?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su ingreso mensual total?",
+              "label": "Ingresos mensuales totales"
+            },
+            "zh": {
+              "question": "你的月总收入是多少？",
+              "label": "月总收入"
+            },
+            "fr": {
+              "question": "Quel est votre revenu mensuel total ?",
+              "label": "Revenu mensuel total"
+            },
+            "ja": {
+              "question": "毎月の総収入はいくらですか？",
+              "label": "毎月の総収入"
+            },
+            "pt": {
+              "question": "Qual é a sua renda mensal total?",
+              "label": "Renda mensal total"
+            },
+            "ar": {
+              "question": "ما هو إجمالي الدخل الشهري الخاص بك؟",
+              "label": "إجمالي الدخل الشهري"
+            },
+            "ru": {
+              "question": "Каков ваш общий ежемесячный доход?",
+              "label": "Общий ежемесячный доход"
+            }
+          }
         }
       ]
     },
@@ -120,7 +507,101 @@
             "Student",
             "Unable to Work"
           ],
-          "ai_note": "Patient's current employment status"
+          "ai_note": "Patient's current employment status",
+          "question": "What is your Employment Status?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su situación laboral?",
+              "label": "Situación laboral",
+              "options": [
+                "Jornada completa",
+                "A tiempo parcial",
+                "Trabajador autónomo",
+                "Desempleado",
+                "Retirado",
+                "Estudiante",
+                "Incapaz de trabajar"
+              ]
+            },
+            "zh": {
+              "question": "你的就业状况如何？",
+              "label": "就业状况",
+              "options": [
+                "全职",
+                "兼职",
+                "自雇",
+                "失业",
+                "已退休",
+                "学生",
+                "无法工作"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre statut professionnel ?",
+              "label": "Statut d'emploi",
+              "options": [
+                "À plein temps",
+                "À temps partiel",
+                "Travailleur indépendant",
+                "Chômeurs",
+                "Retraité",
+                "Étudiant",
+                "Incapable de travailler"
+              ]
+            },
+            "ja": {
+              "question": "あなたの雇用状況は？",
+              "label": "雇用状況",
+              "options": [
+                "フルタイム",
+                "パートタイム",
+                "自営業",
+                "無職",
+                "退職しました",
+                "学生",
+                "仕事ができない"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu status de emprego?",
+              "label": "Status de emprego",
+              "options": [
+                "Tempo integral",
+                "A tempo parcial",
+                "Trabalhador autônomo",
+                "Desempregado",
+                "Aposentado",
+                "Estudante",
+                "Incapaz de trabalhar"
+              ]
+            },
+            "ar": {
+              "question": "ما هي حالة التوظيف الخاصة بك؟",
+              "label": "حالة التوظيف",
+              "options": [
+                "بدوام كامل",
+                "دوام جزئي",
+                "يعمل لحسابه",
+                "عاطل عن العمل",
+                "متقاعد",
+                "طالب",
+                "غير قادر على العمل"
+              ]
+            },
+            "ru": {
+              "question": "Каков ваш трудовой статус?",
+              "label": "Статус занятости",
+              "options": [
+                "Полный рабочий день",
+                "Частичная",
+                "Самозанятые",
+                "Безработные",
+                "В отставке",
+                "Ученик",
+                "Не могу работать"
+              ]
+            }
+          }
         },
         {
           "id": "insurance_status",
@@ -135,7 +616,94 @@
             "CHIP",
             "Other"
           ],
-          "ai_note": "Patient's current health insurance coverage, if any"
+          "ai_note": "Patient's current health insurance coverage, if any",
+          "question": "What is your Insurance Status?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su estado de seguro?",
+              "label": "Estado del seguro",
+              "options": [
+                "Sin seguro",
+                "Medicaid",
+                "Medicare",
+                "Seguro privado/para empleadores",
+                "CHIP",
+                "Otros"
+              ]
+            },
+            "zh": {
+              "question": "你的保险状况如何？",
+              "label": "保险状态",
+              "options": [
+                "没有保险",
+                "医疗补助",
+                "医疗保险",
+                "私人/雇主保险",
+                "芯片",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre statut d'assurance ?",
+              "label": "État de l'assurance",
+              "options": [
+                "Aucune assurance",
+                "Medicaid",
+                "Medicare",
+                "Assurance privée/patronale",
+                "PUCE",
+                "Autres"
+              ]
+            },
+            "ja": {
+              "question": "あなたの保険状況は？",
+              "label": "保険ステータス",
+              "options": [
+                "保険なし",
+                "メディケイド",
+                "メディケア",
+                "民間/雇用者保険",
+                "チップ",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o status do seu seguro?",
+              "label": "Status do seguro",
+              "options": [
+                "Sem seguro",
+                "Medicaid",
+                "Medicare",
+                "Seguro privado/empregador",
+                "CHIP",
+                "Outros"
+              ]
+            },
+            "ar": {
+              "question": "ما هي حالة التأمين الخاصة بك؟",
+              "label": "حالة التأمين",
+              "options": [
+                "لا يوجد تأمين",
+                "ميديكيد",
+                "الرعاية الطبية",
+                "التأمين الخاص/تأمين صاحب العمل",
+                "رقاقة",
+                "أخرى"
+              ]
+            },
+            "ru": {
+              "question": "Каков ваш страховой статус?",
+              "label": "Страховой статус",
+              "options": [
+                "Нет страховки",
+                "федеральная система медицинской помощи неимущим",
+                "Medicare",
+                "Страхование частных лиц и работодателей",
+                "ЧИП",
+                "Другой"
+              ]
+            }
+          }
         }
       ]
     }

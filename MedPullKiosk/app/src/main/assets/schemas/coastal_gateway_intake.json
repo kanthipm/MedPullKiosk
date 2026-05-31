@@ -3,24 +3,125 @@
   "form_name": "Coastal Gateway Health Center — Patient Intake",
   "version": "2.0",
   "ai_instructions": "You are conducting a patient intake at Coastal Gateway Health Center (CGHC). Work through all 4 sections in order: Registration, Health History, HIPAA Consent, General Consents. Ask one question at a time. Follow all skip_if rules. Be warm and concise. Never display ai_note content to the patient — use it only to guide your responses.",
-
-  "skip_during_intake": ["name_confirmation", "telehealth_notice_acknowledged"],
-  "consent_batch_fields": ["hipaa_consent", "sliding_fee_acknowledgment", "ghhc_data_sharing", "photo_consent"],
-  "skip_rules": [
-    { "when_field": "physical_same_as_mailing", "equals": "Yes", "skip": ["physical_address_street", "physical_city", "physical_state", "physical_zip"] },
-    { "when_field": "has_insurance", "equals": "No", "skip": ["primary_insurance_provider", "primary_insurance_id", "primary_insurance_group", "policyholder_is_self", "policyholder_name", "policyholder_dob", "policyholder_relationship", "has_secondary_insurance", "secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"] },
-    { "when_field": "policyholder_is_self", "equals": "Yes", "skip": ["policyholder_name", "policyholder_dob", "policyholder_relationship"] },
-    { "when_field": "has_secondary_insurance", "equals": "No", "skip": ["secondary_insurance_provider", "secondary_insurance_id", "secondary_insurance_group"] },
-    { "when_field": "family_history_any", "equals": "No", "skip": ["family_history_conditions", "family_history_members"] },
-    { "when_field": "tobacco_use", "equals": "No", "skip": ["tobacco_type", "tobacco_frequency"] },
-    { "when_field": "alcohol_use", "equals": "No", "skip": ["alcohol_frequency"] },
-    { "when_field": "surgeries_any", "equals": "No", "skip": ["surgeries_list"] },
-    { "when_field": "medications_any", "equals": "No", "skip": ["medications_list"] },
-    { "when_field": "allergies_any", "equals": "No", "skip": ["allergies_list"] },
-    { "when_field": "authorized_phi_contacts_any", "equals": "No", "skip": ["authorized_phi_contact_1_name", "authorized_phi_contact_1_relationship", "authorized_phi_contact_2_name", "authorized_phi_contact_2_relationship"] },
-    { "when_field": "filling_for_self", "equals": "Myself", "skip": ["representative_name", "representative_relationship"] }
+  "skip_during_intake": [
+    "name_confirmation",
+    "telehealth_notice_acknowledged"
   ],
-
+  "consent_batch_fields": [
+    "hipaa_consent",
+    "sliding_fee_acknowledgment",
+    "ghhc_data_sharing",
+    "photo_consent"
+  ],
+  "skip_rules": [
+    {
+      "when_field": "physical_same_as_mailing",
+      "equals": "Yes",
+      "skip": [
+        "physical_address_street",
+        "physical_city",
+        "physical_state",
+        "physical_zip"
+      ]
+    },
+    {
+      "when_field": "has_insurance",
+      "equals": "No",
+      "skip": [
+        "primary_insurance_provider",
+        "primary_insurance_id",
+        "primary_insurance_group",
+        "policyholder_is_self",
+        "policyholder_name",
+        "policyholder_dob",
+        "policyholder_relationship",
+        "has_secondary_insurance",
+        "secondary_insurance_provider",
+        "secondary_insurance_id",
+        "secondary_insurance_group"
+      ]
+    },
+    {
+      "when_field": "policyholder_is_self",
+      "equals": "Yes",
+      "skip": [
+        "policyholder_name",
+        "policyholder_dob",
+        "policyholder_relationship"
+      ]
+    },
+    {
+      "when_field": "has_secondary_insurance",
+      "equals": "No",
+      "skip": [
+        "secondary_insurance_provider",
+        "secondary_insurance_id",
+        "secondary_insurance_group"
+      ]
+    },
+    {
+      "when_field": "family_history_any",
+      "equals": "No",
+      "skip": [
+        "family_history_conditions",
+        "family_history_members"
+      ]
+    },
+    {
+      "when_field": "tobacco_use",
+      "equals": "No",
+      "skip": [
+        "tobacco_type",
+        "tobacco_frequency"
+      ]
+    },
+    {
+      "when_field": "alcohol_use",
+      "equals": "No",
+      "skip": [
+        "alcohol_frequency"
+      ]
+    },
+    {
+      "when_field": "surgeries_any",
+      "equals": "No",
+      "skip": [
+        "surgeries_list"
+      ]
+    },
+    {
+      "when_field": "medications_any",
+      "equals": "No",
+      "skip": [
+        "medications_list"
+      ]
+    },
+    {
+      "when_field": "allergies_any",
+      "equals": "No",
+      "skip": [
+        "allergies_list"
+      ]
+    },
+    {
+      "when_field": "authorized_phi_contacts_any",
+      "equals": "No",
+      "skip": [
+        "authorized_phi_contact_1_name",
+        "authorized_phi_contact_1_relationship",
+        "authorized_phi_contact_2_name",
+        "authorized_phi_contact_2_relationship"
+      ]
+    },
+    {
+      "when_field": "filling_for_self",
+      "equals": "Myself",
+      "skip": [
+        "representative_name",
+        "representative_relationship"
+      ]
+    }
+  ],
   "sections": [
     {
       "id": "registration",
@@ -31,242 +132,1857 @@
           "label": "Preferred Language",
           "type": "radio",
           "required": true,
-          "options": ["English", "Español", "Tiếng Việt", "Other"],
-          "ai_note": "Ask this FIRST. If 'Other', collect free text and proceed in English."
+          "options": [
+            "English",
+            "Español",
+            "Tiếng Việt",
+            "Other"
+          ],
+          "ai_note": "Ask this FIRST. If 'Other', collect free text and proceed in English.",
+          "question": "What is your Preferred Language?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su idioma preferido?",
+              "label": "Idioma preferido",
+              "options": [
+                "Inglés",
+                "English",
+                "Ting Viet",
+                "Otros"
+              ]
+            },
+            "zh": {
+              "question": "你的首选语言是什么？",
+              "label": "首选语言",
+              "options": [
+                "英语",
+                "西班牙语",
+                "Ting Vit",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est ta langue préférée ?",
+              "label": "Langue préférée",
+              "options": [
+                "Anglais",
+                "Espanol",
+                "Tiếng Việt",
+                "Autres"
+              ]
+            },
+            "ja": {
+              "question": "あなたの好きな言語は何ですか？",
+              "label": "優先言語",
+              "options": [
+                "英語",
+                "エスパニョール",
+                "ティエン・ベット",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu idioma preferido?",
+              "label": "Idioma preferido",
+              "options": [
+                "Inglês",
+                "Español",
+                "Tiếng Việt",
+                "Outros"
+              ]
+            },
+            "ar": {
+              "question": "ما هي لغتك المفضلة؟",
+              "label": "اللغة المفضلة",
+              "options": [
+                "الإنجليزية",
+                "إسبانيول",
+                "تينج فيت",
+                "أخرى"
+              ]
+            },
+            "ru": {
+              "question": "Какой язык вы предпочитаете?",
+              "label": "Предпочтительный язык",
+              "options": [
+                "английский",
+                "Испанский",
+                "Тиенг Вьют",
+                "Другой"
+              ]
+            }
+          }
         },
         {
           "id": "filling_for_self",
           "label": "Filling Out For",
           "type": "radio",
           "required": true,
-          "options": ["Myself", "Someone else"],
-          "ai_note": "If 'Someone else', switch to guardian mode — reframe all questions to third person."
+          "options": [
+            "Myself",
+            "Someone else"
+          ],
+          "ai_note": "If 'Someone else', switch to guardian mode — reframe all questions to third person.",
+          "question": "What is your Filling Out For?",
+          "i18n": {
+            "es": {
+              "question": "¿Para qué sirve su llenado?",
+              "label": "Rellenando el formulario",
+              "options": [
+                "Yo mismo",
+                "Alguien más"
+              ]
+            },
+            "zh": {
+              "question": "你填写的目的是什么？",
+              "label": "填写",
+              "options": [
+                "我自己",
+                "别人"
+              ]
+            },
+            "fr": {
+              "question": "À quoi sert votre formulaire de remplissage ?",
+              "label": "Remplir le formulaire",
+              "options": [
+                "Moi-même",
+                "Quelqu'un d'autre"
+              ]
+            },
+            "ja": {
+              "question": "何のために記入するの？",
+              "label": "への記入",
+              "options": [
+                "自分自身",
+                "他の誰か"
+              ]
+            },
+            "pt": {
+              "question": "Para que serve o seu preenchimento?",
+              "label": "Preenchendo um formulário",
+              "options": [
+                "Eu mesmo",
+                "Outra pessoa"
+              ]
+            },
+            "ar": {
+              "question": "ما الغرض من التعبئة الخاص بك؟",
+              "label": "تعبئة النموذج",
+              "options": [
+                "نفسي",
+                "شخص آخر"
+              ]
+            },
+            "ru": {
+              "question": "Для чего вы заполняете анкету?",
+              "label": "Заполнение формы",
+              "options": [
+                "Я сам",
+                "Кто-то другой"
+              ]
+            }
+          }
         },
         {
           "id": "patient_full_name",
           "label": "Patient Full Name (Last, First)",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Patient Full Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el nombre completo de su paciente?",
+              "label": "Nombre completo del paciente (apellido, nombre)"
+            },
+            "zh": {
+              "question": "你的患者全名是什么？",
+              "label": "患者全名（姓氏、名字）"
+            },
+            "fr": {
+              "question": "Quel est le nom complet de votre patient ?",
+              "label": "Nom complet du patient (nom, prénom)"
+            },
+            "ja": {
+              "question": "あなたの患者のフルネームは何ですか?",
+              "label": "患者のフルネーム (ラスト、ファースト)"
+            },
+            "pt": {
+              "question": "Qual é o nome completo do seu paciente?",
+              "label": "Nome completo do paciente (último, primeiro)"
+            },
+            "ar": {
+              "question": "ما هو الاسم الكامل لمريضك؟",
+              "label": "الاسم الكامل للمريض (الأخير، الأول)"
+            },
+            "ru": {
+              "question": "Какое полное имя вашего пациента?",
+              "label": "Полное имя пациента (фамилия, имя)"
+            }
+          }
         },
         {
           "id": "date_of_birth",
           "label": "Date of Birth",
           "type": "date",
           "required": true,
-          "hint": "MM/DD/YYYY"
+          "hint": "MM/DD/YYYY",
+          "question": "What is your Date of Birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su fecha de nacimiento?",
+              "label": "Fecha de nacimiento"
+            },
+            "zh": {
+              "question": "你的出生日期是哪一天？",
+              "label": "出生日期"
+            },
+            "fr": {
+              "question": "Quelle est votre date de naissance ?",
+              "label": "Date de naissance"
+            },
+            "ja": {
+              "question": "あなたの生年月日は？",
+              "label": "生年月日"
+            },
+            "pt": {
+              "question": "Qual é a sua data de nascimento?",
+              "label": "Data de nascimento"
+            },
+            "ar": {
+              "question": "ما هو تاريخ ميلادك؟",
+              "label": "تاريخ الميلاد"
+            },
+            "ru": {
+              "question": "Какая у тебя дата рождения?",
+              "label": "Дата рождения"
+            }
+          }
         },
         {
           "id": "mailing_address_street",
           "label": "Mailing Address — Street / PO Box",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Mailing Address — Street / PO Box?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su dirección postal: calle/apartado postal?",
+              "label": "Dirección postal: calle/apartado postal"
+            },
+            "zh": {
+              "question": "你的邮寄地址是什么 — 街道/邮政信箱？",
+              "label": "邮寄地址 — 街道/邮政信箱"
+            },
+            "fr": {
+              "question": "Quelle est votre adresse postale — rue ou boîte postale ?",
+              "label": "Adresse postale — Rue/Boîte postale"
+            },
+            "ja": {
+              "question": "郵送先住所は何ですか？ストリート/私書箱？",
+              "label": "郵送先住所 — ストリート/私書箱"
+            },
+            "pt": {
+              "question": "Qual é o seu endereço para correspondência — Rua/Caixa postal?",
+              "label": "Endereço para correspondência — Rua/Caixa postal"
+            },
+            "ar": {
+              "question": "ما هو عنوانك البريدي - الشارع/صندوق البريد؟",
+              "label": "العنوان البريدي - الشارع/صندوق البريد"
+            },
+            "ru": {
+              "question": "Какой у вас почтовый адрес — улица/почтовый ящик?",
+              "label": "Почтовый адрес — улица/почтовый ящик"
+            }
+          }
         },
         {
           "id": "mailing_city",
           "label": "Mailing City",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Mailing City?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es tu ciudad postal?",
+              "label": "Ciudad de correo"
+            },
+            "zh": {
+              "question": "你的邮寄城市是什么？",
+              "label": "邮寄城市"
+            },
+            "fr": {
+              "question": "Quelle est votre ville d'envoi ?",
+              "label": "Ville d'envoi"
+            },
+            "ja": {
+              "question": "あなたの郵送先市区町村はどこですか？",
+              "label": "メーリングシティ"
+            },
+            "pt": {
+              "question": "Qual é a sua cidade de correspondência?",
+              "label": "Cidade de correspondência"
+            },
+            "ar": {
+              "question": "ما هي مدينتك البريدية؟",
+              "label": "مدينة البريد"
+            },
+            "ru": {
+              "question": "Какой у вас город рассылки?",
+              "label": "Город рассылки"
+            }
+          }
         },
         {
           "id": "mailing_state",
           "label": "Mailing State",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Mailing State?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su estado postal?",
+              "label": "Estado de envío"
+            },
+            "zh": {
+              "question": "你的邮寄状态是什么？",
+              "label": "邮寄状态"
+            },
+            "fr": {
+              "question": "Quel est votre État d'envoi ?",
+              "label": "État d'envoi"
+            },
+            "ja": {
+              "question": "郵送先の都道府県は？",
+              "label": "郵送先都道府県"
+            },
+            "pt": {
+              "question": "Qual é o seu estado de correspondência?",
+              "label": "Estado de correspondência"
+            },
+            "ar": {
+              "question": "ما هي الدولة البريدية الخاصة بك؟",
+              "label": "الدولة البريدية"
+            },
+            "ru": {
+              "question": "Какой у вас штат рассылки?",
+              "label": "Государство рассылки"
+            }
+          }
         },
         {
           "id": "mailing_zip",
           "label": "Mailing Zip Code",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Mailing Zip Code?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su código postal?",
+              "label": "Código postal postal"
+            },
+            "zh": {
+              "question": "你的邮寄邮政编码是什么？",
+              "label": "邮寄邮政编码"
+            },
+            "fr": {
+              "question": "Quel est votre code postal d'envoi ?",
+              "label": "Code postal d'envoi"
+            },
+            "ja": {
+              "question": "郵送先の郵便番号は何ですか?",
+              "label": "郵送先の郵便番号"
+            },
+            "pt": {
+              "question": "Qual é o seu CEP de correspondência?",
+              "label": "CEP de envio"
+            },
+            "ar": {
+              "question": "ما هو الرمز البريدي الخاص بك؟",
+              "label": "الرمز البريدي البريدي"
+            },
+            "ru": {
+              "question": "Какой у вас почтовый индекс?",
+              "label": "Почтовый индекс для рассылки"
+            }
+          }
         },
         {
           "id": "physical_same_as_mailing",
           "label": "Physical Address Same as Mailing?",
           "type": "radio",
           "required": true,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Physical Address Same as Mailing?",
+          "i18n": {
+            "es": {
+              "question": "¿La dirección física es la misma que la postal?",
+              "label": "¿La dirección física es la misma que la postal?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "实际地址和邮寄地址一样吗？",
+              "label": "实际地址和邮寄地址一样吗？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Adresse physique identique à l'adresse postale ?",
+              "label": "Adresse physique identique à l'adresse postale ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "住所は郵送先と同じですか？",
+              "label": "住所は郵送先と同じですか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Endereço físico igual ao endereço postal?",
+              "label": "Endereço físico igual ao endereço postal?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "العنوان الفعلي هو نفس العنوان البريدي؟",
+              "label": "العنوان الفعلي هو نفس العنوان البريدي؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Физический адрес совпадает с почтой?",
+              "label": "Физический адрес совпадает с почтой?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "physical_address_street",
           "label": "Physical Address — Street",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Physical Address — Street?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su dirección física: calle?",
+              "label": "Dirección física: calle"
+            },
+            "zh": {
+              "question": "你的实际地址是什么 — 街道？",
+              "label": "实际地址—街道"
+            },
+            "fr": {
+              "question": "Quelle est votre adresse physique ? Rue ?",
+              "label": "Adresse physique — Rue"
+            },
+            "ja": {
+              "question": "お住まいの住所（番地）は何ですか？",
+              "label": "住所 — 番地"
+            },
+            "pt": {
+              "question": "Qual é o seu endereço físico — Rua?",
+              "label": "Endereço físico — Rua"
+            },
+            "ar": {
+              "question": "ما هو عنوانك الفعلي - الشارع؟",
+              "label": "العنوان الفعلي - الشارع"
+            },
+            "ru": {
+              "question": "Какой у вас физический адрес — улица?",
+              "label": "Физический адрес — улица"
+            }
+          }
         },
         {
           "id": "physical_city",
           "label": "Physical City",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Physical City?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es tu ciudad física?",
+              "label": "Ciudad física"
+            },
+            "zh": {
+              "question": "你的物理城市是什么？",
+              "label": "物理城市"
+            },
+            "fr": {
+              "question": "Quelle est votre ville physique ?",
+              "label": "Ville physique"
+            },
+            "ja": {
+              "question": "あなたの物理的な都市はどこですか？",
+              "label": "フィジカル・シティ"
+            },
+            "pt": {
+              "question": "Qual é a sua cidade física?",
+              "label": "Cidade física"
+            },
+            "ar": {
+              "question": "ما هي مدينتك المادية؟",
+              "label": "مدينة فيزيائية"
+            },
+            "ru": {
+              "question": "Какой у вас физический город?",
+              "label": "Физический город"
+            }
+          }
         },
         {
           "id": "physical_state",
           "label": "Physical State",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Physical State?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es tu estado físico?",
+              "label": "Estado físico"
+            },
+            "zh": {
+              "question": "你的身体状态是什么？",
+              "label": "物理状态"
+            },
+            "fr": {
+              "question": "Quel est ton état physique ?",
+              "label": "État physique"
+            },
+            "ja": {
+              "question": "あなたの身体状態はどうですか？",
+              "label": "物理状態"
+            },
+            "pt": {
+              "question": "Qual é o seu estado físico?",
+              "label": "Estado físico"
+            },
+            "ar": {
+              "question": "ما هي حالتك المادية؟",
+              "label": "الحالة الفيزيائية"
+            },
+            "ru": {
+              "question": "Каково ваше физическое состояние?",
+              "label": "Физическое состояние"
+            }
+          }
         },
         {
           "id": "physical_zip",
           "label": "Physical Zip Code",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Physical Zip Code?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su código postal físico?",
+              "label": "Código postal físico"
+            },
+            "zh": {
+              "question": "你的物理邮政编码是什么？",
+              "label": "物理邮政编码"
+            },
+            "fr": {
+              "question": "Quel est votre code postal physique ?",
+              "label": "Code postal physique"
+            },
+            "ja": {
+              "question": "お住まいの郵便番号は何ですか？",
+              "label": "実際の郵便番号"
+            },
+            "pt": {
+              "question": "Qual é o seu CEP físico?",
+              "label": "CEP físico"
+            },
+            "ar": {
+              "question": "ما هو الرمز البريدي الفعلي الخاص بك؟",
+              "label": "الرمز البريدي المادي"
+            },
+            "ru": {
+              "question": "Какой у вас физический почтовый индекс?",
+              "label": "Физический почтовый индекс"
+            }
+          }
         },
         {
           "id": "cell_phone",
           "label": "Cell Phone Number",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Cell Phone Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de teléfono móvil?",
+              "label": "Número de teléfono celular"
+            },
+            "zh": {
+              "question": "你的手机号码是什么？",
+              "label": "手机号码"
+            },
+            "fr": {
+              "question": "Quel est ton numéro de téléphone portable ?",
+              "label": "Numéro de téléphone portable"
+            },
+            "ja": {
+              "question": "あなたの携帯電話番号は何ですか？",
+              "label": "携帯電話番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de celular?",
+              "label": "Número de telefone celular"
+            },
+            "ar": {
+              "question": "ما هو رقم هاتفك الخلوي؟",
+              "label": "رقم الهاتف الخلوي"
+            },
+            "ru": {
+              "question": "Какой у тебя номер мобильного телефона?",
+              "label": "Номер мобильного телефона"
+            }
+          }
         },
         {
           "id": "home_phone",
           "label": "Home Phone Number",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Home Phone Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el número de teléfono de su casa?",
+              "label": "Número de teléfono residencial"
+            },
+            "zh": {
+              "question": "你的家庭电话号码是什么？",
+              "label": "家庭电话号码"
+            },
+            "fr": {
+              "question": "Quel est votre numéro de téléphone fixe ?",
+              "label": "Numéro de téléphone du domicile"
+            },
+            "ja": {
+              "question": "自宅の電話番号は何ですか？",
+              "label": "自宅電話番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de telefone residencial?",
+              "label": "Número de telefone residencial"
+            },
+            "ar": {
+              "question": "ما هو رقم هاتف منزلك؟",
+              "label": "رقم هاتف المنزل"
+            },
+            "ru": {
+              "question": "Какой у вас домашний номер телефона?",
+              "label": "Домашний номер телефона"
+            }
+          }
         },
         {
           "id": "email",
           "label": "Email Address",
           "type": "text",
           "required": false,
-          "ai_note": "Mention: used for appointment reminders and Healow portal access."
+          "ai_note": "Mention: used for appointment reminders and Healow portal access.",
+          "question": "What is your Email Address?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su dirección de correo electrónico?",
+              "label": "Dirección de correo electrónico"
+            },
+            "zh": {
+              "question": "你的电子邮件地址是什么？",
+              "label": "电子邮件地址"
+            },
+            "fr": {
+              "question": "Quelle est votre adresse e-mail ?",
+              "label": "Adresse e-mail"
+            },
+            "ja": {
+              "question": "あなたのEメールアドレスは何ですか？",
+              "label": "Eメールアドレス"
+            },
+            "pt": {
+              "question": "Qual é o seu endereço de e-mail?",
+              "label": "Endereço de e-mail"
+            },
+            "ar": {
+              "question": "ما هو عنوان البريد الإلكتروني الخاص بك؟",
+              "label": "عنوان البريد الإلكتروني"
+            },
+            "ru": {
+              "question": "Какой у вас адрес электронной почты?",
+              "label": "Адрес электронной почты"
+            }
+          }
         },
         {
           "id": "demographics_framing",
           "label": "Demographics Framing",
           "type": "static_label",
           "required": false,
-          "ai_note": "Deliver: 'Now a few questions about identity and background — these help the clinic provide better care. You can skip any of them.'"
+          "ai_note": "Deliver: 'Now a few questions about identity and background — these help the clinic provide better care. You can skip any of them.'",
+          "question": "Now a few questions about identity and background — these help the clinic provide better care. You can skip any of them.",
+          "i18n": {
+            "es": {
+              "question": "Ahora, algunas preguntas sobre la identidad y los antecedentes ayudan a la clínica a brindar una mejor atención. Puedes saltarte cualquiera de ellas.",
+              "label": "Encuadre demográfico"
+            },
+            "zh": {
+              "question": "现在有几个关于身份和背景的问题——这些问题可以帮助诊所提供更好的护理。你可以跳过其中的任何一个。",
+              "label": "人口统计学框架"
+            },
+            "fr": {
+              "question": "Maintenant, quelques questions sur l'identité et les antécédents aident la clinique à fournir de meilleurs soins. Vous pouvez ignorer n'importe laquelle d'entre elles.",
+              "label": "Cadrage démographique"
+            },
+            "ja": {
+              "question": "さて、アイデンティティと経歴についていくつか質問します。これらはクリニックがより良いケアを提供するのに役立ちます。いずれもスキップできます。",
+              "label": "人口統計フレーミング"
+            },
+            "pt": {
+              "question": "Agora, algumas perguntas sobre identidade e antecedentes ajudam a clínica a oferecer um melhor atendimento. Você pode pular qualquer um deles.",
+              "label": "Enquadramento demográfico"
+            },
+            "ar": {
+              "question": "الآن بعض الأسئلة حول الهوية والخلفية - هذه تساعد العيادة على تقديم رعاية أفضل. يمكنك تخطي أي منها.",
+              "label": "تأطير التركيبة السكانية"
+            },
+            "ru": {
+              "question": "Теперь несколько вопросов о личности и биографии — они помогают клинике предоставлять более качественную медицинскую помощь. Любой из них можно пропустить.",
+              "label": "Демографическое оформление"
+            }
+          }
         },
         {
           "id": "sex_assigned_at_birth",
           "label": "Sex Assigned at Birth",
           "type": "radio",
           "required": false,
-          "options": ["Female", "Male", "Decline to specify"]
+          "options": [
+            "Female",
+            "Male",
+            "Decline to specify"
+          ],
+          "question": "What is your Sex Assigned at Birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su sexo asignado al nacer?",
+              "label": "Sexo asignado al nacer",
+              "options": [
+                "Mujer",
+                "Masculino",
+                "Rechazar especificar"
+              ]
+            },
+            "zh": {
+              "question": "你出生时分配的性别是什么？",
+              "label": "出生时分配的性别",
+              "options": [
+                "女",
+                "男性",
+                "拒绝透明"
+              ]
+            },
+            "fr": {
+              "question": "Quel sexe vous a été assigné à la naissance ?",
+              "label": "Sexe assigné à la naissance",
+              "options": [
+                "Femme",
+                "Masculin",
+                "Refuser de spécifier"
+              ]
+            },
+            "ja": {
+              "question": "出生時に割り当てられる性別は？",
+              "label": "出生時に割り当てられる性別",
+              "options": [
+                "女性",
+                "男性",
+                "指定を拒否"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o sexo atribuído ao seu nascimento?",
+              "label": "Sexo atribuído no nascimento",
+              "options": [
+                "Feminino",
+                "Masculino",
+                "Recuse-se a especificar"
+              ]
+            },
+            "ar": {
+              "question": "ما هو نوع الجنس الخاص بك عند الولادة؟",
+              "label": "الجنس المحدد عند الولادة",
+              "options": [
+                "أنثى",
+                "ذكر",
+                "رفض التحديد"
+              ]
+            },
+            "ru": {
+              "question": "Какой пол вам присваивается при рождении?",
+              "label": "Пол, назначенный при рождении",
+              "options": [
+                "женский пол",
+                "самец",
+                "Отказаться от уточнения"
+              ]
+            }
+          }
         },
         {
           "id": "gender_identity",
           "label": "Gender Identity",
           "type": "radio",
           "required": false,
-          "options": ["Female", "Male", "Transgender Female", "Transgender Male", "Other", "Decline to specify"]
+          "options": [
+            "Female",
+            "Male",
+            "Transgender Female",
+            "Transgender Male",
+            "Other",
+            "Decline to specify"
+          ],
+          "question": "What is your Gender Identity?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es tu identidad de género?",
+              "label": "Identidad de género",
+              "options": [
+                "Mujer",
+                "Masculino",
+                "Mujer transgénero",
+                "Hombre transgénero",
+                "Otros",
+                "Rechazar especificar"
+              ]
+            },
+            "zh": {
+              "question": "你的性别认同是什么？",
+              "label": "性别认同",
+              "options": [
+                "女",
+                "男性",
+                "变性女性",
+                "变性男性",
+                "其他",
+                "拒绝透明"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre identité de genre ?",
+              "label": "Identité de genre",
+              "options": [
+                "Femme",
+                "Masculin",
+                "Femme transgenre",
+                "Homme transgenre",
+                "Autres",
+                "Refuser de spécifier"
+              ]
+            },
+            "ja": {
+              "question": "あなたの性同一性は何ですか?",
+              "label": "ジェンダーアイデンティティ",
+              "options": [
+                "女性",
+                "男性",
+                "トランスジェンダー女性",
+                "トランスジェンダー男性",
+                "その他",
+                "指定を拒否"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua identidade de gênero?",
+              "label": "Identidade de gênero",
+              "options": [
+                "Feminino",
+                "Masculino",
+                "Mulher transgênero",
+                "Homem transgênero",
+                "Outros",
+                "Recuse-se a especificar"
+              ]
+            },
+            "ar": {
+              "question": "ما هي هويتك الجنسية؟",
+              "label": "الهوية الجنسية",
+              "options": [
+                "أنثى",
+                "ذكر",
+                "أنثى متحولة جنسياً",
+                "ذكر متحول جنسيًا",
+                "أخرى",
+                "رفض التحديد"
+              ]
+            },
+            "ru": {
+              "question": "Какова ваша гендерная идентичность?",
+              "label": "Гендерная идентичность",
+              "options": [
+                "женский пол",
+                "самец",
+                "Трансгендерная женщина",
+                "Мужчина-трансгендер",
+                "Другой",
+                "Отказаться от уточнения"
+              ]
+            }
+          }
         },
         {
           "id": "race",
           "label": "Race (select all that apply)",
           "type": "multi_select",
           "required": false,
-          "options": ["White", "African American / Black", "Asian", "American Indian or Alaska Native", "Native Hawaiian", "Other Pacific Islander", "Other", "Decline to specify"]
+          "options": [
+            "White",
+            "African American / Black",
+            "Asian",
+            "American Indian or Alaska Native",
+            "Native Hawaiian",
+            "Other Pacific Islander",
+            "Other",
+            "Decline to specify"
+          ],
+          "question": "Race — select all that apply.",
+          "i18n": {
+            "es": {
+              "question": "Carrera: selecciona todas las opciones que correspondan.",
+              "label": "Raza (selecciona todas las opciones que correspondan)",
+              "options": [
+                "blanco",
+                "Afroamericano/Negro",
+                "asiática",
+                "Indio americano o nativo de Alaska",
+                "Nativo de Hawái",
+                "Otros isleños del Pacífico",
+                "Otros",
+                "Rechazar especificar"
+              ]
+            },
+            "zh": {
+              "question": "种族 — 选择所有适用的选项。",
+              "label": "竞赛（选择所有适用选项）",
+              "options": [
+                "白色",
+                "非裔美国人/黑人",
+                "亚洲的",
+                "美洲印第安人或阿拉斯加土著人",
+                "夏威夷原住民",
+                "其他太平洋岛民",
+                "其他",
+                "拒绝透明"
+              ]
+            },
+            "fr": {
+              "question": "Course : sélectionnez toutes les réponses qui s'appliquent.",
+              "label": "Course (sélectionnez toutes les réponses qui s'appliquent)",
+              "options": [
+                "blanc",
+                "Afro-américain/Noir",
+                "asiatique",
+                "Indien d'Amérique ou natif de l'Alaska",
+                "Hawaïen natif",
+                "Autres habitants des îles du Pacifique",
+                "Autres",
+                "Refuser de spécifier"
+              ]
+            },
+            "ja": {
+              "question": "レース — 当てはまるものをすべて選択してください.",
+              "label": "レース (該当するものをすべて選択してください)",
+              "options": [
+                "ホワイト",
+                "アフリカ系アメリカ人/黒人",
+                "アジア人",
+                "アメリカインディアンまたはアラスカ先住民",
+                "ハワイ先住民",
+                "その他の太平洋諸島系",
+                "その他",
+                "指定を拒否"
+              ]
+            },
+            "pt": {
+              "question": "Corrida — selecione todas as opções aplicáveis.",
+              "label": "Corrida (selecione todas as opções aplicáveis)",
+              "options": [
+                "Branco",
+                "Afro-americano//Negro",
+                "asiáticos",
+                "Índio americano ou nativo do Alasca",
+                "Havaiano nativo",
+                "Outro habitante das ilhas do Pacífico",
+                "Outros",
+                "Recuse-se a especificar"
+              ]
+            },
+            "ar": {
+              "question": "السباق - حدد كل ما ينطبق.",
+              "label": "السباق (حدد كل ما ينطبق)",
+              "options": [
+                "أبيض",
+                "أمريكي من أصل أفريقي/أسود",
+                "آسيوي",
+                "هندي أمريكي أو من سكان ألاسكا الأصليين",
+                "من سكان هاواي الأصليين",
+                "سكان جزر المحيط الهادئ الأخرى",
+                "أخرى",
+                "رفض التحديد"
+              ]
+            },
+            "ru": {
+              "question": "Гонка — выберите все подходящие варианты.",
+              "label": "Гонка (выберите все подходящие варианты)",
+              "options": [
+                "белый",
+                "Афроамериканка/черный",
+                "азиатка",
+                "Американские индейцы или коренные жители Аляски",
+                "Коренные гавайцы",
+                "Другой житель тихоокеанских островов",
+                "Другой",
+                "Отказаться от уточнения"
+              ]
+            }
+          }
         },
         {
           "id": "ethnicity",
           "label": "Ethnicity",
           "type": "radio",
           "required": false,
-          "options": ["Not Hispanic or Latino", "Hispanic or Latino", "Decline to specify"]
+          "options": [
+            "Not Hispanic or Latino",
+            "Hispanic or Latino",
+            "Decline to specify"
+          ],
+          "question": "What is your Ethnicity?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su origen étnico?",
+              "label": "Etnia",
+              "options": [
+                "No es hispano ni latino",
+                "Hispano o latino",
+                "Rechazar especificar"
+              ]
+            },
+            "zh": {
+              "question": "你的种族是什么？",
+              "label": "种族",
+              "options": [
+                "不是西班牙裔或拉丁裔",
+                "西班牙裔或拉丁裔",
+                "拒绝透明"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre origine ethnique ?",
+              "label": "L'ethnicité",
+              "options": [
+                "Pas hispanique ou latino",
+                "Hispanique ou Latino",
+                "Refuser de spécifier"
+              ]
+            },
+            "ja": {
+              "question": "あなたの民族は何ですか?",
+              "label": "民族性",
+              "options": [
+                "ヒスパニック系でもラテン系でもない",
+                "ヒスパニック系またはラテン系",
+                "指定を拒否"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua etnia?",
+              "label": "Etnia",
+              "options": [
+                "Não hispânico ou latino",
+                "Hispânico ou latino",
+                "Recuse-se a especificar"
+              ]
+            },
+            "ar": {
+              "question": "ما هو عرقك؟",
+              "label": "الأصل العرقي",
+              "options": [
+                "ليس من أصل إسباني أو لاتيني",
+                "من أصل إسباني أو لاتيني",
+                "رفض التحديد"
+              ]
+            },
+            "ru": {
+              "question": "Какая у вас этническая принадлежность?",
+              "label": "Этнос",
+              "options": [
+                "Не испаноязычный или латиноамериканец",
+                "испаноязычный или латиноамериканец",
+                "Отказаться от уточнения"
+              ]
+            }
+          }
         },
         {
           "id": "marital_status",
           "label": "Marital Status",
           "type": "radio",
           "required": false,
-          "options": ["Single", "Married", "Divorced", "Widowed"]
+          "options": [
+            "Single",
+            "Married",
+            "Divorced",
+            "Widowed"
+          ],
+          "question": "What is your Marital Status?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su estado civil?",
+              "label": "Estado civil",
+              "options": [
+                "Individual",
+                "Casado",
+                "divorciado",
+                "Viudo"
+              ]
+            },
+            "zh": {
+              "question": "你的婚姻状况如何？",
+              "label": "婚姻状况",
+              "options": [
+                "单身",
+                "结婚了",
+                "离婚了",
+                "丧偶"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre état civil ?",
+              "label": "État civil",
+              "options": [
+                "Unique",
+                "Marié",
+                "Divorcé",
+                "Veuf"
+              ]
+            },
+            "ja": {
+              "question": "あなたの婚姻状況は？",
+              "label": "婚姻状況",
+              "options": [
+                "シングル",
+                "既婚",
+                "離婚した",
+                "未亡人"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu estado civil?",
+              "label": "Estado civil",
+              "options": [
+                "Solteiro",
+                "Casado",
+                "Divorciado",
+                "Viúvo"
+              ]
+            },
+            "ar": {
+              "question": "ما هي حالتك الاجتماعية؟",
+              "label": "الحالة الاجتماعية",
+              "options": [
+                "مفرد",
+                "متزوج",
+                "مُطلق",
+                "أرمل"
+              ]
+            },
+            "ru": {
+              "question": "Каково ваше семейное положение?",
+              "label": "Семейное положение",
+              "options": [
+                "Одинокий",
+                "Женат",
+                "Разведена",
+                "Овдовевший"
+              ]
+            }
+          }
         },
         {
           "id": "emergency_contact_name",
           "label": "Emergency Contact Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Emergency Contact Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su nombre de contacto de emergencia?",
+              "label": "Nombre del contacto de emergencia"
+            },
+            "zh": {
+              "question": "你的紧急联系人姓名是什么？",
+              "label": "紧急联系人姓名"
+            },
+            "fr": {
+              "question": "Quel est le nom de votre personne à contacter en cas d'urgence ?",
+              "label": "Nom du contact en cas d'urgence"
+            },
+            "ja": {
+              "question": "緊急連絡先の名前は何ですか？",
+              "label": "緊急連絡先名"
+            },
+            "pt": {
+              "question": "Qual é o seu nome de contato de emergência?",
+              "label": "Nome do contato de emergência"
+            },
+            "ar": {
+              "question": "ما هو اسم جهة الاتصال في حالات الطوارئ الخاصة بك؟",
+              "label": "اسم جهة الاتصال في حالات الطوارئ"
+            },
+            "ru": {
+              "question": "Какое у вас контактное лицо в экстренных случаях?",
+              "label": "Имя контактного лица в чрезвычайных ситуациях"
+            }
+          }
         },
         {
           "id": "emergency_contact_phone",
           "label": "Emergency Contact Phone",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Emergency Contact Phone?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su teléfono de contacto de emergencia?",
+              "label": "Teléfono de contacto de emergencia"
+            },
+            "zh": {
+              "question": "你的紧急联系电话是什么？",
+              "label": "紧急联系电话"
+            },
+            "fr": {
+              "question": "Quel est votre numéro de téléphone d'urgence ?",
+              "label": "Téléphone à contacter en cas d'urgence"
+            },
+            "ja": {
+              "question": "緊急連絡先の電話番号を教えてください。",
+              "label": "緊急連絡先電話"
+            },
+            "pt": {
+              "question": "Qual é o seu telefone de contato de emergência?",
+              "label": "Telefone de contato de emergência"
+            },
+            "ar": {
+              "question": "ما هو هاتف الاتصال في حالات الطوارئ؟",
+              "label": "هاتف الاتصال في حالات الطوارئ"
+            },
+            "ru": {
+              "question": "Какой у вас телефон для экстренной помощи?",
+              "label": "Телефон экстренной связи"
+            }
+          }
         },
         {
           "id": "emergency_contact_relationship",
           "label": "Emergency Contact Relationship",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Emergency Contact Relationship?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su relación de contacto de emergencia?",
+              "label": "Relación de contacto de emergencia"
+            },
+            "zh": {
+              "question": "你的紧急联系人关系是什么？",
+              "label": "紧急联系关系"
+            },
+            "fr": {
+              "question": "Quelle est votre relation de contact en cas d'urgence ?",
+              "label": "Relation de contact d'urgence"
+            },
+            "ja": {
+              "question": "あなたの緊急連絡先は？",
+              "label": "緊急連絡先関係"
+            },
+            "pt": {
+              "question": "Qual é a sua relação de contato de emergência?",
+              "label": "Relação de contato de emergência"
+            },
+            "ar": {
+              "question": "ما هي علاقة الاتصال في حالات الطوارئ الخاصة بك؟",
+              "label": "علاقة الاتصال في حالات الطوارئ"
+            },
+            "ru": {
+              "question": "Каковы ваши отношения с экстренными контактами?",
+              "label": "Экстренные контактные отношения"
+            }
+          }
         },
         {
           "id": "has_insurance",
           "label": "Has Health Insurance",
           "type": "radio",
           "required": true,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Has Health Insurance?",
+          "i18n": {
+            "es": {
+              "question": "¿Tiene seguro médico?",
+              "label": "Tiene seguro médico",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "有健康保险吗？",
+              "label": "有健康保险",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Dispose d'une assurance maladie ?",
+              "label": "Possède une assurance maladie",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "健康保険に加入していますか？",
+              "label": "健康保険に加入している",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Tem seguro de saúde?",
+              "label": "Tem seguro de saúde",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل لديك تأمين صحي؟",
+              "label": "لديه تأمين صحي",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Есть ли медицинская страховка?",
+              "label": "Имеет медицинскую страховку",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "primary_insurance_provider",
           "label": "Primary Insurance Provider",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Primary Insurance Provider?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su proveedor de seguro principal?",
+              "label": "Proveedor de seguro principal"
+            },
+            "zh": {
+              "question": "您的主要保险提供商是什么？",
+              "label": "主要保险提供商"
+            },
+            "fr": {
+              "question": "Quel est votre principal fournisseur d'assurance ?",
+              "label": "Fournisseur d'assurance principal"
+            },
+            "ja": {
+              "question": "あなたの主な保険プロバイダーは何ですか？",
+              "label": "一次保険プロバイダー"
+            },
+            "pt": {
+              "question": "Qual é a sua principal seguradora?",
+              "label": "Provedor de seguro principal"
+            },
+            "ar": {
+              "question": "ما هو مزود التأمين الأساسي الخاص بك؟",
+              "label": "مزود التأمين الأساسي"
+            },
+            "ru": {
+              "question": "Какая у вас основная страховая компания?",
+              "label": "Поставщик первичного страхования"
+            }
+          }
         },
         {
           "id": "primary_insurance_id",
           "label": "Primary Insurance ID Number",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Primary Insurance ID Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de identificación de seguro principal?",
+              "label": "Número de identificación del seguro principal"
+            },
+            "zh": {
+              "question": "您的主要保险身份证号码是什么？",
+              "label": "主要保险证号"
+            },
+            "fr": {
+              "question": "Quel est votre numéro d'identification d'assurance principal ?",
+              "label": "Numéro d'identification de l'assurance principale"
+            },
+            "ja": {
+              "question": "あなたの一次保険ID番号は何ですか？",
+              "label": "一次保険 ID 番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de identificação de seguro principal?",
+              "label": "Número de identificação do seguro principal"
+            },
+            "ar": {
+              "question": "ما هو رقم معرف التأمين الأساسي الخاص بك؟",
+              "label": "رقم معرف التأمين الأساسي"
+            },
+            "ru": {
+              "question": "Какой у вас основной страховой номер?",
+              "label": "Идентификационный номер основного страхового полиса"
+            }
+          }
         },
         {
           "id": "primary_insurance_group",
           "label": "Primary Insurance Group Number",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Primary Insurance Group Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de grupo de seguro principal?",
+              "label": "Número de grupo de seguro principal"
+            },
+            "zh": {
+              "question": "您的主要保险团体号码是多少？",
+              "label": "主要保险团体编号"
+            },
+            "fr": {
+              "question": "Quel est votre numéro d'assurance collective principal ?",
+              "label": "Numéro du groupe d'assurance principal"
+            },
+            "ja": {
+              "question": "あなたの一次保険グループ番号は何ですか？",
+              "label": "一次保険グループ番号"
+            },
+            "pt": {
+              "question": "Qual é o número do seu grupo de seguros principal?",
+              "label": "Número do grupo de seguros principal"
+            },
+            "ar": {
+              "question": "ما هو رقم مجموعة التأمين الأساسي الخاص بك؟",
+              "label": "رقم مجموعة التأمين الأساسي"
+            },
+            "ru": {
+              "question": "Какой у вас номер основной страховой группы?",
+              "label": "Номер первичной страховой группы"
+            }
+          }
         },
         {
           "id": "policyholder_is_self",
           "label": "Is the Policyholder the Patient?",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Is the Policyholder the Patient?",
+          "i18n": {
+            "es": {
+              "question": "¿Es el titular de la póliza el paciente?",
+              "label": "¿Es el titular de la póliza el paciente?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "保单持有人是患者吗？",
+              "label": "保单持有人是患者吗？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Le preneur d'assurance est-il le patient ?",
+              "label": "Le preneur d'assurance est-il le patient ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "保険契約者は患者ですか？",
+              "label": "保険契約者は患者ですか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "O segurado é o paciente?",
+              "label": "O segurado é o paciente?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل حامل البوليصة هو المريض؟",
+              "label": "هل حامل البوليصة هو المريض؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Является ли страхователь пациентом?",
+              "label": "Является ли страхователь пациентом?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "policyholder_name",
           "label": "Policyholder Name",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Policyholder Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el nombre de su titular de la póliza?",
+              "label": "Nombre del titular de la póliza"
+            },
+            "zh": {
+              "question": "你的保单持有人姓名是什么？",
+              "label": "保单持有人姓名"
+            },
+            "fr": {
+              "question": "Quel est le nom de votre assuré ?",
+              "label": "Nom du titulaire de la police"
+            },
+            "ja": {
+              "question": "保険契約者の名前は何ですか？",
+              "label": "保険契約者名"
+            },
+            "pt": {
+              "question": "Qual é o nome do seu segurado?",
+              "label": "Nome do segurado"
+            },
+            "ar": {
+              "question": "ما هو اسم حامل البوليصة الخاص بك؟",
+              "label": "اسم حامل البوليصة"
+            },
+            "ru": {
+              "question": "Как зовут вашего страхователя?",
+              "label": "Имя страхователя"
+            }
+          }
         },
         {
           "id": "policyholder_dob",
           "label": "Policyholder Date of Birth",
           "type": "date",
-          "required": false
+          "required": false,
+          "question": "What is your Policyholder Date of Birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es la fecha de nacimiento de su asegurado?",
+              "label": "Fecha de nacimiento del titular de la póliza"
+            },
+            "zh": {
+              "question": "您的保单持有人的出生日期是哪一天？",
+              "label": "保单持有人出生日期"
+            },
+            "fr": {
+              "question": "Quelle est la date de naissance de votre assuré ?",
+              "label": "Date de naissance de l'assuré"
+            },
+            "ja": {
+              "question": "保険契約者の生年月日は？",
+              "label": "保険契約者の生年月日"
+            },
+            "pt": {
+              "question": "Qual é a data de nascimento do seu segurado?",
+              "label": "Data de nascimento do segurado"
+            },
+            "ar": {
+              "question": "ما هو تاريخ ميلاد حامل البوليصة الخاص بك؟",
+              "label": "تاريخ ميلاد حامل البوليصة"
+            },
+            "ru": {
+              "question": "Какова дата рождения вашего страхователя?",
+              "label": "Дата рождения страхователя"
+            }
+          }
         },
         {
           "id": "policyholder_relationship",
           "label": "Policyholder Relationship to Patient",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Policyholder Relationship to Patient?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es la relación entre el titular de la póliza y el paciente?",
+              "label": "Relación del titular de la póliza con el paciente"
+            },
+            "zh": {
+              "question": "您的保单持有人与患者的关系如何？",
+              "label": "保单持有人与患者的关系"
+            },
+            "fr": {
+              "question": "Quelle est la relation entre votre assuré et votre patient ?",
+              "label": "Relation entre l'assuré et le patient"
+            },
+            "ja": {
+              "question": "保険契約者と患者との関係は？",
+              "label": "保険契約者と患者との関係"
+            },
+            "pt": {
+              "question": "Qual é a relação do seu segurado com o paciente?",
+              "label": "Relação do segurado com o paciente"
+            },
+            "ar": {
+              "question": "ما هي علاقة حامل البوليصة بالمريض؟",
+              "label": "علاقة حامل البوليصة بالمريض"
+            },
+            "ru": {
+              "question": "Каковы ваши отношения страхователя с пациентом?",
+              "label": "Отношения страхователя с пациентом"
+            }
+          }
         },
         {
           "id": "has_secondary_insurance",
           "label": "Has Secondary Insurance",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Has Secondary Insurance?",
+          "i18n": {
+            "es": {
+              "question": "¿Tiene seguro secundario?",
+              "label": "Tiene un seguro secundario",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "有二级保险吗？",
+              "label": "有二级保险",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Dispose d'une assurance secondaire ?",
+              "label": "Possède une assurance secondaire",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "二次保険に加入していますか？",
+              "label": "二次保険に加入している",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Tem seguro secundário?",
+              "label": "Tem seguro secundário",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل لديك تأمين ثانوي؟",
+              "label": "لديه تأمين ثانوي",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Есть ли вторичное страхование?",
+              "label": "Имеет вторичную страховку",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "secondary_insurance_provider",
           "label": "Secondary Insurance Provider",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Secondary Insurance Provider?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su proveedor de seguro secundario?",
+              "label": "Proveedor de seguro secundario"
+            },
+            "zh": {
+              "question": "您的二级保险提供商是什么？",
+              "label": "二级保险提供商"
+            },
+            "fr": {
+              "question": "Quel est votre fournisseur d'assurance secondaire ?",
+              "label": "Fournisseur d'assurance secondaire"
+            },
+            "ja": {
+              "question": "あなたの二次保険プロバイダーは何ですか？",
+              "label": "二次保険プロバイダー"
+            },
+            "pt": {
+              "question": "Qual é a sua seguradora secundária?",
+              "label": "Provedor de seguros secundário"
+            },
+            "ar": {
+              "question": "ما هو مزود التأمين الثانوي الخاص بك؟",
+              "label": "مزود التأمين الثانوي"
+            },
+            "ru": {
+              "question": "Какой у вас поставщик вторичного страхования?",
+              "label": "Поставщик вторичного страхования"
+            }
+          }
         },
         {
           "id": "secondary_insurance_id",
           "label": "Secondary Insurance ID Number",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Secondary Insurance ID Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de identificación de seguro secundario?",
+              "label": "Número de identificación de seguro secundario"
+            },
+            "zh": {
+              "question": "你的二级保险身份证号码是什么？",
+              "label": "二级保险证号"
+            },
+            "fr": {
+              "question": "Quel est votre numéro d'identification d'assurance secondaire ?",
+              "label": "Numéro d'identification de l'assurance secondaire"
+            },
+            "ja": {
+              "question": "二次保険ID番号は何ですか？",
+              "label": "二次保険 ID 番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de identificação de seguro secundário?",
+              "label": "Número de identificação do seguro secundário"
+            },
+            "ar": {
+              "question": "ما هو رقم معرف التأمين الثانوي الخاص بك؟",
+              "label": "رقم معرف التأمين الثانوي"
+            },
+            "ru": {
+              "question": "Какой у вас идентификационный номер по вторичному страхованию?",
+              "label": "Идентификационный номер вторичного страхования"
+            }
+          }
         },
         {
           "id": "secondary_insurance_group",
           "label": "Secondary Insurance Group Number",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Secondary Insurance Group Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de grupo de seguro secundario?",
+              "label": "Número de grupo de seguro secundario"
+            },
+            "zh": {
+              "question": "您的二级保险团体号码是多少？",
+              "label": "二级保险团体编号"
+            },
+            "fr": {
+              "question": "Quel est votre numéro d'assurance collective secondaire ?",
+              "label": "Numéro de groupe d'assurance secondaire"
+            },
+            "ja": {
+              "question": "二次保険グループ番号を教えてください。",
+              "label": "二次保険グループ番号"
+            },
+            "pt": {
+              "question": "Qual é o número do seu grupo de seguro secundário?",
+              "label": "Número do grupo de seguros secundários"
+            },
+            "ar": {
+              "question": "ما هو رقم مجموعة التأمين الثانوي الخاص بك؟",
+              "label": "رقم مجموعة التأمين الثانوية"
+            },
+            "ru": {
+              "question": "Какой у вас номер группы вторичного страхования?",
+              "label": "Номер группы вторичного страхования"
+            }
+          }
         }
       ]
     },
-
     {
       "id": "health_history",
       "name": "Section 2: Health History",
@@ -278,49 +1994,494 @@
           "required": false,
           "options": [
             "None",
-            "Heart Disease", "Heart Attack", "High Blood Pressure",
+            "Heart Disease",
+            "Heart Attack",
+            "High Blood Pressure",
             "Asthma / Lung Disease",
-            "Stroke", "Seizures / Epilepsy", "Headaches / Migraines", "Sleep Problems / Sleep Apnea",
-            "Diabetes", "Thyroid Problems",
-            "Hepatitis", "HIV / AIDS",
-            "Cancer", "Anemia", "Liver Disease",
+            "Stroke",
+            "Seizures / Epilepsy",
+            "Headaches / Migraines",
+            "Sleep Problems / Sleep Apnea",
+            "Diabetes",
+            "Thyroid Problems",
+            "Hepatitis",
+            "HIV / AIDS",
+            "Cancer",
+            "Anemia",
+            "Liver Disease",
             "Back Problems",
             "Other"
-          ]
+          ],
+          "question": "Diagnosed or Treated Conditions — select all that apply.",
+          "i18n": {
+            "es": {
+              "question": "Afecciones diagnosticadas o tratadas: seleccione todas las que correspondan.",
+              "label": "Afecciones diagnosticadas o tratadas (seleccione todas las que correspondan)",
+              "options": [
+                "Ninguna",
+                "Enfermedad cardiaca",
+                "Ataque cardiaco",
+                "Presión arterial alta",
+                "Asma/ enfermedad pulmonar",
+                "Ictus",
+                "Convulsiones/epilepsia",
+                "Dolores de cabeza/migrañas",
+                "Problemas del sueño/Apnea del sueño",
+                "Diabetes",
+                "Problemas de tiroides",
+                "Hepatitis",
+                "VIH/ SIDA",
+                "Cáncer",
+                "Anemia",
+                "Enfermedad hepática",
+                "Problemas de espalda",
+                "Otros"
+              ]
+            },
+            "zh": {
+              "question": "已诊断或治疗的疾病-选择所有适用的选项。",
+              "label": "已诊断或治疗的疾病（选择所有适用的选项）",
+              "options": [
+                "无",
+                "心脏病",
+                "心脏病发作",
+                "高血压",
+                "哮喘/肺部疾病",
+                "中风",
+                "癫痫发作/癫痫",
+                "头痛/偏头痛",
+                "睡眠问题/睡眠呼吸暂停",
+                "糖尿病",
+                "甲状腺问题",
+                "肝炎",
+                "艾滋病毒/艾滋病",
+                "癌症",
+                "贫血",
+                "肝病",
+                "背部问题",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Affections diagnostiquées ou traitées — sélectionnez toutes les réponses qui s'appliquent.",
+              "label": "Affections diagnostiquées ou traitées (sélectionnez toutes les réponses qui s'appliquent)",
+              "options": [
+                "Aucune",
+                "Les maladies du cœur",
+                "Attaque cardiaque",
+                "Hypertension artérielle",
+                "Asthme/maladie pulmonaire",
+                "accident vasculaire cérébral",
+                "Convulsions/épilepsie",
+                "Céphalées/migraines",
+                "Troubles du sommeil/Apnée du sommeil",
+                "Diabète",
+                "Problèmes thyroïdiens",
+                "Hépatite",
+                "VIH/SIDA",
+                "Cancer",
+                "Anémie",
+                "Maladie du foie",
+                "Problèmes de dos",
+                "Autres"
+              ]
+            },
+            "ja": {
+              "question": "診断または治療された状態 — 当てはまるものをすべて選択してください。",
+              "label": "診断または治療された状態（当てはまるものをすべて選択）",
+              "options": [
+                "[なし]",
+                "心臓病",
+                "ハート・アタック",
+                "高血圧",
+                "喘息/肺疾患",
+                "ストローク",
+                "発作/てんかん",
+                "頭痛 /片頭痛",
+                "睡眠障害/睡眠時無呼吸",
+                "糖尿病",
+                "甲状腺の問題",
+                "肝炎",
+                "HIV/エイズ",
+                "がん",
+                "貧血",
+                "肝臓疾患",
+                "背中の問題",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Condições diagnosticadas ou tratadas — selecione todas as que se aplicam.",
+              "label": "Condições diagnosticadas ou tratadas (selecione todas as que se aplicam)",
+              "options": [
+                "Nenhum",
+                "Doença cardíaca",
+                "Ataque cardíaco",
+                "Pressão arterial elevada",
+                "Asma/Doença pulmonar",
+                "AVC",
+                "Convulsões/Epilepsia",
+                "Dores de cabeça/Enxaquecas",
+                "Problemas de sono//Apneia do sono",
+                "Diabetes",
+                "Problemas de tireóide",
+                "Hepatite",
+                "HIV//AIDS",
+                "Câncer",
+                "Anemia",
+                "Doença hepática",
+                "Problemas nas costas",
+                "Outros"
+              ]
+            },
+            "ar": {
+              "question": "الحالات التي تم تشخيصها أو معالجتها - حدد كل ما ينطبق.",
+              "label": "الحالات التي تم تشخيصها أو معالجتها (حدد كل ما ينطبق)",
+              "options": [
+                "لا شيء",
+                "أمراض القلب",
+                "نوبة قلبية",
+                "ضغط دم مرتفع",
+                "الربو/أمراض الرئة",
+                "السكتة الدماغية",
+                "نوبات الصرع/الصرع",
+                "حالات الصداع/ الصداع النصفي",
+                "مشاكل النوم/توقف التنفس أثناء النوم",
+                "داء السكري",
+                "مشاكل الغدة الدرقية",
+                "التهاب الكبد",
+                "فيروس نقص المناعة البشرية/الإيدز",
+                "السرطان",
+                "الأنيميا",
+                "أمراض الكبد",
+                "مشاكل الظهر",
+                "أخرى"
+              ]
+            },
+            "ru": {
+              "question": "Диагностированные или вылеченные заболевания — выберите все подходящие заболевания.",
+              "label": "Диагностированные или вылеченные заболевания (выберите все подходящие)",
+              "options": [
+                "Нет",
+                "Болезнь сердца",
+                "Сердечный приступ",
+                "Высокое кровяное давление",
+                "Астма/болезнь легких",
+                "Инсульт",
+                "Припадки и эпилепси",
+                "Головные боли и мигрень",
+                "Проблемы со сном/Апноэ во сне",
+                "Диабет",
+                "Проблемы со щитовидной железой",
+                "Гепатит",
+                "ВИЧ/ СПИД",
+                "Рак",
+                "Анемия",
+                "Заболевание печени",
+                "Проблемы со спиной",
+                "Другой"
+              ]
+            }
+          }
         },
         {
           "id": "other_health_concerns",
           "label": "Other Health Conditions or Concerns",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Other Health Conditions or Concerns?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuáles son sus otras afecciones o preocupaciones de salud?",
+              "label": "Otras afecciones o problemas de salud"
+            },
+            "zh": {
+              "question": "您的其他健康状况或问题是什么？",
+              "label": "其他健康状况或问题"
+            },
+            "fr": {
+              "question": "Quels sont vos autres problèmes de santé ou préoccupations ?",
+              "label": "Autres problèmes de santé ou préoccupations"
+            },
+            "ja": {
+              "question": "他にどのような健康状態や懸念がありますか？",
+              "label": "その他の健康状態または懸念"
+            },
+            "pt": {
+              "question": "Quais são suas outras condições ou preocupações de saúde?",
+              "label": "Outras condições ou preocupações de saúde"
+            },
+            "ar": {
+              "question": "ما هي الحالات أو المخاوف الصحية الأخرى الخاصة بك؟",
+              "label": "حالات أو مخاوف صحية أخرى"
+            },
+            "ru": {
+              "question": "Какие у вас другие проблемы со здоровьем или проблемы?",
+              "label": "Другие состояния здоровья или проблемы"
+            }
+          }
         },
         {
           "id": "family_history_any",
           "label": "Any Family History of Significant Conditions?",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Any Family History of Significant Conditions?",
+          "i18n": {
+            "es": {
+              "question": "¿Algún antecedente familiar de enfermedades importantes?",
+              "label": "¿Algún antecedente familiar de enfermedades importantes?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "有重大疾病的家族史吗？",
+              "label": "有重大疾病的家族史吗？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Avez-vous des antécédents familiaux de problèmes de santé importants ?",
+              "label": "Avez-vous des antécédents familiaux de problèmes de santé importants ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "重大な症状の家族歴はありますか？",
+              "label": "重大な症状の家族歴はありますか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Algum histórico familiar de doenças significativas?",
+              "label": "Algum histórico familiar de doenças significativas?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل هناك تاريخ عائلي لحالات خطيرة؟",
+              "label": "هل هناك تاريخ عائلي لحالات خطيرة؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Есть ли в семейном анамнезе серьезные заболевания?",
+              "label": "Есть ли в семейном анамнезе серьезные заболевания?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "family_history_conditions",
           "label": "Family History — Conditions Present",
           "type": "multi_select",
           "required": false,
-          "options": ["Cancer", "Diabetes", "High Blood Pressure", "Thyroid Problems", "Heart Attack", "Stroke", "Mental Illness", "Drug / Alcohol Abuse"]
+          "options": [
+            "Cancer",
+            "Diabetes",
+            "High Blood Pressure",
+            "Thyroid Problems",
+            "Heart Attack",
+            "Stroke",
+            "Mental Illness",
+            "Drug / Alcohol Abuse"
+          ],
+          "question": "Family History — Conditions Present — select all that apply.",
+          "i18n": {
+            "es": {
+              "question": "Historia familiar: condiciones presentes: seleccione todas las que correspondan.",
+              "label": "Antecedentes familiares: condiciones presentes",
+              "options": [
+                "Cáncer",
+                "Diabetes",
+                "Presión arterial alta",
+                "Problemas de tiroides",
+                "Ataque cardiaco",
+                "Ictus",
+                "Enfermedad mental",
+                "Abuso de drogas y alcohol"
+              ]
+            },
+            "zh": {
+              "question": "家族史-存在条件-选择所有适用的选项。",
+              "label": "家族史—存在的状况",
+              "options": [
+                "癌症",
+                "糖尿病",
+                "高血压",
+                "甲状腺问题",
+                "心脏病发作",
+                "中风",
+                "精神疾病",
+                "药物/酒精滥用"
+              ]
+            },
+            "fr": {
+              "question": "Antécédents familiaux — Conditions présentes — sélectionnez toutes les réponses qui s'appliquent.",
+              "label": "Antécédents familiaux — Conditions présentes",
+              "options": [
+                "Cancer",
+                "Diabète",
+                "Hypertension artérielle",
+                "Problèmes thyroïdiens",
+                "Attaque cardiaque",
+                "accident vasculaire cérébral",
+                "Maladie mentale",
+                "Abus de drogues/d'alcool"
+              ]
+            },
+            "ja": {
+              "question": "家族歴 — 現在の条件 — 当てはまるものをすべて選択してください.",
+              "label": "家族歴 — 現在の状況",
+              "options": [
+                "がん",
+                "糖尿病",
+                "高血圧",
+                "甲状腺の問題",
+                "ハート・アタック",
+                "ストローク",
+                "精神障害",
+                "薬物/アルコールの乱用"
+              ]
+            },
+            "pt": {
+              "question": "História da família — Condições presentes — selecione todas as que se aplicam.",
+              "label": "História da família — Condições presentes",
+              "options": [
+                "Câncer",
+                "Diabetes",
+                "Pressão arterial elevada",
+                "Problemas de tireóide",
+                "Ataque cardíaco",
+                "AVC",
+                "Doença mental",
+                "Abuso de drogas/álcool"
+              ]
+            },
+            "ar": {
+              "question": "تاريخ العائلة - الشروط الحالية - حدد كل ما ينطبق.",
+              "label": "التاريخ العائلي - الظروف الحالية",
+              "options": [
+                "السرطان",
+                "داء السكري",
+                "ضغط دم مرتفع",
+                "مشاكل الغدة الدرقية",
+                "نوبة قلبية",
+                "السكتة الدماغية",
+                "مرض عقلي",
+                "تعاطي المخدرات/الكحول"
+              ]
+            },
+            "ru": {
+              "question": "Семейная история — при наличии условий — выберите все подходящие варианты.",
+              "label": "Семейная история — существующие условия",
+              "options": [
+                "Рак",
+                "Диабет",
+                "Высокое кровяное давление",
+                "Проблемы со щитовидной железой",
+                "Сердечный приступ",
+                "Инсульт",
+                "Психическое заболевание",
+                "Злоупотребление наркотиками и алкоголем"
+              ]
+            }
+          }
         },
         {
           "id": "family_history_members",
           "label": "Family History — Affected Members",
           "type": "text",
           "required": false,
-          "ai_note": "For each confirmed condition note which members. E.g. 'Cancer: Mother; Diabetes: Father'."
+          "ai_note": "For each confirmed condition note which members. E.g. 'Cancer: Mother; Diabetes: Father'.",
+          "question": "What is your Family History — Affected Members?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuáles son sus antecedentes familiares? ¿Miembros afectados?",
+              "label": "Antecedentes familiares: miembros afectados"
+            },
+            "zh": {
+              "question": "您的家族史是什么—受影响的成员？",
+              "label": "家族史—受影响的成员"
+            },
+            "fr": {
+              "question": "Quels sont vos antécédents familiaux — Membres concernés ?",
+              "label": "Antécédents familiaux — Membres concernés"
+            },
+            "ja": {
+              "question": "あなたの家族歴は何ですか—影響を受けたメンバー?",
+              "label": "家族歴 — 影響を受けたメンバー"
+            },
+            "pt": {
+              "question": "Qual é a sua história familiar — Membros afetados?",
+              "label": "História da família — Membros afetados"
+            },
+            "ar": {
+              "question": "ما هو تاريخ عائلتك - الأعضاء المتضررون؟",
+              "label": "تاريخ العائلة - الأعضاء المتضررون"
+            },
+            "ru": {
+              "question": "Каков ваш семейный анамнез — пострадавшие члены?",
+              "label": "Семейный анамнез — пострадавшие члены"
+            }
+          }
         },
         {
           "id": "mental_health_framing",
           "label": "Mental Health & Lifestyle",
           "type": "static_label",
           "required": false,
-          "ai_note": "Deliver: 'The next questions are about mental health and lifestyle. These help your care team support you fully — everything is confidential. You can skip any question.'"
+          "ai_note": "Deliver: 'The next questions are about mental health and lifestyle. These help your care team support you fully — everything is confidential. You can skip any question.'",
+          "question": "The next questions are about mental health and lifestyle. These help your care team support you fully — everything is confidential. You can skip any question.",
+          "i18n": {
+            "es": {
+              "question": "Las siguientes preguntas son sobre la salud mental y el estilo de vida. Estas ayudan a que su equipo de atención médica le brinde un apoyo total; todo es confidencial. Puede omitir cualquier pregunta.",
+              "label": "Salud mental y estilo de vida"
+            },
+            "zh": {
+              "question": "接下来的问题是关于心理健康和生活方式的。这些可以帮助您的护理团队为您提供全力支持——一切都是机密的。你可以跳过任何问题。",
+              "label": "心理健康与生活方式"
+            },
+            "fr": {
+              "question": "Les prochaines questions concernent la santé mentale et le mode de vie. Ils permettent à votre équipe soignante de vous apporter un soutien total. Tout est confidentiel. Vous pouvez ignorer n'importe quelle question.",
+              "label": "Santé mentale et mode de vie"
+            },
+            "ja": {
+              "question": "次の質問は、メンタルヘルスとライフスタイルについてです。これらはケアチームがあなたを全面的にサポートするのに役立ちます。すべて機密事項です。どの質問もスキップできます。",
+              "label": "メンタルヘルスとライフスタイル"
+            },
+            "pt": {
+              "question": "As próximas perguntas são sobre saúde mental e estilo de vida. Isso ajuda sua equipe de atendimento a apoiá-lo totalmente — tudo é confidencial. Você pode pular qualquer pergunta.",
+              "label": "Saúde mental e estilo de vida"
+            },
+            "ar": {
+              "question": "الأسئلة التالية تتعلق بالصحة العقلية ونمط الحياة. يساعد ذلك فريق الرعاية الخاص بك على دعمك بالكامل - كل شيء سري. يمكنك تخطي أي سؤال.",
+              "label": "الصحة النفسية ونمط الحياة"
+            },
+            "ru": {
+              "question": "Следующие вопросы касаются психического здоровья и образа жизни. Это поможет вашей медицинской бригаде оказать вам полную поддержку — все конфиденциально. Любой вопрос можно пропустить.",
+              "label": "Психическое здоровье и образ жизни"
+            }
+          }
         },
         {
           "id": "mental_health_conditions",
@@ -329,101 +2490,817 @@
           "required": false,
           "options": [
             "None",
-            "ADHD", "Depression / Anxiety", "OCD", "Mental Illness",
+            "ADHD",
+            "Depression / Anxiety",
+            "OCD",
+            "Mental Illness",
             "Eating Disorder",
-            "Drug / Alcohol Abuse", "Housing / Financial Problems", "Family Stressors",
+            "Drug / Alcohol Abuse",
+            "Housing / Financial Problems",
+            "Family Stressors",
             "Physical / Emotional Abuse"
-          ]
+          ],
+          "question": "Mental Health and Social History — select all that apply.",
+          "i18n": {
+            "es": {
+              "question": "Salud mental e historial social: seleccione todas las opciones que correspondan.",
+              "label": "Salud mental e historial social (seleccione todas las opciones que correspondan)",
+              "options": [
+                "Ninguna",
+                "TDAH",
+                "Depresión/Ansiedad",
+                "TOC",
+                "Enfermedad mental",
+                "Trastorno de la alimentación",
+                "Abuso de drogas y alcohol",
+                "Problemas habitacionales/financieros",
+                "Factores estresantes familiares",
+                "Abuso físico/emocional"
+              ]
+            },
+            "zh": {
+              "question": "心理健康和社会历史-选择所有适用的选项。",
+              "label": "心理健康和社会历史（选择所有适用的选项）",
+              "options": [
+                "无",
+                "多动症",
+                "抑郁/焦虑",
+                "强迫症",
+                "精神疾病",
+                "饮食失调",
+                "药物/酒精滥用",
+                "住房/财务问题",
+                "家庭压力因素",
+                "身体/情感虐待"
+              ]
+            },
+            "fr": {
+              "question": "Santé mentale et antécédents sociaux — sélectionnez toutes les réponses qui s'appliquent.",
+              "label": "Santé mentale et histoire sociale (cochez toutes les réponses qui s'appliquent)",
+              "options": [
+                "Aucune",
+                "TDAH",
+                "Dépression/Anxiété",
+                "OCD",
+                "Maladie mentale",
+                "Trouble de l'alimentation",
+                "Abus de drogues/d'alcool",
+                "Problèmes de logement et financiers",
+                "Facteurs de stress familiaux",
+                "Violence physique/psychologique"
+              ]
+            },
+            "ja": {
+              "question": "メンタルヘルスと社会史—当てはまるものをすべて選択してください.",
+              "label": "メンタルヘルスと社会史（該当するものをすべて選択してください）",
+              "options": [
+                "[なし]",
+                "ADHD",
+                "うつ病/不安",
+                "強迫性障害の",
+                "精神障害",
+                "摂食障害",
+                "薬物/アルコールの乱用",
+                "住宅/財政問題",
+                "ファミリーストレッサー",
+                "身体的/精神的虐待"
+              ]
+            },
+            "pt": {
+              "question": "Saúde mental e história social — selecione todas as opções aplicáveis.",
+              "label": "Saúde mental e história social (selecione todas as opções aplicáveis)",
+              "options": [
+                "Nenhum",
+                "TDAH",
+                "Depressão/Ansiedade",
+                "OCD",
+                "Doença mental",
+                "Transtorno alimentar",
+                "Abuso de drogas/álcool",
+                "Problemas habitacionais/financeiros",
+                "Estressores familiares",
+                "Abuso físico/emocional"
+              ]
+            },
+            "ar": {
+              "question": "الصحة العقلية والتاريخ الاجتماعي - حدد كل ما ينطبق.",
+              "label": "الصحة العقلية والتاريخ الاجتماعي (حدد كل ما ينطبق)",
+              "options": [
+                "لا شيء",
+                "ADHD",
+                "الاكتئاب والقلق",
+                "الوسواس القهري",
+                "مرض عقلي",
+                "اضطراب الأكل",
+                "تعاطي المخدرات/الكحول",
+                "مشاكل الإسكان/المالية",
+                "ضغوطات الأسرة",
+                "سوء المعاملة الجسدية/العاطفية"
+              ]
+            },
+            "ru": {
+              "question": "Психическое здоровье и социальная история — выберите все подходящие варианты.",
+              "label": "Психическое здоровье и социальная история (выберите все подходящие варианты)",
+              "options": [
+                "Нет",
+                "СДВГ",
+                "Депрессия/беспокойство",
+                "ОКР",
+                "Психическое заболевание",
+                "расстройство пищевого поведения",
+                "Злоупотребление наркотиками и алкоголем",
+                "Жилищные/финансовые проблемы",
+                "Семейные стрессоры",
+                "Физическое/эмоциональное насилие"
+              ]
+            }
+          }
         },
         {
           "id": "tobacco_use",
           "label": "Current Tobacco / Nicotine Use",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "What is your Current Tobacco / Nicotine Use?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su consumo actual de tabaco/nicotina?",
+              "label": "Consumo actual de tabaco/nicotina",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "你目前的烟草/尼古丁用量是多少？",
+              "label": "当前烟草/尼古丁的使用情况",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre consommation actuelle de tabac et de nicotine ?",
+              "label": "Consommation actuelle de tabac et de nicotine",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "現在のタバコ/ニコチンの使用状況は？",
+              "label": "現在のタバコ/ニコチン使用量",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu uso atual de tabaco/nicotina?",
+              "label": "Uso atual de tabaco/nicotina",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "ما هو استخدامك الحالي للتبغ/النيكوتين؟",
+              "label": "الاستخدام الحالي للتبغ/النيكوتين",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Каков ваш текущий уровень потребления табака/никотина?",
+              "label": "Текущее употребление табака/никотина",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "tobacco_type",
           "label": "Tobacco Type",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Tobacco Type?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su tipo de tabaco?",
+              "label": "Tipo de tabaco"
+            },
+            "zh": {
+              "question": "你的烟草类型是什么？",
+              "label": "烟草类型"
+            },
+            "fr": {
+              "question": "Quel est votre type de tabac ?",
+              "label": "Type de tabac"
+            },
+            "ja": {
+              "question": "あなたのタバコの種類は何ですか？",
+              "label": "タバコの種類"
+            },
+            "pt": {
+              "question": "Qual é o seu tipo de tabaco?",
+              "label": "Tipo de tabaco"
+            },
+            "ar": {
+              "question": "ما هو نوع التبغ الخاص بك؟",
+              "label": "نوع التبغ"
+            },
+            "ru": {
+              "question": "Какой у вас тип табака?",
+              "label": "Тип табака"
+            }
+          }
         },
         {
           "id": "tobacco_frequency",
           "label": "Tobacco Use Frequency",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Tobacco Use Frequency?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su frecuencia de consumo de tabaco?",
+              "label": "Frecuencia de consumo de tabaco"
+            },
+            "zh": {
+              "question": "你的烟草使用频率是多少？",
+              "label": "烟草使用频率"
+            },
+            "fr": {
+              "question": "Quelle est votre fréquence de consommation de tabac ?",
+              "label": "Fréquence de consommation de tabac"
+            },
+            "ja": {
+              "question": "タバコの使用頻度はどれくらいですか？",
+              "label": "タバコ使用頻度"
+            },
+            "pt": {
+              "question": "Qual é a sua frequência de uso de tabaco?",
+              "label": "Frequência de uso de tabaco"
+            },
+            "ar": {
+              "question": "ما هو معدل استخدام التبغ الخاص بك؟",
+              "label": "تكرار استخدام التبغ"
+            },
+            "ru": {
+              "question": "Какова частота употребления табака?",
+              "label": "Частота употребления табака"
+            }
+          }
         },
         {
           "id": "alcohol_use",
           "label": "Current Alcohol Use",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "What is your Current Alcohol Use?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su consumo actual de alcohol?",
+              "label": "Consumo actual de alcohol",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "你目前的酒精使用量是多少？",
+              "label": "目前的酒精使用情况",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre consommation d'alcool actuelle ?",
+              "label": "Consommation actuelle d'alcool",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "現在のアルコールの使用量はどのくらいですか？",
+              "label": "現在のアルコール使用量",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu uso atual de álcool?",
+              "label": "Uso atual de álcool",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "ما هو استخدامك الحالي للكحول؟",
+              "label": "استخدام الكحول الحالي",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Каково ваше текущее употребление алкоголя?",
+              "label": "Текущее употребление алкоголя",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "alcohol_frequency",
           "label": "Alcohol Use Frequency",
           "type": "radio",
           "required": false,
-          "options": ["Daily", "Weekly", "Occasionally"]
+          "options": [
+            "Daily",
+            "Weekly",
+            "Occasionally"
+          ],
+          "question": "What is your Alcohol Use Frequency?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su frecuencia de consumo de alcohol?",
+              "label": "Frecuencia de consumo de alcohol",
+              "options": [
+                "Diariamente",
+                "Semanalmente",
+                "En ocasiones"
+              ]
+            },
+            "zh": {
+              "question": "你的饮酒频率是多少？",
+              "label": "酒精使用频率",
+              "options": [
+                "每天",
+                "每周一次",
+                "偶尔"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre fréquence de consommation d'alcool ?",
+              "label": "Fréquence de consommation d'alcool",
+              "options": [
+                "Tous les jours",
+                "Hebdo",
+                "À l'occasion"
+              ]
+            },
+            "ja": {
+              "question": "あなたのアルコールの使用頻度は？",
+              "label": "アルコールの使用頻度",
+              "options": [
+                "デイリー",
+                "毎週",
+                "たまに"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua frequência de uso de álcool?",
+              "label": "Frequência de uso de álcool",
+              "options": [
+                "Diariamente",
+                "Semanalmente",
+                "Às vezes"
+              ]
+            },
+            "ar": {
+              "question": "ما هو معدل استخدام الكحول الخاص بك؟",
+              "label": "تردد استخدام الكحول",
+              "options": [
+                "اليومي",
+                "أسبوعي",
+                "من حين لآخر"
+              ]
+            },
+            "ru": {
+              "question": "Какова частота употребления алкоголя?",
+              "label": "Частота употребления алкоголя",
+              "options": [
+                "Ежедневно",
+                "Еженедельно",
+                "Время от времени"
+              ]
+            }
+          }
         },
         {
           "id": "surgeries_any",
           "label": "Any Prior Surgeries or Hospitalizations?",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Any Prior Surgeries or Hospitalizations?",
+          "i18n": {
+            "es": {
+              "question": "¿Alguna cirugía u hospitalización previa?",
+              "label": "¿Alguna cirugía u hospitalización previa?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "之前有过手术或住院吗？",
+              "label": "之前有过手术或住院吗？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Y a-t-il eu des chirurgies ou des hospitalisations antérieures ?",
+              "label": "Y a-t-il eu des chirurgies ou des hospitalisations antérieures ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "以前に手術や入院をしたことはありますか？",
+              "label": "以前に手術や入院をしたことはありますか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Alguma cirurgia ou hospitalização anterior?",
+              "label": "Alguma cirurgia ou hospitalização anterior?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "أي عمليات جراحية سابقة أو دخول المستشفى؟",
+              "label": "أي عمليات جراحية سابقة أو دخول المستشفى؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Были ли ранее перенесенные операции или госпитализации?",
+              "label": "Были ли ранее перенесенные операции или госпитализации?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "surgeries_list",
           "label": "Surgeries / Hospitalizations List",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Surgeries / Hospitalizations List?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su lista de cirugías/hospitalizaciones?",
+              "label": "Lista de cirugías y hospitalizaciones"
+            },
+            "zh": {
+              "question": "你的手术/住院清单是什么？",
+              "label": "手术/住院清单"
+            },
+            "fr": {
+              "question": "Quelle est votre liste de chirurgies et d'hospitalisations ?",
+              "label": "Liste des chirurgies et des hospitalisations"
+            },
+            "ja": {
+              "question": "手術/入院リストを教えてください。",
+              "label": "手術/入院リスト"
+            },
+            "pt": {
+              "question": "Qual é a sua lista de cirurgias/hospitalizações?",
+              "label": "Lista de cirurgias e hospitalizações"
+            },
+            "ar": {
+              "question": "ما هي قائمة الجراحات/المستشفيات الخاصة بك؟",
+              "label": "قائمة الجراحات والاستشفاء"
+            },
+            "ru": {
+              "question": "Каков ваш список операций и госпитализаций?",
+              "label": "Список операций и госпитализаций"
+            }
+          }
         },
         {
           "id": "medications_any",
           "label": "Currently Taking Medications, Vitamins, or Supplements?",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Currently Taking Medications, Vitamins, or Supplements?",
+          "i18n": {
+            "es": {
+              "question": "¿Está tomando actualmente medicamentos, vitaminas o suplementos?",
+              "label": "¿Está tomando actualmente medicamentos, vitaminas o suplementos?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "目前正在服用药物、维生素或补品？",
+              "label": "目前正在服用药物、维生素或补品？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Vous prenez actuellement des médicaments, des vitamines ou des suppléments ?",
+              "label": "Vous prenez actuellement des médicaments, des vitamines ou des suppléments ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "現在、薬、ビタミン、またはサプリメントを服用していますか？",
+              "label": "現在、薬、ビタミン、またはサプリメントを服用していますか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Atualmente está tomando medicamentos, vitaminas ou suplementos?",
+              "label": "Atualmente está tomando medicamentos, vitaminas ou suplementos?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل تتناول حاليًا الأدوية أو الفيتامينات أو المكملات الغذائية؟",
+              "label": "هل تتناول حاليًا الأدوية أو الفيتامينات أو المكملات الغذائية؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "В настоящее время принимаете лекарства, витамины или добавки?",
+              "label": "В настоящее время принимаете лекарства, витамины или добавки?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "medications_list",
           "label": "Medications / Vitamins / Supplements",
           "type": "text",
           "required": false,
-          "ai_note": "Collect name, dose, and frequency for each."
+          "ai_note": "Collect name, dose, and frequency for each.",
+          "question": "What is your Medications / Vitamins / Supplements?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuáles son sus medicamentos, vitaminas o suplementos?",
+              "label": "Medicamentos, vitaminas, suplementos"
+            },
+            "zh": {
+              "question": "你的药物/维生素/补品是什么？",
+              "label": "药物/维生素/补品"
+            },
+            "fr": {
+              "question": "Quels sont vos médicaments, vitamines et suppléments ?",
+              "label": "Médicaments/Vitamines/Suppléments"
+            },
+            "ja": {
+              "question": "あなたの薬/ビタミン/サプリメントは何ですか？",
+              "label": "医薬品 /ビタミン /サプリメント"
+            },
+            "pt": {
+              "question": "Quais são os seus medicamentos/vitaminas/suplementos?",
+              "label": "Medicamentos/Vitaminas//Suplementos"
+            },
+            "ar": {
+              "question": "ما هي أدويتك/الفيتامينات/المكملات الغذائية الخاصة بك؟",
+              "label": "الأدوية/ الفيتامينات/المكملات الغذائية"
+            },
+            "ru": {
+              "question": "Какие у вас лекарства/витамины/добавки?",
+              "label": "Лекарственные препараты/витамины/пищевые добавки"
+            }
+          }
         },
         {
           "id": "allergies_any",
           "label": "Known Allergies or Drug Intolerances?",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Known Allergies or Drug Intolerances?",
+          "i18n": {
+            "es": {
+              "question": "¿Alergias o intolerancias farmacológicas conocidas?",
+              "label": "¿Alergias o intolerancias farmacológicas conocidas?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "已知的过敏或药物不耐受？",
+              "label": "已知的过敏或药物不耐受？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Allergies ou intolérances médicamenteuses connues ?",
+              "label": "Allergies ou intolérances médicamenteuses connues ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "既知のアレルギーまたは薬物不耐性？",
+              "label": "既知のアレルギーまたは薬物不耐性？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Alergias conhecidas ou intolerâncias a medicamentos?",
+              "label": "Alergias conhecidas ou intolerâncias a medicamentos?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "الحساسية المعروفة أو عدم تحمل الأدوية؟",
+              "label": "الحساسية المعروفة أو عدم تحمل الأدوية؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Известная аллергия или лекарственная непереносимость?",
+              "label": "Известная аллергия или лекарственная непереносимость?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "allergies_list",
           "label": "Allergy List",
           "type": "text",
           "required": false,
-          "ai_note": "Collect allergen name and reaction type for each."
+          "ai_note": "Collect allergen name and reaction type for each.",
+          "question": "What is your Allergy List?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su lista de alergias?",
+              "label": "Lista de alergias"
+            },
+            "zh": {
+              "question": "你的过敏清单是什么？",
+              "label": "过敏清单"
+            },
+            "fr": {
+              "question": "Quelle est votre liste d'allergies ?",
+              "label": "Liste des allergies"
+            },
+            "ja": {
+              "question": "アレルギーリストは何ですか？",
+              "label": "アレルギーリスト"
+            },
+            "pt": {
+              "question": "Qual é a sua lista de alergias?",
+              "label": "Lista de alergias"
+            },
+            "ar": {
+              "question": "ما هي قائمة الحساسية الخاصة بك؟",
+              "label": "قائمة الحساسية"
+            },
+            "ru": {
+              "question": "Какой у вас список аллергиков?",
+              "label": "Список аллергиков"
+            }
+          }
         },
         {
           "id": "primary_care_provider",
           "label": "Current Primary Care Provider",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Current Primary Care Provider?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su proveedor de atención primaria actual?",
+              "label": "Proveedor de atención primaria actual"
+            },
+            "zh": {
+              "question": "你目前的初级保健提供者是什么？",
+              "label": "当前的初级保健提供者"
+            },
+            "fr": {
+              "question": "Quel est votre fournisseur de soins primaires actuel ?",
+              "label": "Prestataire de soins primaires actuel"
+            },
+            "ja": {
+              "question": "現在のプライマリケア提供者は誰ですか？",
+              "label": "現在のプライマリケア提供者"
+            },
+            "pt": {
+              "question": "Qual é o seu provedor de cuidados primários atual?",
+              "label": "Prestador de cuidados primários atual"
+            },
+            "ar": {
+              "question": "ما هو مزود الرعاية الأولية الحالي الخاص بك؟",
+              "label": "مزود الرعاية الأولية الحالي"
+            },
+            "ru": {
+              "question": "Кто ваш текущий поставщик первичной медико-санитарной помощи?",
+              "label": "Текущий поставщик первичной медико-санитарной помощи"
+            }
+          }
         },
         {
           "id": "preferred_pharmacy",
           "label": "Preferred Pharmacy",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Preferred Pharmacy?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su farmacia preferida?",
+              "label": "Farmacia preferida"
+            },
+            "zh": {
+              "question": "你的首选药房是什么？",
+              "label": "首选药房"
+            },
+            "fr": {
+              "question": "Quelle est votre pharmacie préférée ?",
+              "label": "Pharmacie préférée"
+            },
+            "ja": {
+              "question": "あなたの好きな薬局は何ですか？",
+              "label": "優先薬局"
+            },
+            "pt": {
+              "question": "Qual é a sua farmácia preferida?",
+              "label": "Farmácia preferida"
+            },
+            "ar": {
+              "question": "ما هي الصيدلية المفضلة لديك؟",
+              "label": "الصيدلية المفضلة"
+            },
+            "ru": {
+              "question": "Какую аптеку вы предпочитаете?",
+              "label": "Преимущественная аптека"
+            }
+          }
         }
       ]
     },
-
     {
       "id": "hipaa_consent",
       "name": "Section 3: HIPAA Consent",
@@ -433,57 +3310,397 @@
           "label": "HIPAA Plain Language Summary",
           "type": "static_label",
           "required": false,
-          "ai_note": "Deliver: 'This clinic may share your health information with insurance companies, labs, and pharmacies to deliver your care. You have the right to request limits and can revoke consent at any time in writing.'"
+          "ai_note": "Deliver: 'This clinic may share your health information with insurance companies, labs, and pharmacies to deliver your care. You have the right to request limits and can revoke consent at any time in writing.'",
+          "question": "This clinic may share your health information with insurance companies, labs, and pharmacies to deliver your care. You have the right to request limits and can revoke consent at any time in writing.",
+          "i18n": {
+            "es": {
+              "question": "Esta clínica puede compartir su información médica con compañías de seguros, laboratorios y farmacias para brindarle atención. Tiene derecho a solicitar límites y puede revocar el consentimiento por escrito en cualquier momento.",
+              "label": "Resumen en lenguaje sencillo de la HIPAA"
+            },
+            "zh": {
+              "question": "该诊所可能会与保险公司、实验室和药房共享您的健康信息，以提供您的医疗服务。您有权申请限制，并可以随时以书面形式撤销同意。",
+              "label": "HIPAA 通俗语言摘要"
+            },
+            "fr": {
+              "question": "Cette clinique peut partager vos informations de santé avec des compagnies d'assurance, des laboratoires et des pharmacies pour la prestation de vos soins. Vous avez le droit de demander des limites et pouvez révoquer votre consentement à tout moment par écrit.",
+              "label": "Résumé en langage clair de la loi HIPAA"
+            },
+            "ja": {
+              "question": "このクリニックは、お客様の医療を提供するために、お客様の健康情報を保険会社、研究所、薬局と共有する場合があります。あなたには制限を求める権利があり、いつでも書面で同意を取り消すことができます。",
+              "label": "HIPAA プレーン・ランゲージ・サマリー"
+            },
+            "pt": {
+              "question": "Esta clínica pode compartilhar suas informações de saúde com seguradoras, laboratórios e farmácias para prestar seus cuidados. Você tem o direito de solicitar limites e pode revogar o consentimento a qualquer momento por escrito.",
+              "label": "Resumo em linguagem simples da HIPAA"
+            },
+            "ar": {
+              "question": "قد تشارك هذه العيادة معلوماتك الصحية مع شركات التأمين والمختبرات والصيدليات لتقديم الرعاية الخاصة بك. لديك الحق في طلب القيود ويمكنك إلغاء الموافقة في أي وقت كتابيًا.",
+              "label": "ملخص HIPAA بلغة بسيطة"
+            },
+            "ru": {
+              "question": "Эта клиника может передавать вашу медицинскую информацию страховым компаниям, лабораториям и аптекам для оказания вам медицинской помощи. Вы имеете право запросить ограничения и отозвать согласие в любое время в письменном виде.",
+              "label": "Краткое описание HIPAA на простом языке"
+            }
+          }
         },
         {
           "id": "hipaa_consent",
           "label": "HIPAA Consent — Authorize use and sharing of your health information",
           "type": "radio",
           "required": true,
-          "options": ["Yes, I consent", "No"]
+          "options": [
+            "Yes, I consent",
+            "No"
+          ],
+          "question": "What is your HIPAA Consent — Authorize use and sharing of your health information?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su consentimiento según la HIPAA? ¿Autorizar el uso y el intercambio de su información médica?",
+              "label": "Consentimiento según la HIPAA: autorice el uso y el intercambio de su información médica",
+              "options": [
+                "Sí, doy mi consentimiento",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "您的 HIPAA 同意书是什么 — 授权使用和共享您的健康信息？",
+              "label": "HIPAA 同意 — 授权使用和共享您的健康信息",
+              "options": [
+                "是的，我同意",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre consentement HIPAA — Autoriser l'utilisation et le partage de vos informations de santé ?",
+              "label": "Consentement HIPAA — Autorisez l'utilisation et le partage de vos informations de santé",
+              "options": [
+                "Oui, je suis d'accord",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "HIPAA同意書とはどのようなものですか？健康情報の使用と共有を許可しますか？",
+              "label": "HIPAA 同意 — 健康情報の使用と共有を許可する",
+              "options": [
+                "はい、同意します",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu consentimento da HIPAA — Autorize o uso e o compartilhamento de suas informações de saúde?",
+              "label": "Consentimento HIPAA — Autorize o uso e o compartilhamento de suas informações de saúde",
+              "options": [
+                "Sim, eu concordo",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "ما هي موافقة HIPAA الخاصة بك - السماح باستخدام ومشاركة معلوماتك الصحية؟",
+              "label": "موافقة HIPAA - السماح باستخدام ومشاركة المعلومات الصحية الخاصة بك",
+              "options": [
+                "نعم، أوافق",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Каково ваше согласие HIPAA — разрешение на использование и передачу вашей медицинской информации?",
+              "label": "Согласие HIPAA — разрешите использование и передачу вашей медицинской информации",
+              "options": [
+                "Да, я согласен",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "authorized_phi_contacts_any",
           "label": "Authorize Additional People to Receive Your Health Information?",
           "type": "radio",
           "required": false,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Authorize Additional People to Receive Your Health Information?",
+          "i18n": {
+            "es": {
+              "question": "¿Autorizar a otras personas a recibir su información de salud?",
+              "label": "¿Autorizar a otras personas a recibir su información de salud?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "授权其他人接收您的健康信息？",
+              "label": "授权其他人接收您的健康信息？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Autoriser d'autres personnes à recevoir vos informations de santé ?",
+              "label": "Autoriser d'autres personnes à recevoir vos informations de santé ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "あなたの健康情報を他の人に受け取ってもらいますか？",
+              "label": "あなたの健康情報を他の人に受け取ってもらいますか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Autorizar outras pessoas a receberem suas informações de saúde?",
+              "label": "Autorizar outras pessoas a receberem suas informações de saúde?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "السماح لأشخاص إضافيين بتلقي معلوماتك الصحية؟",
+              "label": "السماح لأشخاص إضافيين بتلقي معلوماتك الصحية؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Разрешить другим людям получать вашу медицинскую информацию?",
+              "label": "Разрешить другим людям получать вашу медицинскую информацию?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "authorized_phi_contact_1_name",
           "label": "Authorized Contact 1 — Name",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Authorized Contact 1 — Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su nombre de contacto autorizado 1?",
+              "label": "Contacto autorizado 1 — Nombre"
+            },
+            "zh": {
+              "question": "您的授权联系人 1 — 姓名是什么？",
+              "label": "授权联系人 1 — 姓名"
+            },
+            "fr": {
+              "question": "Quel est le nom de votre contact autorisé 1 ?",
+              "label": "Contact autorisé 1 — Nom"
+            },
+            "ja": {
+              "question": "あなたの権限のある連絡先 1 — 名前は何ですか?",
+              "label": "権限のある連絡先 1 — 名前"
+            },
+            "pt": {
+              "question": "Qual é o seu contato autorizado 1 — Nome?",
+              "label": "Contato autorizado 1 — Nome"
+            },
+            "ar": {
+              "question": "ما هي جهة الاتصال المعتمدة 1 - الاسم؟",
+              "label": "جهة الاتصال المعتمدة 1 - الاسم"
+            },
+            "ru": {
+              "question": "Имя вашего уполномоченного контактного лица 1?",
+              "label": "Уполномоченное контактное лицо 1 — Имя"
+            }
+          }
         },
         {
           "id": "authorized_phi_contact_1_relationship",
           "label": "Authorized Contact 1 — Relationship",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Authorized Contact 1 — Relationship?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su relación de contacto autorizado 1?",
+              "label": "Contacto autorizado 1 — Relación"
+            },
+            "zh": {
+              "question": "您的授权联系人 1 — 关系是什么？",
+              "label": "授权联系人 1 — 关系"
+            },
+            "fr": {
+              "question": "Quel est votre contact autorisé 1 — Relation ?",
+              "label": "Contact autorisé 1 — Relation"
+            },
+            "ja": {
+              "question": "あなたの権限のある連絡先 1 — 関係とは?",
+              "label": "権限のある連絡先 1 — 関係"
+            },
+            "pt": {
+              "question": "Qual é o seu contato autorizado 1 — Relacionamento?",
+              "label": "Contato autorizado 1 — Relacionamento"
+            },
+            "ar": {
+              "question": "ما هي جهة الاتصال المعتمدة 1 - العلاقة?",
+              "label": "جهة الاتصال المعتمدة 1 - العلاقة"
+            },
+            "ru": {
+              "question": "Каково ваше уполномоченное контактное лицо 1 — Отношения?",
+              "label": "Уполномоченное контактное лицо 1 — Отношения"
+            }
+          }
         },
         {
           "id": "authorized_phi_contact_2_name",
           "label": "Authorized Contact 2 — Name",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Authorized Contact 2 — Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su nombre de contacto autorizado 2?",
+              "label": "Contacto autorizado 2 — Nombre"
+            },
+            "zh": {
+              "question": "您的授权联系人 2 — 姓名是什么？",
+              "label": "授权联系人 2 — 姓名"
+            },
+            "fr": {
+              "question": "Quel est le nom de votre contact autorisé 2 ?",
+              "label": "Contact autorisé 2 — Nom"
+            },
+            "ja": {
+              "question": "あなたの権限のある連絡先 2 — 名前は何ですか?",
+              "label": "権限のある連絡先 2 — 名前"
+            },
+            "pt": {
+              "question": "Qual é o seu contato autorizado 2 — Nome?",
+              "label": "Contato autorizado 2 — Nome"
+            },
+            "ar": {
+              "question": "ما هي جهة الاتصال المعتمدة 2 - الاسم؟",
+              "label": "جهة الاتصال المعتمدة 2 - الاسم"
+            },
+            "ru": {
+              "question": "Имя вашего уполномоченного контактного лица 2?",
+              "label": "Уполномоченное контактное лицо 2 — Имя"
+            }
+          }
         },
         {
           "id": "authorized_phi_contact_2_relationship",
           "label": "Authorized Contact 2 — Relationship",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Authorized Contact 2 — Relationship?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su relación de contacto autorizado 2?",
+              "label": "Contacto autorizado 2 — Relación"
+            },
+            "zh": {
+              "question": "您的授权联系人 2 — 关系是什么？",
+              "label": "授权联系人 2 — 关系"
+            },
+            "fr": {
+              "question": "Quel est votre contact autorisé 2 — Relation ?",
+              "label": "Contact autorisé 2 — Relation"
+            },
+            "ja": {
+              "question": "あなたの権限のある連絡先 2 — 関係は？",
+              "label": "権限のある連絡先 2 — 関係"
+            },
+            "pt": {
+              "question": "Qual é o seu contato autorizado 2 — Relacionamento?",
+              "label": "Contato autorizado 2 — Relacionamento"
+            },
+            "ar": {
+              "question": "ما هي جهة الاتصال المعتمدة 2 - العلاقة؟",
+              "label": "جهة الاتصال المعتمدة 2 - العلاقة"
+            },
+            "ru": {
+              "question": "Каково ваше уполномоченное контактное лицо 2 — Отношения?",
+              "label": "Уполномоченное контактное лицо 2 — Отношения"
+            }
+          }
         },
         {
           "id": "name_confirmation",
           "label": "Name and Address Confirmation",
           "type": "radio",
           "required": true,
-          "options": ["Confirmed — everything looks correct", "I need to make a correction"],
-          "ai_note": "Pre-populate with name and address from registration. Ask patient to confirm before signature."
+          "options": [
+            "Confirmed — everything looks correct",
+            "I need to make a correction"
+          ],
+          "ai_note": "Pre-populate with name and address from registration. Ask patient to confirm before signature.",
+          "question": "What is your Name and Address Confirmation?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su confirmación de nombre y dirección?",
+              "label": "Confirmación de nombre y dirección",
+              "options": [
+                "Confirmado: todo parece correcto",
+                "Necesito hacer una corrección"
+              ]
+            },
+            "zh": {
+              "question": "您的姓名和地址确认信是什么？",
+              "label": "姓名和地址确认",
+              "options": [
+                "已确认-一切看起来都正确",
+                "我需要更正"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est la confirmation de votre nom et de votre adresse ?",
+              "label": "Confirmation du nom et de l'adresse",
+              "options": [
+                "Confirmé — tout semble correct",
+                "J'ai besoin d'apporter une correction"
+              ]
+            },
+            "ja": {
+              "question": "名前と住所の確認書は何ですか？",
+              "label": "名前と住所の確認",
+              "options": [
+                "確認済み — すべて正しく見える",
+                "訂正する必要があります"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua confirmação de nome e endereço?",
+              "label": "Confirmação de nome e endereço",
+              "options": [
+                "Confirmado — tudo parece correto",
+                "Preciso fazer uma correção"
+              ]
+            },
+            "ar": {
+              "question": "ما هو تأكيد اسمك وعنوانك؟",
+              "label": "تأكيد الاسم والعنوان",
+              "options": [
+                "تم التأكيد - كل شيء يبدو صحيحًا",
+                "أحتاج إلى إجراء تصحيح"
+              ]
+            },
+            "ru": {
+              "question": "Какое у вас имя и адрес подтверждения?",
+              "label": "Подтверждение имени и адреса",
+              "options": [
+                "Подтверждено — все выглядит правильно",
+                "Мне нужно внести исправление"
+              ]
+            }
+          }
         }
       ]
     },
-
     {
       "id": "general_consents",
       "name": "Section 4: General Consents",
@@ -493,56 +3710,428 @@
           "label": "General Consents Overview",
           "type": "static_label",
           "required": false,
-          "ai_note": "Deliver: 'The following covers consents for treatment, financial responsibility, e-prescribing, and appointment reminders. Two items need your explicit decision: the Sliding Fee program and GHHC data sharing.'"
+          "ai_note": "Deliver: 'The following covers consents for treatment, financial responsibility, e-prescribing, and appointment reminders. Two items need your explicit decision: the Sliding Fee program and GHHC data sharing.'",
+          "question": "The following covers consents for treatment, financial responsibility, e-prescribing, and appointment reminders. Two items need your explicit decision: the Sliding Fee program and GHHC data sharing.",
+          "i18n": {
+            "es": {
+              "question": "Lo siguiente cubre los consentimientos para el tratamiento, la responsabilidad financiera, la prescripción electrónica y los recordatorios de citas. Hay dos temas que requieren una decisión explícita: el programa de tarifas variables y el intercambio de datos del GHHC.",
+              "label": "Descripción general de los consentimientos"
+            },
+            "zh": {
+              "question": "以下内容涵盖治疗同意、财务责任、电子处方和预约提醒。有两个项目需要你做出明确的决定：滑动费用计划和GHC数据共享。",
+              "label": "一般同意概述"
+            },
+            "fr": {
+              "question": "Ce qui suit couvre les consentements au traitement, la responsabilité financière, la prescription électronique et les rappels de rendez-vous. Deux éléments nécessitent une décision explicite de votre part : le programme Sliding Fee et le partage de données GHHC.",
+              "label": "Vue d'ensemble des consentements généraux"
+            },
+            "ja": {
+              "question": "以下には、治療に関する同意、経済的責任、電子処方、および予約のリマインダーが含まれます。明確な決定が必要な項目は、スライディング・フィー・プログラムとGHHCデータ共有の2つです。",
+              "label": "一般同意の概要"
+            },
+            "pt": {
+              "question": "A seguir, abordamos consentimentos para tratamento, responsabilidade financeira, prescrição eletrônica e lembretes de consultas. Dois itens precisam de sua decisão explícita: o programa Sliding Fee e o compartilhamento de dados do GHHC.",
+              "label": "Visão geral dos consentimentos"
+            },
+            "ar": {
+              "question": "يغطي ما يلي الموافقات على العلاج والمسؤولية المالية والوصف الإلكتروني والتذكيرات بالمواعيد. يحتاج عنصران إلى قرارك الصريح: برنامج Sliding Fee ومشاركة بيانات GHHC.",
+              "label": "نظرة عامة على الموافقات العامة"
+            },
+            "ru": {
+              "question": "Ниже приведены разрешения на лечение, финансовая ответственность, электронное назначение лекарств и напоминания о приеме на прием. Два вопроса требуют вашего четкого решения: программа скользящей оплаты и обмен данными GHHC.",
+              "label": "Обзор общих согласий"
+            }
+          }
         },
         {
           "id": "sliding_fee_acknowledgment",
           "label": "Sliding Fee Discount Program — I understand and acknowledge",
           "type": "radio",
           "required": true,
-          "options": ["Yes, I understand", "I have questions"],
-          "ai_note": "Explain: 'If you qualify for the Sliding Fee Discount Program, it is the payer of last resort. You are required to report any changes in insurance coverage.'"
+          "options": [
+            "Yes, I understand",
+            "I have questions"
+          ],
+          "ai_note": "Explain: 'If you qualify for the Sliding Fee Discount Program, it is the payer of last resort. You are required to report any changes in insurance coverage.'",
+          "question": "What is your Sliding Fee Discount Program — I understand and acknowledge?",
+          "i18n": {
+            "es": {
+              "question": "¿Qué es su programa de descuento con tarifa variable? Lo entiendo y lo reconozco.",
+              "label": "Programa de descuento con tarifa variable: lo entiendo y reconozco",
+              "options": [
+                "Sí, lo entiendo",
+                "Tengo preguntas"
+              ]
+            },
+            "zh": {
+              "question": "你们的浮动费用折扣计划是什么？我理解并承认？",
+              "label": "滑动费用折扣计划 — 我理解并承认",
+              "options": [
+                "是的，我明白",
+                "我有问题"
+              ]
+            },
+            "fr": {
+              "question": "En quoi consiste votre programme de réduction sur les frais dégressifs ? Je comprends et j'en prends acte ?",
+              "label": "Programme de réduction sur les frais dégressifs — Je comprends et j'accepte",
+              "options": [
+                "Oui, je comprends",
+                "J'ai des questions"
+              ]
+            },
+            "ja": {
+              "question": "スライディングフィー割引プログラムとはどのようなものですか？私は理解し、同意しますか？",
+              "label": "スライディングフィー割引プログラム — 了解し、同意します",
+              "options": [
+                "はい、わかりました",
+                "質問があります"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu programa de desconto de taxa variável — eu entendo e reconheço?",
+              "label": "Programa de desconto de taxa variável — Eu entendo e reconheço",
+              "options": [
+                "Sim, eu entendo",
+                "Eu tenho perguntas"
+              ]
+            },
+            "ar": {
+              "question": "ما هو برنامج خصم الرسوم المنزلقة الخاص بك - أفهم وأقر؟",
+              "label": "برنامج خصم الرسوم المنزلقة - أفهم وأقر",
+              "options": [
+                "نعم، أنا أفهم",
+                "لدي أسئلة"
+              ]
+            },
+            "ru": {
+              "question": "Я понимаю и подтверждаю, в чем заключается ваша программа скидок по скользящим ставкам?",
+              "label": "Программа скидок по скользящим тарифам — я понимаю и подтверждаю",
+              "options": [
+                "Да, я понимаю",
+                "У меня есть вопросы"
+              ]
+            }
+          }
         },
         {
           "id": "ghhc_data_sharing",
           "label": "Greater Houston Healthconnect (GHHC) — Authorize electronic sharing of health records",
           "type": "radio",
           "required": true,
-          "options": ["Yes, I authorize", "No, I opt out"],
-          "ai_note": "Explain: 'CGHC participates in GHHC, which shares your records with labs, pharmacies, and hospitals in the network. You can revoke within 3 days written notice. No impact on treatment.'"
+          "options": [
+            "Yes, I authorize",
+            "No, I opt out"
+          ],
+          "ai_note": "Explain: 'CGHC participates in GHHC, which shares your records with labs, pharmacies, and hospitals in the network. You can revoke within 3 days written notice. No impact on treatment.'",
+          "question": "What is your Greater Houston Healthconnect (GHHC) — Authorize electronic sharing of health records?",
+          "i18n": {
+            "es": {
+              "question": "¿Qué es Greater Houston Healthconnect (GHHC)? ¿Autorizar el intercambio electrónico de registros médicos?",
+              "label": "Greater Houston Healthconnect (GHHC): autorice el intercambio electrónico de registros de salud",
+              "options": [
+                "Sí, autorizo",
+                "No, opto por no participar"
+              ]
+            },
+            "zh": {
+              "question": "您的大休斯敦健康连接（GHC）是什么？授权以电子方式共享健康记录？",
+              "label": "大休斯敦健康连接（GHC）——授权电子共享健康记录",
+              "options": [
+                "是的，我授权",
+                "不，我选择退出"
+              ]
+            },
+            "fr": {
+              "question": "Qu'est-ce que votre Greater Houston Healthconnect (GHHC) — Autoriser le partage électronique des dossiers médicaux ?",
+              "label": "Greater Houston Healthconnect (GHHC) — Autoriser le partage électronique des dossiers médicaux",
+              "options": [
+                "Oui, j'autorise",
+                "Non, je me désabonne"
+              ]
+            },
+            "ja": {
+              "question": "グレーター・ヒューストン・ヘルスコネクト（GHHC）とは何ですか？健康記録の電子共有を許可していますか？",
+              "label": "グレーター・ヒューストン・ヘルスコネクト (GHHC) — 医療記録の電子共有を承認",
+              "options": [
+                "はい、許可します",
+                "いいえ、オプトアウトします"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu Greater Houston Healthconnect (GHHC) — Autorizar o compartilhamento eletrônico de registros de saúde?",
+              "label": "Greater Houston Healthconnect (GHHC) — Autorizar o compartilhamento eletrônico de registros de saúde",
+              "options": [
+                "Sim, eu autorizo",
+                "Não, eu opto por sair"
+              ]
+            },
+            "ar": {
+              "question": "ما هو برنامج Healthconnect الخاص بك في هيوستن الكبرى (GHHC) - السماح بالمشاركة الإلكترونية للسجلات الصحية؟",
+              "label": "منطقة هيوستن هيلث كونيكت الكبرى (GHHC) - السماح بالمشاركة الإلكترونية للسجلات الصحية",
+              "options": [
+                "نعم، أفوض",
+                "لا، أنا أقوم بإلغاء الاشتراك"
+              ]
+            },
+            "ru": {
+              "question": "Что такое ваше приложение Greater Houston Healthconnect (GHHC) — разрешите обмен медицинскими картами в электронном виде?",
+              "label": "Greater Houston Healthconnect (GHHC) — разрешите электронный обмен медицинскими картами",
+              "options": [
+                "Да, я авторизуюсь",
+                "Нет, я отказываюсь"
+              ]
+            }
+          }
         },
         {
           "id": "photo_consent",
           "label": "Photography Consent for Identity Verification",
           "type": "radio",
           "required": true,
-          "options": ["Yes, I consent", "No"]
+          "options": [
+            "Yes, I consent",
+            "No"
+          ],
+          "question": "What is your Photography Consent for Identity Verification?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su consentimiento fotográfico para la verificación de identidad?",
+              "label": "Consentimiento fotográfico para la verificación de identidad",
+              "options": [
+                "Sí, doy mi consentimiento",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "您的身份验证摄影同意书是什么？",
+              "label": "用于身份验证的摄影许可",
+              "options": [
+                "是的，我同意",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre consentement à la photographie pour la vérification d'identité ?",
+              "label": "Consentement à la photographie pour vérification d'identité",
+              "options": [
+                "Oui, je suis d'accord",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "本人確認のための写真撮影同意書は？",
+              "label": "本人確認のための写真撮影同意",
+              "options": [
+                "はい、同意します",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu consentimento fotográfico para verificação de identidade?",
+              "label": "Consentimento fotográfico para verificação de identidade",
+              "options": [
+                "Sim, eu concordo",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "ما هي موافقتك على التصوير للتحقق من الهوية؟",
+              "label": "الموافقة على التصوير للتحقق من الهوية",
+              "options": [
+                "نعم، أوافق",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Каково ваше согласие на фотосъемку для подтверждения личности?",
+              "label": "Согласие на фотосъемку для подтверждения личности",
+              "options": [
+                "Да, я согласен",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "telehealth_notice_acknowledged",
           "label": "Telehealth Limitations Acknowledgment",
           "type": "radio",
           "required": false,
-          "options": ["Yes, I understand", "I have questions"],
-          "ai_note": "Only for telehealth visits — skip entirely for in-person."
+          "options": [
+            "Yes, I understand",
+            "I have questions"
+          ],
+          "ai_note": "Only for telehealth visits — skip entirely for in-person.",
+          "question": "What is your Telehealth Limitations Acknowledgment?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su reconocimiento de limitaciones de telesalud?",
+              "label": "Reconocimiento de limitaciones de telesalud",
+              "options": [
+                "Sí, lo entiendo",
+                "Tengo preguntas"
+              ]
+            },
+            "zh": {
+              "question": "您的远程医疗限制确认书是什么？",
+              "label": "远程医疗限制致谢",
+              "options": [
+                "是的，我明白",
+                "我有问题"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre reconnaissance des limites de la télésanté ?",
+              "label": "Reconnaissance des limites de la télésanté",
+              "options": [
+                "Oui, je comprends",
+                "J'ai des questions"
+              ]
+            },
+            "ja": {
+              "question": "遠隔医療の制限についてどのような認識を持っていますか？",
+              "label": "遠隔医療の制限に関する了解",
+              "options": [
+                "はい、わかりました",
+                "質問があります"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu reconhecimento de limitações de telessaúde?",
+              "label": "Reconhecimento das limitações da telessaúde",
+              "options": [
+                "Sim, eu entendo",
+                "Eu tenho perguntas"
+              ]
+            },
+            "ar": {
+              "question": "ما هو الإقرار بقيود الرعاية الصحية عن بُعد؟",
+              "label": "إقرار بقيود الرعاية الصحية عن بُعد",
+              "options": [
+                "نعم، أنا أفهم",
+                "لدي أسئلة"
+              ]
+            },
+            "ru": {
+              "question": "Каково ваше подтверждение ограничений в области телемедицины?",
+              "label": "Подтверждение ограничений в области телемедицины",
+              "options": [
+                "Да, я понимаю",
+                "У меня есть вопросы"
+              ]
+            }
+          }
         },
         {
           "id": "final_signature",
           "label": "Signature — All Consents Acknowledged",
           "type": "signature",
-          "required": true
+          "required": true,
+          "question": "Please sign below.",
+          "i18n": {
+            "es": {
+              "question": "Por favor, firme a continuación.",
+              "label": "Firma: se reconocen todos los consentimientos"
+            },
+            "zh": {
+              "question": "请在下面签名。",
+              "label": "签名 — 所有同意均已确认"
+            },
+            "fr": {
+              "question": "Veuillez signer ci-dessous.",
+              "label": "Signature — Reconnaissance de tous les consentements"
+            },
+            "ja": {
+              "question": "以下に署名してください。",
+              "label": "署名 — すべての同意が確認されました"
+            },
+            "pt": {
+              "question": "Por favor, assine abaixo.",
+              "label": "Assinatura — Todos os consentimentos reconhecidos"
+            },
+            "ar": {
+              "question": "يرجى التوقيع أدناه.",
+              "label": "التوقيع - تم الاعتراف بجميع الموافقات"
+            },
+            "ru": {
+              "question": "Пожалуйста, подпишитесь ниже.",
+              "label": "Подпись — все согласия подтверждены"
+            }
+          }
         },
         {
           "id": "representative_name",
           "label": "Personal Representative Name (if signing on behalf)",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Personal Representative Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el nombre de su representante personal?",
+              "label": "Nombre del representante personal (si firma en nombre)"
+            },
+            "zh": {
+              "question": "你的个人代表姓名是什么？",
+              "label": "个人代表姓名（如果代表签名）"
+            },
+            "fr": {
+              "question": "Quel est le nom de votre représentant personnel ?",
+              "label": "Nom du représentant personnel (si vous signez au nom)"
+            },
+            "ja": {
+              "question": "あなたの個人代表者の名前は何ですか？",
+              "label": "個人代表者名 (代理で署名する場合)"
+            },
+            "pt": {
+              "question": "Qual é o seu nome de representante pessoal?",
+              "label": "Nome do representante pessoal (se assinar em nome)"
+            },
+            "ar": {
+              "question": "ما هو اسم الممثل الشخصي الخاص بك؟",
+              "label": "اسم الممثل الشخصي (في حالة التوقيع نيابة عن)"
+            },
+            "ru": {
+              "question": "Как зовут вашего личного представителя?",
+              "label": "Имя личного представителя (если вы подписываетесь от имени)"
+            }
+          }
         },
         {
           "id": "representative_relationship",
           "label": "Personal Representative Relationship",
           "type": "text",
-          "required": false
+          "required": false,
+          "question": "What is your Personal Representative Relationship?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su relación de representante personal?",
+              "label": "Relación de representante personal"
+            },
+            "zh": {
+              "question": "你的个人代表关系是什么？",
+              "label": "个人代表关系"
+            },
+            "fr": {
+              "question": "Quelle est votre relation de représentant personnel ?",
+              "label": "Relation de représentant personnel"
+            },
+            "ja": {
+              "question": "あなたの個人的な代表関係は？",
+              "label": "個人代表関係"
+            },
+            "pt": {
+              "question": "Qual é a sua relação de representação pessoal?",
+              "label": "Relação de representação pessoal"
+            },
+            "ar": {
+              "question": "ما هي علاقة الممثل الشخصي الخاصة بك؟",
+              "label": "علاقة الممثل الشخصي"
+            },
+            "ru": {
+              "question": "Каковы ваши личные отношения с представителем?",
+              "label": "Отношения с личным представителем"
+            }
+          }
         }
       ]
     }

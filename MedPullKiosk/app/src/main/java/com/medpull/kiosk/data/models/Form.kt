@@ -42,15 +42,18 @@ data class FormField(
     val fieldName: String,
     val fieldType: FieldType,
     val originalText: String? = null,
-    val translatedText: String? = null,
+    val translatedText: String? = null,        // Localized field label (falls back to English label)
     val value: String? = null,
     val boundingBox: BoundingBox? = null,
     val labelBoundingBox: BoundingBox? = null,
     val confidence: Float = 0f,
     val required: Boolean = false,
     val page: Int = 1,
-    val options: List<String> = emptyList(),   // For RADIO/DROPDOWN — rendered as choice chips
-    val description: String? = null             // From schema ai_note — shown below question text
+    val options: List<String> = emptyList(),   // Canonical English values — used for skip rules / export
+    val optionLabels: List<String> = emptyList(), // Localized display labels, parallel to options
+    val description: String? = null,            // From schema ai_note — internal AI guidance, never shown to patient
+    val question: String? = null,               // Patient-facing English question (baked into schema)
+    val translatedQuestion: String? = null      // Patient-facing question in the active language
 )
 
 /**

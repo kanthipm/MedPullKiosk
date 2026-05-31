@@ -131,10 +131,19 @@ class GuidedIntakeViewModel @Inject constructor(
          * per-form loaders — the schema fully describes fields, skip logic,
          * consent batching, and which fields to defer to the review step.
          */
-        fun loadSchemaForm(context: Context, formId: String, assetPath: String): LoadedSchema {
+        fun loadSchemaForm(
+            context: Context,
+            formId: String,
+            assetPath: String,
+            language: String = "en"
+        ): LoadedSchema {
             val root = JSONObject(context.assets.open(assetPath).bufferedReader().readText())
             val formName = root.optString("form_name", formId)
             val sections = root.optJSONArray("sections")
+
+            fun JSONObject.stringArray(key: String): List<String> =
+                optJSONArray(key)?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                    ?: emptyList()
 
             val fields = mutableListOf<FormField>()
             if (sections != null) {
@@ -143,19 +152,34 @@ class GuidedIntakeViewModel @Inject constructor(
                     val sectionFields = section.optJSONArray("fields") ?: continue
                     for (f in 0 until sectionFields.length()) {
                         val field = sectionFields.getJSONObject(f)
-                        val opts = field.optJSONArray("options")
-                            ?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
-                            ?: emptyList()
+                        val label = field.optString("label")
+                        val question = field.optString("question", "").ifBlank { null }
+                        val opts = field.stringArray("options")
+
+                        // Pull localized text from the i18n block for the active language.
+                        // English (or any missing translation) falls back to the canonical values.
+                        val i18n = if (language != "en")
+                            field.optJSONObject("i18n")?.optJSONObject(language) else null
+                        val localizedLabel = i18n?.optString("label", "")?.ifBlank { null } ?: label
+                        val localizedQuestion =
+                            i18n?.optString("question", "")?.ifBlank { null } ?: question
+                        // Localized option labels must stay parallel to canonical options.
+                        val localizedOpts = i18n?.stringArray("options")
+                            ?.takeIf { it.size == opts.size } ?: opts
+
                         fields += FormField(
                             id = field.optString("id"),
                             formId = formId,
-                            fieldName = field.optString("label"),
-                            originalText = field.optString("label"),
-                            translatedText = field.optString("label"),
+                            fieldName = label,
+                            originalText = label,
+                            translatedText = localizedLabel,
                             fieldType = fieldTypeOf(field.optString("type")),
                             required = field.optBoolean("required", false),
                             options = opts,
-                            description = field.optString("ai_note", "").ifBlank { null }
+                            optionLabels = localizedOpts,
+                            description = field.optString("ai_note", "").ifBlank { null },
+                            question = question,
+                            translatedQuestion = localizedQuestion
                         )
                     }
                 }
@@ -219,33 +243,22 @@ class GuidedIntakeViewModel @Inject constructor(
 
     // ─── Form Loading ─────────────────────────────────────────────────────────
 
-    /**
-     * Overlay previously-saved field values from the DB onto a freshly-parsed schema form.
-     * Prevents saveForm(REPLACE) from wiping mid-session progress on reload.
-     */
-    private suspend fun mergeWithSavedValues(schema: Form): Form {
-        val saved = try {
-            formRepository.getFormById(schema.id)?.fields
-                ?.filter { !it.value.isNullOrBlank() }
-                ?.associateBy { it.id }
-        } catch (e: Exception) { null }
-        if (saved.isNullOrEmpty()) return schema
-        return schema.copy(
-            fields = schema.fields.map { f ->
-                saved[f.id]?.let { s -> f.copy(value = s.value) } ?: f
-            }
-        )
-    }
-
     private fun loadForm() {
         viewModelScope.launch {
             try {
+                val language = localeManager.getCurrentLanguage(appContext)
                 _state.update {
                     it.copy(
                         isLoading = true,
-                        userLanguage = localeManager.getCurrentLanguage(appContext)
+                        userLanguage = language
                     )
                 }
+
+                // Kiosk always starts every form from the very beginning — no
+                // resume. Wipe any prior intake progress (skip / answered /
+                // current-index state) so a new patient never inherits the
+                // previous session's place in the form.
+                intakeRepository.clearFlow(formId)
 
                 // Auto-discover a declarative schema for this formId. Any built-in
                 // form (sliding fee, coastal gateway, medicaid, or a future one)
@@ -257,13 +270,15 @@ class GuidedIntakeViewModel @Inject constructor(
                 }
 
                 if (schemaPath != null) {
-                    val loaded = loadSchemaForm(appContext, formId, schemaPath)
+                    val loaded = loadSchemaForm(appContext, formId, schemaPath, language)
                     skipRules = loaded.skipRules
                     consentGroupFieldIds = loaded.consentGroupFieldIds
                     skipDuringIntakeIds = loaded.skipDuringIntakeIds
-                    val merged = mergeWithSavedValues(loaded.form)
-                    formRepository.saveForm(merged)
-                    initFormState(merged)
+                    // Persist the pristine schema (blank values). saveForm REPLACEs
+                    // the DB rows, so this also wipes any answers saved earlier —
+                    // guaranteeing a clean start even across app relaunches.
+                    formRepository.saveForm(loaded.form)
+                    initFormState(loaded.form)
                 } else {
                     // Ad-hoc / uploaded (Textract) form straight from the DB. It has
                     // no schema metadata, but the conversational engine still drives
@@ -271,6 +286,13 @@ class GuidedIntakeViewModel @Inject constructor(
                     skipRules = emptyMap()
                     consentGroupFieldIds = emptySet()
                     skipDuringIntakeIds = emptySet()
+                    // No pristine schema to re-save here, so blank any previously
+                    // entered answers directly in the DB before we start, so the
+                    // form opens fresh at its first question. Done once, before the
+                    // collect below subscribes, to avoid re-triggering the flow.
+                    formRepository.getFormById(formId)?.fields
+                        ?.filter { !it.value.isNullOrBlank() }
+                        ?.forEach { formRepository.updateFieldValue(it.id, null) }
                     formRepository.getFormByIdFlow(formId).collect { form ->
                         if (form != null) initFormState(form)
                         else _state.update { it.copy(error = appStrings.get(R.string.form_not_found), isLoading = false) }
@@ -287,80 +309,56 @@ class GuidedIntakeViewModel @Inject constructor(
         val flow = intakeRepository.getOrCreateFlow(form.id)
         val language = localeManager.getCurrentLanguage(appContext)
 
-        // Pre-fill preferred_language from app locale
+        // The patient picks their language at app start, so the form must never
+        // ask it. Auto-fill the preferred_language field from the app locale (so
+        // it's already answered and gets skipped during intake) and start EVERY
+        // other field blank — full reset, no resumed answers, no patient-cache
+        // prefill.
         val languageLabel = when (language) {
             "es" -> "Español"; "zh" -> "中文"; "fr" -> "Français"
             "ja" -> "日本語"; "pt" -> "Português"
             "ar" -> "العربية"; "ru" -> "Русский"; else -> "English"
         }
-        val withLanguage = form.fields.map { f ->
-            if (f.id == "preferred_language") f.copy(value = languageLabel) else f
+        val freshFields = form.fields.map { f ->
+            if (f.id == "preferred_language") f.copy(value = languageLabel)
+            else f.copy(value = null)
         }
 
-        // Apply cross-form demographic prefill from patient cache.
-        // Use "demo_user" when no authenticated user (demo mode bypass).
-        val userId = authRepository.getCurrentUserId()?.takeIf { it.isNotBlank() } ?: DEMO_USER_ID
-        val cache = formRepository.getPatientCache(userId)
-
-        // Identify which blank fields (not restored from DB) get values from the cache.
-        // These are the ones that need patient confirmation.
-        val newlyCacheFilledFields: List<FormField> = if (cache != null) {
-            withLanguage.mapNotNull { f ->
-                val cachedValue = cache.valueForFieldId(f.id)
-                if (f.id in PatientCacheEntity.DEMOGRAPHIC_FIELD_IDS &&
-                    !cachedValue.isNullOrBlank() &&
-                    f.value.isNullOrBlank() // was blank before cache — not from a restored session
-                ) f.copy(value = cachedValue) else null
+        // Persist the reset to the DB so it survives an app relaunch: keep the
+        // auto-filled language, blank every other previously-entered answer.
+        form.fields.forEach { f ->
+            when {
+                f.id == "preferred_language" -> formRepository.updateFieldValue(f.id, languageLabel)
+                !f.value.isNullOrBlank() -> formRepository.updateFieldValue(f.id, null)
             }
-        } else emptyList()
-
-        val withCache = if (cache != null) {
-            withLanguage.map { f ->
-                val cached = cache.valueForFieldId(f.id)
-                if (f.id in PatientCacheEntity.DEMOGRAPHIC_FIELD_IDS && !cached.isNullOrBlank())
-                    f.copy(value = cached)
-                else f
-            }
-        } else withLanguage
-
-        // Persist pre-filled values to DB
-        withCache.filter { it.value != null }.forEach { f ->
-            formRepository.updateFieldValue(f.id, f.value!!)
         }
 
-        // Restore skip state from previous session
-        val restoredSkips = flow.skippedFieldIds
-
-        val allSkipped = restoredSkips + skipDuringIntakeIds
-        val filledCount = withCache.count { f ->
-            f.id !in allSkipped &&
+        val filledCount = freshFields.count { f ->
+            f.id !in skipDuringIntakeIds &&
             f.fieldType != FieldType.STATIC_LABEL &&
             !f.value.isNullOrBlank()
         }
-        val totalCount = withCache.count { f ->
-            f.id !in allSkipped && f.fieldType != FieldType.STATIC_LABEL
+        val totalCount = freshFields.count { f ->
+            f.id !in skipDuringIntakeIds && f.fieldType != FieldType.STATIC_LABEL
         }
 
         _state.update {
             it.copy(
                 form = form,
-                fields = withCache,
+                fields = freshFields,
                 intakeFlow = flow,
-                skippedFieldIds = restoredSkips,
+                skippedFieldIds = emptySet(),
                 chatMessages = emptyList(),
                 userLanguage = language,
                 isLoading = false,
                 filledCount = filledCount,
                 totalCount = totalCount,
-                pendingConfirmFields = newlyCacheFilledFields.takeIf { it.isNotEmpty() }
+                pendingConfirmFields = null
             )
         }
 
-        // If there are pre-filled fields to confirm, pause and wait for user confirmation.
-        // Otherwise begin the intake immediately.
-        if (newlyCacheFilledFields.isEmpty()) {
-            advanceToNextField()
-        }
+        // Always begin the intake immediately at the first question.
+        advanceToNextField()
     }
 
     // ─── Field Progression State Machine ─────────────────────────────────────
@@ -417,7 +415,10 @@ class GuidedIntakeViewModel @Inject constructor(
 
     /** Deliver a static_label framing message and immediately advance. */
     private fun deliverStaticLabel(field: FormField) {
-        val text = field.description ?: field.fieldName
+        // Prefer the baked patient-facing (and localized) text; fall back to the
+        // raw ai_note only for schema-less forms with no derived question.
+        val text = field.translatedQuestion ?: field.question
+            ?: field.description ?: field.fieldName
         viewModelScope.launch {
             try {
                 formRepository.updateFieldValue(field.id, "delivered")

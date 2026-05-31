@@ -33,15 +33,32 @@ class GrokApiService @Inject constructor(
 
     /**
      * Send a chat message. Tries Grok first; falls back to Groq on quota/auth errors.
+     *
+     * Set [preferGroq] to skip Grok entirely and call Groq's free tier directly
+     * (when a Groq key is configured). Used by cost-sensitive code paths — e.g.
+     * the intake engine — to conserve xAI credits.
      */
     suspend fun sendMessage(
         userMessage: String,
         conversationHistory: List<ChatMessage> = emptyList(),
         systemPrompt: String? = null,
         model: String = Constants.AI.GROK_MODEL,
-        maxTokens: Int = Constants.AI.MAX_TOKENS
+        maxTokens: Int = Constants.AI.MAX_TOKENS,
+        preferGroq: Boolean = false
     ): AiResponse = withContext(Dispatchers.IO) {
         val messages = buildMessages(systemPrompt, conversationHistory, userMessage)
+
+        // Conserve xAI credits: when the caller prefers Groq and a key is set,
+        // use Groq's free tier directly without touching Grok.
+        if (preferGroq && BuildConfig.GROQ_API_KEY.isNotBlank()) {
+            return@withContext callApi(
+                url = Constants.AI.GROQ_API_URL,
+                apiKey = BuildConfig.GROQ_API_KEY,
+                model = Constants.AI.GROQ_MODEL,
+                messages = messages,
+                maxTokens = maxTokens
+            )
+        }
 
         // Try Grok first
         val grokResult = callApi(

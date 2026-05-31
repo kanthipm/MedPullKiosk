@@ -3,11 +3,15 @@
   "form_name": "Medicaid Coverage Renewal",
   "version": "2.0-demo",
   "ai_instructions": "You are helping a patient complete their Medicaid renewal. Ask one question at a time. Be warm and reassuring — many patients are anxious about losing coverage.",
-
   "skip_rules": [
-    { "when_field": "has_other_insurance", "equals": "No", "skip": ["other_insurance_type"] }
+    {
+      "when_field": "has_other_insurance",
+      "equals": "No",
+      "skip": [
+        "other_insurance_type"
+      ]
+    }
   ],
-
   "sections": [
     {
       "id": "personal_info",
@@ -17,27 +21,151 @@
           "id": "renewal_full_name",
           "label": "Full Legal Name (Last, First)",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Full Legal Name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su nombre legal completo?",
+              "label": "Nombre legal completo (apellido, nombre)"
+            },
+            "zh": {
+              "question": "你的法定全名是什么？",
+              "label": "法定全名（姓氏、名字）"
+            },
+            "fr": {
+              "question": "Quel est votre nom légal complet ?",
+              "label": "Nom légal complet (nom, prénom)"
+            },
+            "ja": {
+              "question": "あなたの正式名称は何ですか?",
+              "label": "正式名称 (最後、最初)"
+            },
+            "pt": {
+              "question": "Qual é o seu nome legal completo?",
+              "label": "Nome legal completo (último, primeiro)"
+            },
+            "ar": {
+              "question": "ما هو اسمك القانوني الكامل؟",
+              "label": "الاسم القانوني الكامل (الأخير، الأول)"
+            },
+            "ru": {
+              "question": "Какое ваше полное юридическое имя?",
+              "label": "Полное юридическое имя (фамилия, имя)"
+            }
+          }
         },
         {
           "id": "renewal_date_of_birth",
           "label": "Date of Birth",
           "type": "date",
           "required": true,
-          "hint": "MM/DD/YYYY"
+          "hint": "MM/DD/YYYY",
+          "question": "What is your Date of Birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su fecha de nacimiento?",
+              "label": "Fecha de nacimiento"
+            },
+            "zh": {
+              "question": "你的出生日期是哪一天？",
+              "label": "出生日期"
+            },
+            "fr": {
+              "question": "Quelle est votre date de naissance ?",
+              "label": "Date de naissance"
+            },
+            "ja": {
+              "question": "あなたの生年月日は？",
+              "label": "生年月日"
+            },
+            "pt": {
+              "question": "Qual é a sua data de nascimento?",
+              "label": "Data de nascimento"
+            },
+            "ar": {
+              "question": "ما هو تاريخ ميلادك؟",
+              "label": "تاريخ الميلاد"
+            },
+            "ru": {
+              "question": "Какая у тебя дата рождения?",
+              "label": "Дата рождения"
+            }
+          }
         },
         {
           "id": "renewal_ssn_last4",
           "label": "Last 4 digits of Social Security Number",
           "type": "text",
           "required": true,
-          "hint": "####"
+          "hint": "####",
+          "question": "What is your Last 4 digits of Social Security Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuáles son los últimos 4 dígitos de su número de seguro social?",
+              "label": "Últimos 4 dígitos del número de seguro social"
+            },
+            "zh": {
+              "question": "您的社会安全号码的最后四位数是多少？",
+              "label": "社会保险号的最后 4 位数字"
+            },
+            "fr": {
+              "question": "Quels sont les 4 derniers chiffres de votre numéro de sécurité sociale ?",
+              "label": "Les 4 derniers chiffres du numéro de sécurité sociale"
+            },
+            "ja": {
+              "question": "社会保障番号の下4桁は何ですか？",
+              "label": "社会保障番号の下4桁"
+            },
+            "pt": {
+              "question": "Quais são os seus últimos 4 dígitos do número do Seguro Social?",
+              "label": "Últimos 4 dígitos do número do seguro social"
+            },
+            "ar": {
+              "question": "ما هي آخر 4 أرقام من رقم الضمان الاجتماعي؟",
+              "label": "آخر 4 أرقام من رقم الضمان الاجتماعي"
+            },
+            "ru": {
+              "question": "Каковы ваши последние 4 цифры номера социального страхования?",
+              "label": "Последние 4 цифры номера социального страхования"
+            }
+          }
         },
         {
           "id": "renewal_phone",
           "label": "Best Phone Number",
           "type": "text",
-          "required": true
+          "required": true,
+          "question": "What is your Best Phone Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es tu mejor número de teléfono?",
+              "label": "Mejor número de teléfono"
+            },
+            "zh": {
+              "question": "你最好的电话号码是什么？",
+              "label": "最佳电话号码"
+            },
+            "fr": {
+              "question": "Quel est ton meilleur numéro de téléphone ?",
+              "label": "Meilleur numéro de téléphone"
+            },
+            "ja": {
+              "question": "あなたのベスト電話番号は何ですか？",
+              "label": "最適な電話番号"
+            },
+            "pt": {
+              "question": "Qual é o seu melhor número de telefone?",
+              "label": "Melhor número de telefone"
+            },
+            "ar": {
+              "question": "ما هو أفضل رقم هاتف لديك؟",
+              "label": "أفضل رقم هاتف"
+            },
+            "ru": {
+              "question": "Какой у тебя лучший номер телефона?",
+              "label": "Лучший телефонный номер"
+            }
+          }
         }
       ]
     },
@@ -50,21 +178,224 @@
           "label": "How many people live in your household?",
           "type": "radio",
           "required": true,
-          "options": ["1 (just me)", "2", "3", "4", "5 or more"]
+          "options": [
+            "1 (just me)",
+            "2",
+            "3",
+            "4",
+            "5 or more"
+          ],
+          "question": "How many people live in your household?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuántas personas viven en su hogar?",
+              "label": "¿Cuántas personas viven en su hogar?",
+              "options": [
+                "1 (solo yo)",
+                "2",
+                "3",
+                "4",
+                "5 o más"
+              ]
+            },
+            "zh": {
+              "question": "你家里住着多少人？",
+              "label": "你家里住着多少人？",
+              "options": [
+                "1（只有我）",
+                "2",
+                "3",
+                "4",
+                "5 个或更多"
+              ]
+            },
+            "fr": {
+              "question": "Combien de personnes vivent dans votre foyer ?",
+              "label": "Combien de personnes vivent dans votre foyer ?",
+              "options": [
+                "1 (juste moi)",
+                "2",
+                "3",
+                "4",
+                "5 ou plus"
+              ]
+            },
+            "ja": {
+              "question": "あなたの世帯には何人住んでいますか？",
+              "label": "あなたの世帯には何人住んでいますか？",
+              "options": [
+                "1 (私だけ)",
+                "2",
+                "3",
+                "4",
+                "5 またはそれ以上"
+              ]
+            },
+            "pt": {
+              "question": "Quantas pessoas moram na sua casa?",
+              "label": "Quantas pessoas moram na sua casa?",
+              "options": [
+                "1 (só eu)",
+                "2",
+                "3",
+                "4",
+                "5 ou mais"
+              ]
+            },
+            "ar": {
+              "question": "كم عدد الأشخاص الذين يعيشون في منزلك؟",
+              "label": "كم عدد الأشخاص الذين يعيشون في منزلك؟",
+              "options": [
+                "1 (أنا فقط)",
+                "2",
+                "3",
+                "4",
+                "5 أو أكثر"
+              ]
+            },
+            "ru": {
+              "question": "Сколько человек живет в вашей семье?",
+              "label": "Сколько человек живет в вашей семье?",
+              "options": [
+                "1 (только я)",
+                "2",
+                "3",
+                "4",
+                "5 и более"
+              ]
+            }
+          }
         },
         {
           "id": "employment_status",
           "label": "Current Employment Status",
           "type": "radio",
           "required": true,
-          "options": ["Employed", "Self-employed", "Unemployed", "Retired", "Unable to work"]
+          "options": [
+            "Employed",
+            "Self-employed",
+            "Unemployed",
+            "Retired",
+            "Unable to work"
+          ],
+          "question": "What is your Current Employment Status?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su situación laboral actual?",
+              "label": "Situación laboral actual",
+              "options": [
+                "Empleado",
+                "Trabajador autónomo",
+                "Desempleado",
+                "Retirado",
+                "Incapaz de trabajar"
+              ]
+            },
+            "zh": {
+              "question": "你目前的就业状况如何？",
+              "label": "目前的就业状况",
+              "options": [
+                "已就业",
+                "自雇",
+                "失业",
+                "已退休",
+                "无法工作"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre statut professionnel actuel ?",
+              "label": "Situation d'emploi actuelle",
+              "options": [
+                "Employé",
+                "Travailleur indépendant",
+                "Chômeurs",
+                "Retraité",
+                "Incapable de travailler"
+              ]
+            },
+            "ja": {
+              "question": "現在の雇用状況は？",
+              "label": "現在の雇用状況",
+              "options": [
+                "雇用",
+                "自営業",
+                "無職",
+                "退職しました",
+                "仕事ができない"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua situação atual de emprego?",
+              "label": "Status atual do emprego",
+              "options": [
+                "Empregado",
+                "Trabalhador autônomo",
+                "Desempregado",
+                "Aposentado",
+                "Incapaz de trabalhar"
+              ]
+            },
+            "ar": {
+              "question": "ما هي حالة التوظيف الحالية الخاصة بك؟",
+              "label": "حالة التوظيف الحالية",
+              "options": [
+                "مستخدمون",
+                "العاملون لحسابهم الخاص",
+                "عاطل عن العمل",
+                "متقاعد",
+                "غير قادر على العمل"
+              ]
+            },
+            "ru": {
+              "question": "Каков ваш текущий трудовой статус?",
+              "label": "Текущее положение с занятостью",
+              "options": [
+                "Занятые",
+                "Самозанятые",
+                "Безработные",
+                "В отставке",
+                "Не в состоянии работать"
+              ]
+            }
+          }
         },
         {
           "id": "total_household_monthly_income",
           "label": "Estimated Total Monthly Household Income",
           "type": "text",
           "required": true,
-          "hint": "e.g. $1,500"
+          "hint": "e.g. $1,500",
+          "question": "What is your Estimated Total Monthly Household Income?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el ingreso total mensual estimado de su hogar?",
+              "label": "Ingresos totales mensuales estimados del hogar"
+            },
+            "zh": {
+              "question": "您的预计每月家庭总收入是多少？",
+              "label": "预计每月家庭总收入"
+            },
+            "fr": {
+              "question": "Quel est le revenu mensuel total estimé de votre ménage ?",
+              "label": "Revenu mensuel total estimé des ménages"
+            },
+            "ja": {
+              "question": "あなたの推定月間総世帯収入はいくらですか？",
+              "label": "推定月間総世帯収入"
+            },
+            "pt": {
+              "question": "Qual é a sua renda familiar mensal estimada?",
+              "label": "Renda familiar mensal total estimada"
+            },
+            "ar": {
+              "question": "ما هو إجمالي دخل الأسرة الشهري المقدر؟",
+              "label": "إجمالي دخل الأسرة الشهري المقدر"
+            },
+            "ru": {
+              "question": "Каков ваш предполагаемый совокупный ежемесячный доход семьи?",
+              "label": "Предполагаемый совокупный ежемесячный доход семьи"
+            }
+          }
         }
       ]
     },
@@ -77,21 +408,192 @@
           "label": "Medicaid ID Number",
           "type": "text",
           "required": true,
-          "hint": "Found on your Medicaid card"
+          "hint": "Found on your Medicaid card",
+          "question": "What is your Medicaid ID Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de identificación de Medicaid?",
+              "label": "Número de identificación de Medicaid"
+            },
+            "zh": {
+              "question": "你的医疗补助身份证号码是什么？",
+              "label": "医疗补助身份证号"
+            },
+            "fr": {
+              "question": "Quel est votre numéro d'identification Medicaid ?",
+              "label": "Numéro d'identification Medicaid"
+            },
+            "ja": {
+              "question": "あなたのメディケイドID番号は何ですか？",
+              "label": "メディケイド ID 番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de identificação do Medicaid?",
+              "label": "Número de identificação do Medicaid"
+            },
+            "ar": {
+              "question": "ما هو رقم معرف Medicaid الخاص بك؟",
+              "label": "رقم معرف ميديكيد"
+            },
+            "ru": {
+              "question": "Какой у вас идентификационный номер Medicaid?",
+              "label": "Идентификационный номер Medicaid"
+            }
+          }
         },
         {
           "id": "has_other_insurance",
           "label": "Do you have any other health insurance besides Medicaid?",
           "type": "radio",
           "required": true,
-          "options": ["Yes", "No"]
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Do you have any other health insurance besides Medicaid?",
+          "i18n": {
+            "es": {
+              "question": "¿Tiene algún otro seguro médico además de Medicaid?",
+              "label": "¿Tiene algún otro seguro médico además de Medicaid?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "除了医疗补助，你还有其他健康保险吗？",
+              "label": "除了医疗补助，你还有其他健康保险吗？",
+              "options": [
+                "是的",
+                "没有"
+              ]
+            },
+            "fr": {
+              "question": "Avez-vous une autre assurance maladie en plus de Medicaid ?",
+              "label": "Avez-vous une autre assurance maladie en plus de Medicaid ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "メディケイド以外に健康保険に加入していますか？",
+              "label": "メディケイド以外に健康保険に加入していますか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Você tem algum outro seguro de saúde além do Medicaid?",
+              "label": "Você tem algum outro seguro de saúde além do Medicaid?",
+              "options": [
+                "sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل لديك أي تأمين صحي آخر إلى جانب برنامج Medicaid؟",
+              "label": "هل لديك أي تأمين صحي آخر إلى جانب برنامج Medicaid؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Есть ли у вас другая медицинская страховка, кроме Medicaid?",
+              "label": "Есть ли у вас другая медицинская страховка, кроме Medicaid?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
         },
         {
           "id": "other_insurance_type",
           "label": "What other insurance?",
           "type": "radio",
           "required": false,
-          "options": ["Employer-sponsored", "Medicare", "Marketplace / ACA", "Other"]
+          "options": [
+            "Employer-sponsored",
+            "Medicare",
+            "Marketplace / ACA",
+            "Other"
+          ],
+          "question": "What other insurance?",
+          "i18n": {
+            "es": {
+              "question": "¿Qué otro seguro?",
+              "label": "¿Qué otro seguro?",
+              "options": [
+                "Patrocinado por el empleador",
+                "Medicare",
+                "Marketplace//ACA",
+                "Otros"
+              ]
+            },
+            "zh": {
+              "question": "还有什么保险？",
+              "label": "还有什么保险？",
+              "options": [
+                "雇主赞助",
+                "医疗保险",
+                "市场/ACA",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Quelle autre assurance ?",
+              "label": "Quelle autre assurance ?",
+              "options": [
+                "Parrainé par l'employeur",
+                "Medicare",
+                "Marketplace/ACA",
+                "Autres"
+              ]
+            },
+            "ja": {
+              "question": "他にどんな保険？",
+              "label": "他にどんな保険？",
+              "options": [
+                "雇用主が後援する",
+                "メディケア",
+                "マーケットプレイス/ACA",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Que outro seguro?",
+              "label": "Que outro seguro?",
+              "options": [
+                "Patrocinado pelo empregador",
+                "Medicare",
+                "Mercado/ACA",
+                "Outros"
+              ]
+            },
+            "ar": {
+              "question": "ما أنواع التأمين الأخرى؟",
+              "label": "ما أنواع التأمين الأخرى؟",
+              "options": [
+                "برعاية صاحب العمل",
+                "الرعاية الطبية",
+                "السوق/ACA",
+                "أخرى"
+              ]
+            },
+            "ru": {
+              "question": "Какая еще страховка?",
+              "label": "Какая еще страховка?",
+              "options": [
+                "Спонсируется работодателем",
+                "Medicare",
+                "Торговая площадка/ACA",
+                "Другой"
+              ]
+            }
+          }
         }
       ]
     },
@@ -104,13 +606,75 @@
           "label": "Attestation",
           "type": "static_label",
           "required": false,
-          "ai_note": "Tell the patient: 'By signing below you certify that the information you provided is true and accurate to the best of your knowledge.'"
+          "ai_note": "Tell the patient: 'By signing below you certify that the information you provided is true and accurate to the best of your knowledge.'",
+          "question": "By signing below you certify that the information you provided is true and accurate to the best of your knowledge.",
+          "i18n": {
+            "es": {
+              "question": "Al firmar a continuación, usted certifica que la información que proporcionó es verdadera y precisa según su leal saber y entender.",
+              "label": "Atestación"
+            },
+            "zh": {
+              "question": "通过在下方签名，即表示您证明所提供的信息在您所知的情况下是真实和准确的。",
+              "label": "认证"
+            },
+            "fr": {
+              "question": "En signant ci-dessous, vous certifiez que les informations que vous avez fournies sont vraies et exactes au meilleur de vos connaissances.",
+              "label": "Attestation"
+            },
+            "ja": {
+              "question": "以下に署名することで、提供した情報があなたの知る限り真実かつ正確であることを証明することになります。",
+              "label": "アテステーション"
+            },
+            "pt": {
+              "question": "Ao assinar abaixo, você certifica que as informações fornecidas são verdadeiras e precisas, tanto quanto é do seu conhecimento.",
+              "label": "Atestado"
+            },
+            "ar": {
+              "question": "من خلال التوقيع أدناه، فإنك تقر بأن المعلومات التي قدمتها صحيحة ودقيقة على حد علمك.",
+              "label": "تصديق"
+            },
+            "ru": {
+              "question": "Подписываясь ниже, вы подтверждаете, что предоставленная вами информация правдива и точна, насколько вам известно.",
+              "label": "Аттестация"
+            }
+          }
         },
         {
           "id": "renewal_signature",
           "label": "Signature",
           "type": "signature",
-          "required": true
+          "required": true,
+          "question": "Please sign below.",
+          "i18n": {
+            "es": {
+              "question": "Por favor, firme a continuación.",
+              "label": "Firma"
+            },
+            "zh": {
+              "question": "请在下面签名。",
+              "label": "签名"
+            },
+            "fr": {
+              "question": "Veuillez signer ci-dessous.",
+              "label": "Signature"
+            },
+            "ja": {
+              "question": "以下に署名してください。",
+              "label": "署名"
+            },
+            "pt": {
+              "question": "Por favor, assine abaixo.",
+              "label": "Assinatura"
+            },
+            "ar": {
+              "question": "يرجى التوقيع أدناه.",
+              "label": "التوقيع"
+            },
+            "ru": {
+              "question": "Пожалуйста, подпишитесь ниже.",
+              "label": "Подпись"
+            }
+          }
         }
       ]
     }

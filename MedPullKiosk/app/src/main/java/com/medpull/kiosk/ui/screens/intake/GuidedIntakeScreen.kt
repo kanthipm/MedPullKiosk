@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -90,6 +91,27 @@ import kotlin.math.sin
  * Prompt    → idle/ready; tap the arch to start speaking
  */
 private enum class VoicePhase { Idle, Speaking, Listening, Review, Editing, Prompt }
+
+private const val TTS_STT_TAG = "GuidedIntakeVoice"
+
+/** Human-readable name for a SpeechRecognizer.ERROR_* code, for logging. */
+private fun speechErrorName(code: Int): String = when (code) {
+    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "NETWORK_TIMEOUT"
+    SpeechRecognizer.ERROR_NETWORK -> "NETWORK"
+    SpeechRecognizer.ERROR_AUDIO -> "AUDIO"
+    SpeechRecognizer.ERROR_SERVER -> "SERVER"
+    SpeechRecognizer.ERROR_CLIENT -> "CLIENT"
+    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "SPEECH_TIMEOUT"
+    SpeechRecognizer.ERROR_NO_MATCH -> "NO_MATCH"
+    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "RECOGNIZER_BUSY"
+    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "INSUFFICIENT_PERMISSIONS"
+    SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "TOO_MANY_REQUESTS"
+    SpeechRecognizer.ERROR_SERVER_DISCONNECTED -> "SERVER_DISCONNECTED"
+    SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED -> "LANGUAGE_NOT_SUPPORTED"
+    SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "LANGUAGE_UNAVAILABLE"
+    SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT -> "CANNOT_CHECK_SUPPORT"
+    else -> "UNKNOWN"
+}
 
 /**
  * Typeform-style guided intake screen.
@@ -184,6 +206,11 @@ fun GuidedIntakeScreen(
     // ── Speech-to-text ────────────────────────────────────────────────────────
     val speechAvailable = remember { SpeechRecognizer.isRecognitionAvailable(context) }
     var isListening by remember { mutableStateOf(false) }
+    // SERVER_DISCONNECTED / RECOGNIZER_BUSY are usually transient (the recognition
+    // service was still spinning up). Bumping this token re-arms a single retry;
+    // didRetry stops it from looping forever on a genuinely-down backend.
+    var sttRetryToken by remember { mutableIntStateOf(0) }
+    var sttDidRetry by remember { mutableStateOf(false) }
     val speechLocale = remember(state.userLanguage) {
         when (state.userLanguage) {
             "es" -> "es-ES"; "zh" -> "zh-CN"; "fr" -> "fr-FR"
@@ -215,10 +242,23 @@ fun GuidedIntakeScreen(
         isListening = false
         micAmplitude = 0f
     }
-    val onSpeechError = rememberUpdatedState<() -> Unit> {
+    val onSpeechError = rememberUpdatedState<(Int) -> Unit> { error ->
         isListening = false
         micAmplitude = 0f
-        if (voiceActiveRef.value && finalTranscript.isBlank()) voicePhase = VoicePhase.Prompt
+        // Don't swallow the code — a foreign locale with no on-device language
+        // pack returns ERROR_LANGUAGE_UNAVAILABLE/NOT_SUPPORTED and the mic would
+        // otherwise appear to do nothing. Surfacing it makes the failure visible.
+        Log.w(TTS_STT_TAG, "SpeechRecognizer error ${speechErrorName(error)} ($error) for locale=$speechLocale")
+        val transient = error == SpeechRecognizer.ERROR_SERVER_DISCONNECTED ||
+            error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
+            error == SpeechRecognizer.ERROR_SERVER
+        if (transient && !sttDidRetry && voiceActiveRef.value && finalTranscript.isBlank()) {
+            sttDidRetry = true
+            Log.i(TTS_STT_TAG, "Transient recognizer error — retrying once")
+            sttRetryToken++
+        } else if (voiceActiveRef.value && finalTranscript.isBlank()) {
+            voicePhase = VoicePhase.Prompt
+        }
     }
 
     // IMPORTANT: a single SpeechRecognizer instance becomes unreliable after a
@@ -239,7 +279,7 @@ fun GuidedIntakeScreen(
                 if (!text.isNullOrBlank()) onPartial.value(text)
             }
             override fun onRmsChanged(rmsdB: Float) { onRms.value(rmsdB) }
-            override fun onError(error: Int) { onSpeechError.value() }
+            override fun onError(error: Int) { onSpeechError.value(error) }
             override fun onReadyForSpeech(params: Bundle?) {
                 if (voiceActiveRef.value) voicePhase = VoicePhase.Listening
             }
@@ -250,12 +290,22 @@ fun GuidedIntakeScreen(
         }
     }
     val startListening: () -> Unit = start@{
-        if (!speechAvailable) return@start
+        if (!speechAvailable) {
+            Log.w(TTS_STT_TAG, "Speech recognition unavailable on this device")
+            if (voiceActiveRef.value) voicePhase = VoicePhase.Prompt
+            return@start
+        }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocale)
+            // Some recognizers fall back to the system locale unless the preferred
+            // language is also set here — keep both in sync so foreign speech is
+            // actually recognized in the patient's language.
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, speechLocale)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            // A few OEM recognizers silently no-op without a calling package.
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         }
         // Tear down any prior session and start with a clean recognizer.
         recognizerHolder.value?.let { old ->
@@ -270,6 +320,16 @@ fun GuidedIntakeScreen(
         } catch (_: Exception) {
             isListening = false
             if (voiceActiveRef.value) voicePhase = VoicePhase.Prompt
+        }
+    }
+    // Fire the one-shot retry armed by onSpeechError on a transient failure.
+    LaunchedEffect(sttRetryToken) {
+        if (sttRetryToken > 0 && voiceActiveRef.value) {
+            delay(400L)
+            if (voiceActiveRef.value && finalTranscript.isBlank()) {
+                voicePhase = VoicePhase.Listening
+                startListening()
+            }
         }
     }
     val cancelListening: () -> Unit = {
@@ -287,8 +347,11 @@ fun GuidedIntakeScreen(
                 voicePhase = VoicePhase.Listening
             }
             startListening()
-        } else if (voiceActiveRef.value) {
-            voicePhase = VoicePhase.Prompt
+        } else {
+            // Without RECORD_AUDIO the recognizer's app-op never starts ("Operation
+            // not started op=RECORD_AUDIO") and the mic silently does nothing.
+            Log.w(TTS_STT_TAG, "RECORD_AUDIO permission denied — voice input unavailable")
+            if (voiceActiveRef.value) voicePhase = VoicePhase.Prompt
         }
     }
 
@@ -302,10 +365,16 @@ fun GuidedIntakeScreen(
     // ── Text-to-speech ────────────────────────────────────────────────────────
     var ttsReady by remember { mutableStateOf(false) }
     var isSpeaking by remember { mutableStateOf(false) }
-    val tts = remember {
+    // The TTS engine's remote service can die (DeadObjectException on speak),
+    // leaving a dead binder. Bumping this generation rebuilds the engine; keying
+    // the instance on it disposes the old one and re-binds. ttsReady flips
+    // false→true on rebuild, which re-fires the speak effect to recover speech.
+    var ttsGeneration by remember { mutableIntStateOf(0) }
+    var ttsDidReinit by remember { mutableStateOf(false) }
+    val tts = remember(ttsGeneration) {
         TextToSpeech(context) { status -> ttsReady = status == TextToSpeech.SUCCESS }
     }
-    DisposableEffect(Unit) { onDispose { tts.shutdown() } }
+    DisposableEffect(tts) { onDispose { try { tts.stop(); tts.shutdown() } catch (_: Exception) {} } }
 
     // Leave the spoken-question phase: open the mic hands-free if we can, else
     // fall back to tap-to-speak. Guarded so it only acts while still "Speaking",
@@ -328,16 +397,34 @@ fun GuidedIntakeScreen(
 
     LaunchedEffect(state.userLanguage, ttsReady) {
         if (ttsReady) {
+            // Country-qualified locales: several engines report a bare language
+            // tag ("zh", "ar") as NOT_SUPPORTED but accept the regional variant
+            // (zh-CN, ar-SA) whose voice data is actually installed.
             val locale = when (state.userLanguage) {
-                "es" -> Locale("es"); "zh" -> Locale.CHINESE
-                "fr" -> Locale.FRENCH; "ja" -> Locale.JAPANESE
-                "pt" -> Locale("pt"); "ar" -> Locale("ar")
-                "ru" -> Locale("ru")
-                else -> Locale.ENGLISH
+                "es" -> Locale("es", "ES"); "zh" -> Locale.SIMPLIFIED_CHINESE
+                "fr" -> Locale("fr", "FR"); "ja" -> Locale.JAPANESE
+                "pt" -> Locale("pt", "BR"); "ar" -> Locale("ar", "SA")
+                "ru" -> Locale("ru", "RU")
+                else -> Locale.US
             }
-            tts.language = locale
+            // tts.language ignores the result, so a missing voice silently keeps
+            // the previous (English) voice — foreign questions then come out in
+            // English or not at all. Check the code and log so it's diagnosable.
+            val result = tts.setLanguage(locale)
+            if (result == TextToSpeech.LANG_MISSING_DATA ||
+                result == TextToSpeech.LANG_NOT_SUPPORTED
+            ) {
+                Log.w(
+                    TTS_STT_TAG,
+                    "TTS locale $locale unavailable (code=$result) for " +
+                        "'${state.userLanguage}'; voice data may need installing"
+                )
+            } else {
+                Log.i(TTS_STT_TAG, "TTS locale set to $locale (code=$result)")
+            }
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {
+                    Log.i(TTS_STT_TAG, "TTS speaking '$utteranceId' in $locale")
                     mainHandler.post { isSpeaking = true }
                 }
                 override fun onDone(utteranceId: String?) {
@@ -348,7 +435,15 @@ fun GuidedIntakeScreen(
                 }
                 @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) {
+                    Log.w(TTS_STT_TAG, "TTS error speaking '$utteranceId'")
                     // A TTS failure must NOT strand the user on "Speaking" — advance.
+                    mainHandler.post {
+                        isSpeaking = false
+                        proceedAfterQuestionRef.value()
+                    }
+                }
+                override fun onError(utteranceId: String?, errorCode: Int) {
+                    Log.w(TTS_STT_TAG, "TTS error speaking '$utteranceId' (code=$errorCode)")
                     mainHandler.post {
                         isSpeaking = false
                         proceedAfterQuestionRef.value()
@@ -357,6 +452,10 @@ fun GuidedIntakeScreen(
             })
         }
     }
+
+    // One engine-rebuild budget per question — keyed on the question only (NOT
+    // ttsReady), so the post-rebuild ttsReady flip can't re-arm it into a loop.
+    LaunchedEffect(currentQuestion?.text) { ttsDidReinit = false }
 
     // Auto-speak each new question, then open the mic once it finishes.
     //
@@ -371,13 +470,44 @@ fun GuidedIntakeScreen(
             finalTranscript = ""
             voiceEditText = ""
             micAmplitude = 0f
+            sttDidRetry = false  // each question gets a fresh retry budget
             val q = currentQuestion.text
                 .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
             voicePhase = VoicePhase.Speaking
-            val spokeOk = ttsReady && q.isNotBlank() &&
-                tts.speak(q, TextToSpeech.QUEUE_FLUSH, null, "question") == TextToSpeech.SUCCESS
 
-            if (!spokeOk) {
+            // TTS init is async — on the very first question ttsReady is often
+            // still false. Don't mistake that for a broken engine (which would
+            // skip speech and jump straight to the mic). Wait: this effect is
+            // keyed on ttsReady, so it re-fires and speaks the moment the engine
+            // is ready. The delay is only a safety net if it never initializes.
+            if (!ttsReady) {
+                delay(4000L)
+                if (voicePhase == VoicePhase.Speaking && !ttsReady) proceedAfterQuestionRef.value()
+                return@LaunchedEffect
+            }
+
+            val result = if (q.isNotBlank())
+                tts.speak(q, TextToSpeech.QUEUE_FLUSH, null, "question")
+            else TextToSpeech.ERROR
+
+            // A dead TTS service returns ERROR (DeadObjectException). Rebuild the
+            // engine once; the ttsReady flip re-fires this effect to speak again.
+            if (result == TextToSpeech.ERROR && ttsReady && !ttsDidReinit) {
+                Log.w(TTS_STT_TAG, "TTS speak failed — reinitializing engine and retrying")
+                ttsDidReinit = true
+                ttsReady = false
+                ttsGeneration++
+                return@LaunchedEffect
+            }
+            val spokeOk = result == TextToSpeech.SUCCESS
+
+            if (!spokeOk && ttsDidReinit && !ttsReady) {
+                // Engine is rebuilding — don't open the mic yet; this effect
+                // re-fires (and re-speaks) when ttsReady returns. Safety net only:
+                // if the rebuild never completes, advance so we never strand here.
+                delay(4000L)
+                if (voicePhase == VoicePhase.Speaking && !ttsReady) proceedAfterQuestionRef.value()
+            } else if (!spokeOk) {
                 // TTS won't speak at all — go to the mic almost immediately.
                 delay(300L)
                 if (voicePhase == VoicePhase.Speaking) proceedAfterQuestionRef.value()
@@ -429,6 +559,7 @@ fun GuidedIntakeScreen(
             ) {
                 if (isSpeaking) { tts.stop(); isSpeaking = false }
                 liveTranscript = ""
+                sttDidRetry = false  // fresh user-initiated session
                 voicePhase = VoicePhase.Listening
                 startListening()
             } else {
@@ -676,7 +807,8 @@ fun GuidedIntakeScreen(
                                             BigOptionButtons(
                                                 options = field.options,
                                                 onSelect = { viewModel.sendMessage(it) },
-                                                modifier = Modifier.fillMaxWidth()
+                                                modifier = Modifier.fillMaxWidth(),
+                                                optionLabels = field.optionLabels
                                             )
                                         }
                                         Spacer(Modifier.weight(1.2f))
@@ -1501,28 +1633,32 @@ private fun BigOptionButton(
 private fun BigOptionButtons(
     options: List<String>,
     onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    optionLabels: List<String> = emptyList()
 ) {
     val cols = if (options.size <= 3) options.size.coerceAtLeast(1) else 2
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        options.chunked(cols).forEach { rowOptions ->
+        options.indices.chunked(cols).forEach { rowIndices ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                rowOptions.forEach { option ->
+                rowIndices.forEach { i ->
+                    val canonical = options[i]
+                    // Display the localized label, but always submit the canonical value.
+                    val display = optionLabels.getOrNull(i)?.takeIf { it.isNotBlank() } ?: canonical
                     BigOptionButton(
-                        text = option,
+                        text = display,
                         selected = false,
-                        onClick = { onSelect(option) },
+                        onClick = { onSelect(canonical) },
                         modifier = Modifier.weight(1f)
                     )
                 }
                 // Keep buttons uniformly sized when the last row is partial.
-                repeat(cols - rowOptions.size) { Spacer(Modifier.weight(1f)) }
+                repeat(cols - rowIndices.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -1556,26 +1692,30 @@ private fun BigMultiSelect(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        field.options.chunked(cols).forEach { rowOptions ->
+        field.options.indices.chunked(cols).forEach { rowIndices ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                rowOptions.forEach { option ->
-                    val selected = option in currentSelections.value
+                rowIndices.forEach { i ->
+                    // Selections are tracked and submitted by canonical English value;
+                    // the button shows the localized label.
+                    val canonical = field.options[i]
+                    val display = field.optionLabels.getOrNull(i)?.takeIf { it.isNotBlank() } ?: canonical
+                    val selected = canonical in currentSelections.value
                     BigOptionButton(
-                        text = option,
+                        text = display,
                         selected = selected,
                         onClick = {
                             val updated = currentSelections.value.toMutableSet()
-                            if (selected) updated.remove(option) else updated.add(option)
+                            if (selected) updated.remove(canonical) else updated.add(canonical)
                             currentSelections.value = updated
                             viewModel.updateMultiSelectField(field.id, updated.joinToString(", "))
                         },
                         modifier = Modifier.weight(1f)
                     )
                 }
-                repeat(cols - rowOptions.size) { Spacer(Modifier.weight(1f)) }
+                repeat(cols - rowIndices.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -1748,7 +1888,7 @@ private fun ConsentFieldCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = field.fieldName,
+                text = field.translatedText ?: field.fieldName,
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -1757,11 +1897,14 @@ private fun ConsentFieldCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                field.options.forEach { option ->
+                field.options.indices.forEach { i ->
+                    // Chips display localized labels; selection keys off canonical values.
+                    val canonical = field.options[i]
+                    val display = field.optionLabels.getOrNull(i)?.takeIf { it.isNotBlank() } ?: canonical
                     FilterChip(
-                        selected = selectedOption == option,
-                        onClick = { if (enabled) onOptionSelected(option) },
-                        label = { Text(option, style = MaterialTheme.typography.bodySmall) }
+                        selected = selectedOption == canonical,
+                        onClick = { if (enabled) onOptionSelected(canonical) },
+                        label = { Text(display, style = MaterialTheme.typography.bodySmall) }
                     )
                 }
             }
@@ -1865,7 +2008,7 @@ private fun ConfirmPrefillPanel(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = field.fieldName,
+                                text = field.translatedText ?: field.fieldName,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                             )

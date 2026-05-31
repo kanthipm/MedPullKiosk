@@ -63,66 +63,31 @@ class IntakeConversationEngine @Inject constructor(
     // ─── Question Generation ──────────────────────────────────────────────────
 
     /**
-     * Generate a single warm question for the given field.
-     * Falls back to a template question on API failure — callers always get a string.
+     * Return a single warm question for the given field.
+     *
+     * Questions are pre-translated and baked into the schema (see
+     * scripts/translate_forms.py), so this is fully deterministic — no LLM call,
+     * no network, no xAI credits. The patient-facing text is already in the
+     * active language. Guardian mode and schema-less (uploaded) forms fall back
+     * to a template built from the field label.
      */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun generateQuestion(
         field: FormField,
         filledFields: List<FormField>,
         language: String,
         guardianMode: Boolean
     ): String {
-        val languageName = languageName(language)
-        val filledSummary = filledFields
-            .take(6)
-            .joinToString(", ") { "${it.id}=${it.value}" }
-            .ifBlank { "none yet" }
-
-        val prompt = buildString {
-            appendLine("Generate ONE warm, natural intake question in $languageName.")
-            appendLine("Field: ${field.id} (${field.fieldType.name.lowercase()})")
-            appendLine("Label: ${field.translatedText ?: field.fieldName}")
-            if (!field.description.isNullOrBlank()) {
-                appendLine("Schema instructions: ${field.description}")
-            }
-            if (field.options.isNotEmpty()) {
-                appendLine("Note: answer options shown as buttons in UI — do NOT list them in the question.")
-            }
-            if (guardianMode) {
-                appendLine("Use third-person framing — ask about 'the patient', not 'you'.")
-            }
-            appendLine("Already collected: $filledSummary")
-            appendLine()
-            append("Return JSON only: {\"question\": \"your question here\"}")
-        }
-
         logAudit("AI_QUESTION_GEN", "Field: ${field.id}")
 
-        return when (val resp = apiService.sendMessage(
-            userMessage = prompt,
-            conversationHistory = emptyList(),
-            systemPrompt = "You generate intake form questions. Respond with valid JSON only.",
-            model = Constants.AI.CONVERSATION_MODEL,
-            maxTokens = 150
-        )) {
-            is AiResponse.Success -> parseQuestionJson(resp.message) ?: fallbackQuestion(field, guardianMode)
-            is AiResponse.Error -> {
-                Log.w(TAG, "Question gen failed for ${field.id}: ${resp.message}")
-                fallbackQuestion(field, guardianMode)
-            }
+        // Guardian mode reframes to third person, which the baked first-person
+        // question can't express — derive from the (localized) label instead.
+        if (!guardianMode) {
+            val baked = field.translatedQuestion?.takeIf { it.isNotBlank() }
+                ?: field.question?.takeIf { it.isNotBlank() }
+            if (baked != null) return baked
         }
-    }
-
-    private fun parseQuestionJson(raw: String): String? {
-        return try {
-            val cleaned = raw.trim()
-                .removePrefix("```json").removePrefix("```")
-                .removeSuffix("```").trim()
-            JSONObject(cleaned).optString("question", "").ifBlank { null }
-        } catch (e: Exception) {
-            // If it's plain text (not JSON), use it directly if reasonable length
-            raw.trim().takeIf { it.isNotBlank() && it.length < 400 && !it.startsWith("{") }
-        }
+        return fallbackQuestion(field, guardianMode)
     }
 
     private fun fallbackQuestion(field: FormField, guardianMode: Boolean = false): String {
@@ -159,10 +124,18 @@ class IntakeConversationEngine @Inject constructor(
         allFields: List<FormField>,
         language: String
     ): FieldParseResult {
-        // Fast path: exact option match for radio/dropdown
+        // Fast path: exact option match for radio/dropdown — no LLM needed.
+        // Match against canonical English options AND the localized display
+        // labels, always returning the canonical English value (skip rules,
+        // consent, and export all key off canonical values).
         if (field.fieldType in listOf(FieldType.RADIO, FieldType.DROPDOWN)) {
-            val match = field.options.find { it.equals(userAnswer.trim(), ignoreCase = true) }
-            if (match != null) return FieldParseResult(value = match, confidence = 1.0f)
+            val answer = userAnswer.trim()
+            val canonical = field.options.find { it.equals(answer, ignoreCase = true) }
+            if (canonical != null) return FieldParseResult(value = canonical, confidence = 1.0f)
+            val localizedIdx = field.optionLabels.indexOfFirst { it.equals(answer, ignoreCase = true) }
+            if (localizedIdx in field.options.indices) {
+                return FieldParseResult(value = field.options[localizedIdx], confidence = 1.0f)
+            }
         }
 
         // Fast path: multi-select value comes in pre-formatted from chip UI
@@ -233,7 +206,8 @@ class IntakeConversationEngine @Inject constructor(
             conversationHistory = emptyList(),
             systemPrompt = "You extract and normalize field values from patient answers. Return valid JSON only.",
             model = Constants.AI.CONVERSATION_MODEL,
-            maxTokens = 400
+            maxTokens = 400,
+            preferGroq = true
         )) {
             is AiResponse.Success -> parseFieldResult(resp.message).normalizeAll(field, allFields)
             is AiResponse.Error -> {
@@ -549,7 +523,8 @@ class IntakeConversationEngine @Inject constructor(
             conversationHistory = emptyList(),
             systemPrompt = "You are a helpful medical assistant. Answer patient questions briefly and kindly. Return valid JSON only.",
             model = Constants.AI.CONVERSATION_MODEL,
-            maxTokens = 200
+            maxTokens = 200,
+            preferGroq = true
         )) {
             is AiResponse.Success -> {
                 try {
