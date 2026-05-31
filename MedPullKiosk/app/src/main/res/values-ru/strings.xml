@@ -221,6 +221,7 @@
     <string name="section_other">Другой</string>
 
     <!-- Voice Intake -->
+    <string name="voice_chime_instruction">Дождитесь сигнала, затем произнесите ответ</string>
     <string name="voice_accept">Принять</string>
     <string name="voice_rerecord">Перезаписать</string>
     <string name="voice_edit">Редактировать</string>

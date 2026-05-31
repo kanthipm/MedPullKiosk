@@ -84,7 +84,7 @@ class PdfFormFiller @Inject constructor(
             // ── Strategy 1: AcroForm ─────────────────────────────────────────
             val acroForm = document.documentCatalog?.acroForm
             if (acroForm != null && acroForm.fields.isNotEmpty()) {
-                val filled = fillAcroForm(acroForm, filledFields, document)
+                val filled = fillAcroForm(acroForm, filledFields)
                 if (filled > 0) {
                     Log.d(TAG, "AcroForm: filled $filled fields")
                     val out = File(outputDir, "filled_${System.currentTimeMillis()}.pdf")
@@ -131,8 +131,7 @@ class PdfFormFiller @Inject constructor(
 
     private fun fillAcroForm(
         acroForm: com.tom_roush.pdfbox.pdmodel.interactive.form.PDAcroForm,
-        fields: List<FormField>,
-        document: PDDocument
+        fields: List<FormField>
     ): Int {
         var count = 0
         for (field in fields) {
@@ -363,15 +362,13 @@ class PdfFormFiller @Inject constructor(
                 return p to cs
             }
 
-            var (currentPage, cs) = newPage()
+            var cs = newPage().second
             var y = PAGE.height - MARGIN
 
             fun checkNewPage(needed: Float) {
                 if (y - needed < MARGIN + 20f) {
                     cs.close()
-                    val (p, newCs) = newPage()
-                    currentPage = p
-                    cs = newCs
+                    cs = newPage().second
                     y = PAGE.height - MARGIN
                 }
             }

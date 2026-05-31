@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -110,7 +111,7 @@ fun FilledFormPreviewScreen(
                             try {
                                 val printManager = context.getSystemService(android.content.Context.PRINT_SERVICE) as PrintManager
                                 val jobName = state.formName.ifBlank { patientIntakeFormTitle }
-                                val webView = WebView(context).apply {
+                                WebView(context).apply {
                                     webViewClient = WebViewClient()
                                     loadUrl("file://${file.absolutePath}")
                                     setWebViewClient(object : WebViewClient() {
@@ -156,7 +157,7 @@ fun FilledFormPreviewScreen(
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.sent))
                         } else {
-                            Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.AutoMirrored.Filled.Send, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.send_to_clinic))
                         }

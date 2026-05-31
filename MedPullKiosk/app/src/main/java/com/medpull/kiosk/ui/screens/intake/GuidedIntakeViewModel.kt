@@ -587,8 +587,7 @@ class GuidedIntakeViewModel @Inject constructor(
                 val result = engine.parseAnswer(
                     field = targetField,
                     userAnswer = message,
-                    allFields = state.fields,
-                    language = state.userLanguage
+                    allFields = state.fields
                 )
 
                 when {

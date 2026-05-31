@@ -4,10 +4,13 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.speech.RecognitionListener
+import android.speech.RecognitionSupport
+import android.speech.RecognitionSupportCallback
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
@@ -47,6 +50,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -304,6 +308,15 @@ fun GuidedIntakeScreen(
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, speechLocale)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            // Give patients much longer to think and pause before the recognizer
+            // decides they're done. Older / slower speakers routinely pause
+            // mid-sentence; the default ~1s of trailing silence cut them off. We
+            // ask for several seconds of allowable silence and a long minimum
+            // listening window. (Google's recognizer may clamp these, but many
+            // OEM engines honor them, and they never make the timeout shorter.)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 10000L)
             // A few OEM recognizers silently no-op without a calling package.
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         }
@@ -355,6 +368,14 @@ fun GuidedIntakeScreen(
         }
     }
 
+    // Resolve the mic permission during form load — BEFORE the first question —
+    // so the very first question can auto-open the mic hands-free instead of
+    // stalling on a permission dialog mid-question. Unlike micPermissionLauncher,
+    // this one only pre-resolves the grant; it never starts a listening session.
+    val micPrewarmLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* pre-resolve only; auto-listen is driven by the question flow */ }
+
     DisposableEffect(Unit) {
         onDispose {
             recognizerHolder.value?.let { try { it.destroy() } catch (_: Exception) {} }
@@ -371,6 +392,11 @@ fun GuidedIntakeScreen(
     // false→true on rebuild, which re-fires the speak effect to recover speech.
     var ttsGeneration by remember { mutableIntStateOf(0) }
     var ttsDidReinit by remember { mutableStateOf(false) }
+    // The very first real speak() on a freshly-bound engine is slow (the service
+    // binds and the voice pipeline spins up). We prime it once with a silent
+    // utterance during form load so the first spoken QUESTION plays immediately
+    // instead of lagging. Keyed per engine instance via ttsGeneration.
+    var ttsWarmedUp by remember(ttsGeneration) { mutableStateOf(false) }
     val tts = remember(ttsGeneration) {
         TextToSpeech(context) { status -> ttsReady = status == TextToSpeech.SUCCESS }
     }
@@ -421,6 +447,14 @@ fun GuidedIntakeScreen(
                 )
             } else {
                 Log.i(TTS_STT_TAG, "TTS locale set to $locale (code=$result)")
+            }
+            // Prime the engine once (silently) so the first real question speaks
+            // without the cold-start delay. playSilentUtterance makes no sound.
+            if (!ttsWarmedUp) {
+                ttsWarmedUp = true
+                try {
+                    tts.playSilentUtterance(150L, TextToSpeech.QUEUE_FLUSH, "warmup")
+                } catch (_: Exception) {}
             }
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {
@@ -534,13 +568,51 @@ fun GuidedIntakeScreen(
         }
     }
 
-    // Request mic permission up front so hands-free auto-listen can work.
-    LaunchedEffect(voiceFirstActive) {
-        if (voiceFirstActive && speechAvailable &&
+    // Request mic permission as soon as the screen opens (during form load) so
+    // hands-free auto-listen is ready by the very first question and never has to
+    // pause for a permission dialog mid-question.
+    LaunchedEffect(speechAvailable) {
+        if (speechAvailable &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            micPrewarmLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    // Pre-bind the speech-recognition service during form load. The first real
+    // startListening() otherwise pays the full RecognitionService bind cost — the
+    // visible "microphone coming on" lag on the first one or two questions. We warm
+    // it with a THROWAWAY recognizer and only query support (checkRecognitionSupport,
+    // API 33+) — never startListening — so the mic never opens and no chime plays.
+    // The real per-session recognizers are still created fresh in startListening();
+    // this only warms the underlying service process so that bind is already paid.
+    var sttWarmedUp by remember { mutableStateOf(false) }
+    LaunchedEffect(speechAvailable) {
+        if (speechAvailable && !sttWarmedUp &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        ) {
+            sttWarmedUp = true
+            try {
+                val warm = SpeechRecognizer.createSpeechRecognizer(context)
+                val warmIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocale)
+                    putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+                }
+                warm.checkRecognitionSupport(
+                    warmIntent,
+                    context.mainExecutor,
+                    object : RecognitionSupportCallback {
+                        override fun onSupportResult(recognitionSupport: RecognitionSupport) {
+                            try { warm.destroy() } catch (_: Exception) {}
+                        }
+                        override fun onError(error: Int) {
+                            try { warm.destroy() } catch (_: Exception) {}
+                        }
+                    }
+                )
+            } catch (_: Exception) {}
         }
     }
 
@@ -631,7 +703,7 @@ fun GuidedIntakeScreen(
                 else onNavigateBack()
             }) {
                 Icon(
-                    Icons.Default.ArrowBack, stringResource(R.string.back),
+                    Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                 )
             }
@@ -788,9 +860,9 @@ fun GuidedIntakeScreen(
                                         Spacer(Modifier.weight(0.8f))
                                         Text(
                                             text = displayText,
-                                            style = MaterialTheme.typography.displaySmall.copy(
+                                            style = MaterialTheme.typography.displayMedium.copy(
                                                 fontWeight = FontWeight.SemiBold,
-                                                lineHeight = 46.sp
+                                                lineHeight = 56.sp
                                             ),
                                             color = MaterialTheme.colorScheme.onSurface,
                                             textAlign = TextAlign.Center,
@@ -825,8 +897,8 @@ fun GuidedIntakeScreen(
                                             text = displayText,
                                             style = MaterialTheme.typography.headlineMedium.copy(
                                                 fontWeight = FontWeight.Normal,
-                                                fontSize = 28.sp,
-                                                lineHeight = 38.sp
+                                                fontSize = 34.sp,
+                                                lineHeight = 44.sp
                                             ),
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -908,27 +980,36 @@ fun GuidedIntakeScreen(
                                 Button(
                                     onClick = sendMessage,
                                     enabled = messageText.isNotBlank(),
-                                    shape = RoundedCornerShape(6.dp),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.heightIn(min = 60.dp),
+                                    contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
                                 ) {
-                                    Text(stringResource(R.string.ok), fontWeight = FontWeight.SemiBold)
-                                    Spacer(Modifier.width(4.dp))
-                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(14.dp))
+                                    Text(
+                                        stringResource(R.string.ok),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(22.dp))
                                 }
                                 Text(
                                     text = stringResource(R.string.press_enter),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                 )
                             }
 
                             Spacer(Modifier.weight(1f))
 
-                            // Handwriting toggle
-                            IconButton(onClick = { showHandwriting = !showHandwriting }) {
+                            // Handwriting / keyboard toggle
+                            IconButton(
+                                onClick = { showHandwriting = !showHandwriting },
+                                modifier = Modifier.size(56.dp)
+                            ) {
                                 Icon(
                                     if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
                                     contentDescription = if (showHandwriting) stringResource(R.string.keyboard) else stringResource(R.string.write),
+                                    modifier = Modifier.size(32.dp),
                                     tint = if (showHandwriting)
                                         MaterialTheme.colorScheme.primary
                                     else
@@ -951,11 +1032,13 @@ fun GuidedIntakeScreen(
                                             micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                         }
                                     },
-                                    enabled = !state.isLoadingResponse
+                                    enabled = !state.isLoadingResponse,
+                                    modifier = Modifier.size(56.dp)
                                 ) {
                                     Icon(
                                         if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
                                         contentDescription = if (isListening) stringResource(R.string.stop) else stringResource(R.string.speak),
+                                        modifier = Modifier.size(32.dp),
                                         tint = if (isListening)
                                             MaterialTheme.colorScheme.error
                                         else
@@ -976,11 +1059,13 @@ fun GuidedIntakeScreen(
                                                 .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
                                             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "q")
                                         }
-                                    }
+                                    },
+                                    modifier = Modifier.size(56.dp)
                                 ) {
                                     Icon(
-                                        if (isSpeaking) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                        if (isSpeaking) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
                                         contentDescription = if (isSpeaking) stringResource(R.string.stop_reading) else stringResource(R.string.read_aloud),
+                                        modifier = Modifier.size(32.dp),
                                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                                     )
                                 }
@@ -1014,7 +1099,7 @@ fun GuidedIntakeScreen(
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(52.dp)
                 ) {
-                    Icon(Icons.Default.Chat, contentDescription = stringResource(R.string.open_conversation_history))
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = stringResource(R.string.open_conversation_history))
                 }
                 // Badge showing message count
                 if (unreadCount > 0) {
@@ -1064,7 +1149,7 @@ fun GuidedIntakeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Default.Chat, null,
+                                Icons.AutoMirrored.Filled.Chat, null,
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -1142,7 +1227,7 @@ fun GuidedIntakeScreen(
                                 },
                                 enabled = chatText.isNotBlank() && !state.isLoadingResponse
                             ) {
-                                Icon(Icons.Default.Send, stringResource(R.string.voice_send))
+                                Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.voice_send))
                             }
                         }
                     }
@@ -1227,7 +1312,8 @@ private fun TypeformTextInput(
         textStyle = MaterialTheme.typography.headlineSmall.copy(
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Light,
-            fontSize = 24.sp
+            fontSize = 30.sp,
+            lineHeight = 38.sp
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -1245,7 +1331,8 @@ private fun TypeformTextInput(
                             text = stringResource(R.string.type_answer),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Light,
-                                fontSize = 24.sp,
+                                fontSize = 30.sp,
+                                lineHeight = 38.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
                             )
                         )
@@ -1318,14 +1405,35 @@ private fun VoiceFirstQuestion(
 
             Text(
                 text = questionText,
-                style = MaterialTheme.typography.displaySmall.copy(
+                style = MaterialTheme.typography.displayMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    lineHeight = 46.sp
+                    lineHeight = 56.sp
                 ),
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Tell the patient exactly when to talk. Android's recognizer plays a
+            // chime as the mic opens; this instruction is shown while the question
+            // is being read, while the mic is opening, and when idle — but hidden
+            // once they're reviewing or editing an answer.
+            if (phase == VoicePhase.Speaking ||
+                phase == VoicePhase.Listening ||
+                phase == VoicePhase.Prompt
+            ) {
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    text = stringResource(R.string.voice_chime_instruction),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 30.sp
+                    ),
+                    color = blue.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Spacer(Modifier.height(28.dp))
 
@@ -1369,8 +1477,9 @@ private fun VoiceFirstQuestion(
                     if (transcript.isNotBlank()) {
                         Text(
                             text = transcript,
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Medium,
+                                lineHeight = 40.sp
                             ),
                             color = blue,
                             textAlign = TextAlign.Center,
@@ -1384,7 +1493,7 @@ private fun VoiceFirstQuestion(
                         }
                         Text(
                             text = hint,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.headlineSmall,
                             color = blue.copy(alpha = 0.5f),
                             textAlign = TextAlign.Center,
                             modifier = Modifier
@@ -1397,38 +1506,52 @@ private fun VoiceFirstQuestion(
 
             Spacer(Modifier.height(28.dp))
 
-            // Accept / Re-record / Edit — after speech ends
+            // Accept / Re-record / Edit — after speech ends. Large, kiosk-friendly
+            // touch targets so older patients can tap them easily.
             if (phase == VoicePhase.Review && finalTranscript.isNotBlank()) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
                         onClick = onAccept,
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.heightIn(min = 72.dp),
+                        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 18.dp)
                     ) {
-                        Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.voice_accept), fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Default.Check, null, modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            stringResource(R.string.voice_accept),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                     OutlinedButton(
                         onClick = onRerecord,
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.heightIn(min = 72.dp),
+                        contentPadding = PaddingValues(horizontal = 26.dp, vertical = 18.dp)
                     ) {
-                        Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.voice_rerecord))
+                        Icon(Icons.Default.Replay, null, modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            stringResource(R.string.voice_rerecord),
+                            style = MaterialTheme.typography.titleLarge
+                        )
                     }
                     OutlinedButton(
                         onClick = onEdit,
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.heightIn(min = 72.dp),
+                        contentPadding = PaddingValues(horizontal = 26.dp, vertical = 18.dp)
                     ) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.voice_edit))
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            stringResource(R.string.voice_edit),
+                            style = MaterialTheme.typography.titleLarge
+                        )
                     }
                 }
             }
@@ -1436,24 +1559,28 @@ private fun VoiceFirstQuestion(
             Spacer(Modifier.weight(1.15f))
         }
 
-        // Low-key "Type your response" — out of the way but easy to tap
+        // "Type your response" — out of the way but a large, easy tap target
+        // for patients who prefer the keyboard over speaking.
         if (phase != VoicePhase.Editing) {
-            TextButton(
+            OutlinedButton(
                 onClick = onStartTyping,
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(horizontal = 28.dp, vertical = 16.dp),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 20.dp)
+                    .heightIn(min = 64.dp)
+                    .padding(bottom = 24.dp)
             ) {
                 Icon(
                     Icons.Default.Keyboard, null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(
                     text = stringResource(R.string.voice_type_response),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                 )
             }
         }
@@ -1540,7 +1667,7 @@ private fun VoiceEditField(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
-            textStyle = MaterialTheme.typography.headlineSmall.copy(
+            textStyle = MaterialTheme.typography.headlineMedium.copy(
                 color = accentColor,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center
@@ -1560,7 +1687,7 @@ private fun VoiceEditField(
                         if (value.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.voice_type_response),
-                                style = MaterialTheme.typography.headlineSmall.copy(
+                                style = MaterialTheme.typography.headlineMedium.copy(
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
                                     textAlign = TextAlign.Center
                                 )
@@ -1572,17 +1699,23 @@ private fun VoiceEditField(
                 }
             }
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
         Button(
             onClick = onSend,
             enabled = value.isNotBlank(),
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .heightIn(min = 64.dp),
+            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
         ) {
-            Text(stringResource(R.string.voice_send), fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.width(6.dp))
-            Icon(Icons.Default.Send, null, modifier = Modifier.size(16.dp))
+            Text(
+                stringResource(R.string.voice_send),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.width(10.dp))
+            Icon(Icons.AutoMirrored.Filled.Send, null, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -1605,17 +1738,17 @@ private fun BigOptionButton(
         shape = RoundedCornerShape(16.dp),
         color = if (selected) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier.heightIn(min = 88.dp)
+        modifier = modifier.heightIn(min = 104.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Medium,
                 color = if (selected) MaterialTheme.colorScheme.onPrimary
                         else MaterialTheme.colorScheme.onSurface,
@@ -1861,7 +1994,7 @@ private fun ConsentBatchPanel(
                     }
                     Text(stringResource(R.string.continue_action))
                     Spacer(Modifier.width(4.dp))
-                    Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(18.dp))
                 }
             }
         }

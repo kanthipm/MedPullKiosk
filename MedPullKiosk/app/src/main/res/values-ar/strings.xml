@@ -221,6 +221,7 @@
     <string name="section_other">أخرى</string>
 
     <!-- Voice Intake -->
+    <string name="voice_chime_instruction">انتظر صوت التنبيه ثم تحدث بإجابتك</string>
     <string name="voice_accept">اقبل</string>
     <string name="voice_rerecord">إعادة التسجيل</string>
     <string name="voice_edit">تحرير</string>

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -86,7 +87,7 @@ fun FhirImportDialog(
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
                             IconButton(onClick = { onSearch(searchQuery) }) {
-                                Icon(Icons.Default.Send, contentDescription = stringResource(R.string.search))
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.search))
                             }
                         }
                     }
@@ -203,7 +204,7 @@ private fun PatientResultCard(
                 )
                 if (patient.dateOfBirth != null) {
                     Text(
-                        text = stringResource(R.string.patient_dob, patient.dateOfBirth!!),
+                        text = stringResource(R.string.patient_dob, patient.dateOfBirth),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )

@@ -849,8 +849,6 @@ class TextractService @Inject constructor(
                 name = s3Key
             }
 
-            val document = Document().withS3Object(s3Object)
-
             val request = StartDocumentAnalysisRequest()
                 .withDocumentLocation(DocumentLocation().withS3Object(s3Object))
                 .withFeatureTypes("FORMS", "TABLES")

@@ -47,6 +47,7 @@ class VerificationViewModel @Inject constructor(
     /**
      * Verify email with code
      */
+    @Suppress("UNUSED_PARAMETER")
     fun verify(onSuccess: () -> Unit, onNavigateToLogin: () -> Unit) {
         val email = _uiState.value.email
         val code = _uiState.value.code

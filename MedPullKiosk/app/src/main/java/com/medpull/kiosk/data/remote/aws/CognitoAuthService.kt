@@ -40,6 +40,7 @@ class CognitoAuthService @Inject constructor(
      *
      * For testing purposes, this returns a success result after a delay.
      */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun signUp(
         email: String,
         password: String,
@@ -151,6 +152,7 @@ class CognitoAuthService @Inject constructor(
     /**
      * Refresh access token
      */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun refreshSession(email: String, refreshToken: String): CognitoUserSession? {
         return try {
             getCurrentSession(email)
@@ -165,6 +167,7 @@ class CognitoAuthService @Inject constructor(
      * STUB IMPLEMENTATION: Using stub to avoid potential SDK interface issues.
      * For testing purposes, this returns success after a delay.
      */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun confirmSignUp(email: String, confirmationCode: String): Boolean {
         delay(1000)
         return true
@@ -198,6 +201,7 @@ class CognitoAuthService @Inject constructor(
      * STUB IMPLEMENTATION: AWS SDK 2.77.0 has interface incompatibility issues.
      * For testing purposes, this returns success after a delay.
      */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun confirmForgotPassword(email: String, confirmationCode: String, newPassword: String): Boolean {
         delay(1000)
         return true

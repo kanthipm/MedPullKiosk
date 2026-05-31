@@ -221,6 +221,7 @@
     <string name="section_other">その他</string>
 
     <!-- Voice Intake -->
+    <string name="voice_chime_instruction">チャイムが鳴ったら、お答えください</string>
     <string name="voice_accept">承諾する</string>
     <string name="voice_rerecord">再録音</string>
     <string name="voice_edit">[編集]</string>

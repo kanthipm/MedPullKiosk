@@ -221,6 +221,7 @@
     <string name="section_other">Outros</string>
 
     <!-- Voice Intake -->
+    <string name="voice_chime_instruction">Aguarde o sinal sonoro e depois diga sua resposta</string>
     <string name="voice_accept">Aceitar</string>
     <string name="voice_rerecord">regravar</string>
     <string name="voice_edit">Editar</string>

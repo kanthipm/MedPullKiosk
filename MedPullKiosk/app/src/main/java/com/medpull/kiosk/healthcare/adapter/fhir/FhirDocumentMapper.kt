@@ -82,7 +82,7 @@ class FhirDocumentMapper @Inject constructor() {
                     data = att.data,
                     url = att.url,
                     title = att.title,
-                    size = att.size?.toLong()
+                    size = att.size.toLong()
                 )
             } ?: emptyList()
         )

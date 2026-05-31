@@ -108,7 +108,7 @@ class PdfUtils @Inject constructor(
                         // Draw text
                         stream.beginText()
                         stream.newLineAtOffset(x, y)
-                        stream.showText(field.value ?: "")
+                        stream.showText(field.value)
                         stream.endText()
 
                         Log.d(TAG, "Added field value: ${field.fieldName} = ${field.value}")

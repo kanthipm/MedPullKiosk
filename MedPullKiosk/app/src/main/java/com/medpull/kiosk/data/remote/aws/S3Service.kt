@@ -103,12 +103,6 @@ class S3Service @Inject constructor(
                 setMetadata(metadata)
             }
 
-            // Upload with progress listener
-            putRequest.setGeneralProgressListener { progressEvent ->
-                val percentTransferred = (progressEvent.bytesTransferred.toDouble() / file.length() * 100).toInt()
-                // Note: Flow emissions from callbacks need careful handling
-            }
-
             // Perform upload
             withContext(Dispatchers.IO) {
                 s3Client.putObject(putRequest)

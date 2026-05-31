@@ -121,8 +121,7 @@ class IntakeConversationEngine @Inject constructor(
     suspend fun parseAnswer(
         field: FormField,
         userAnswer: String,
-        allFields: List<FormField>,
-        language: String
+        allFields: List<FormField>
     ): FieldParseResult {
         // Fast path: exact option match for radio/dropdown — no LLM needed.
         // Match against canonical English options AND the localized display
@@ -537,7 +536,7 @@ class IntakeConversationEngine @Inject constructor(
                         ?: "Happy to help! This field just needs your ${field.fieldName.lowercase()}."
                 }
             }
-            is AiResponse.Error -> buildOfflineClarification(question, field)
+            is AiResponse.Error -> buildOfflineClarification(field)
         }
     }
 
@@ -546,7 +545,7 @@ class IntakeConversationEngine @Inject constructor(
      * so patients aren't left with a generic "please fill it in" message when the
      * AI API is unavailable.
      */
-    private fun buildOfflineClarification(question: String, field: FormField): String {
+    private fun buildOfflineClarification(field: FormField): String {
         val label = field.fieldName.trimEnd('?', ':').trim()
         val desc = field.description?.takeIf { it.isNotBlank() && !it.startsWith("ai_note") }
 

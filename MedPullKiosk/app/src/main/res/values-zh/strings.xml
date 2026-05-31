@@ -221,6 +221,7 @@
     <string name="section_other">其他</string>
 
     <!-- Voice Intake -->
+    <string name="voice_chime_instruction">听到提示音后，请说出您的回答</string>
     <string name="voice_accept">接受</string>
     <string name="voice_rerecord">重新录制</string>
     <string name="voice_edit">编辑</string>

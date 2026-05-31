@@ -162,7 +162,6 @@ class GuidedIntakeRepository @Inject constructor(
      */
     suspend fun getFieldsToSkip(
         formId: String,
-        flow: FormIntakeFlow,
         fields: List<FormField>
     ): List<String> {
         val rules = getBranchingRules(formId)
@@ -192,7 +191,6 @@ class GuidedIntakeRepository @Inject constructor(
      * Get questions excluding skipped fields
      */
     suspend fun getActiveQuestions(
-        formId: String,
         questions: List<IntakeQuestion>,
         flow: FormIntakeFlow
     ): List<IntakeQuestion> {

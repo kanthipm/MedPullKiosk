@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -400,7 +401,7 @@ fun AiChatDialog(
                             modifier = Modifier.size(56.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Send,
+                                imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = stringResource(R.string.voice_send),
                                 tint = if (messageText.isNotBlank() && !state.isLoading) {
                                     MaterialTheme.colorScheme.onPrimaryContainer
@@ -516,7 +517,7 @@ private fun ChatMessageBubble(
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
-                            imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
+                            imageVector = if (isSpeaking) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = if (isSpeaking) {
                                 stringResource(R.string.stop_reading)
                             } else {

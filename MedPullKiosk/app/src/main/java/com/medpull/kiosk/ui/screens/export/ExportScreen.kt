@@ -2,6 +2,7 @@ package com.medpull.kiosk.ui.screens.export
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,7 +53,7 @@ fun ExportScreen(
                 title = { Text(stringResource(R.string.export_pdf)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -83,8 +84,7 @@ fun ExportScreen(
                         isFhirConfigured = viewModel.isFhirConfigured(),
                         onExportToCloud = { viewModel.exportToS3() },
                         onExportToLocal = { viewModel.exportToLocal() },
-                        onExportToFhir = { viewModel.exportToFhir() },
-                        onPreview = { viewModel.previewExport() }
+                        onExportToFhir = { viewModel.exportToFhir() }
                     )
                 }
             }
@@ -223,8 +223,7 @@ private fun ExportOptions(
     isFhirConfigured: Boolean = false,
     onExportToCloud: () -> Unit,
     onExportToLocal: () -> Unit,
-    onExportToFhir: () -> Unit = {},
-    onPreview: () -> Unit
+    onExportToFhir: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier

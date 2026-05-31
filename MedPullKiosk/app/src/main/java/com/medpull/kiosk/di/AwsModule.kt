@@ -80,9 +80,9 @@ object AwsModule {
 
         val s3Client = AmazonS3Client(
             credentialsProvider,
+            Region.getRegion(awsRegion),
             clientConfiguration
         )
-        s3Client.setRegion(Region.getRegion(awsRegion))
         return s3Client
     }
 

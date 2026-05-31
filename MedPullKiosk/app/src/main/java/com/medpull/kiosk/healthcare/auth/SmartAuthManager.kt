@@ -41,7 +41,7 @@ class SmartAuthManager @Inject constructor(
             try {
                 val issuerUri = Uri.parse(config.baseUrl)
                 val serviceConfig = suspendCancellableCoroutine<AuthorizationServiceConfiguration?> { continuation ->
-                    AuthorizationServiceConfiguration.fetchFromIssuer(issuerUri) { cfg, ex ->
+                    AuthorizationServiceConfiguration.fetchFromIssuer(issuerUri) { cfg, _ ->
                         if (cfg != null) {
                             continuation.resume(cfg)
                         } else {
@@ -161,7 +161,7 @@ class SmartAuthManager @Inject constructor(
 
                 val service = AuthorizationService(context)
                 val accessToken = suspendCancellableCoroutine<String?> { continuation ->
-                    state.performActionWithFreshTokens(service) { token, _, ex ->
+                    state.performActionWithFreshTokens(service) { token, _, _ ->
                         if (token != null) {
                             secureStorageManager.saveSecureString(KEY_FHIR_ACCESS_TOKEN, token)
                             continuation.resume(token)
