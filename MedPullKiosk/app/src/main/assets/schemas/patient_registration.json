@@ -1,0 +1,865 @@
+{
+  "form_id": "patient_registration",
+  "form_name": "Brownswood Patient Registration",
+  "version": "1.0",
+  "ai_instructions": "This is the AccelHealth Patient Registration form. Collect all required fields conversationally and warmly. Gender identity and sexual orientation sections are optional for patients under 18 — present them but make clear they are optional. The parent/guardian section only applies if the patient is a minor. SSN, signature, and age are collected at the review step.",
+  "skip_during_intake": [
+    "social_security_number",
+    "parent1_ssn",
+    "parent2_ssn",
+    "patient_signature",
+    "signature_date"
+  ],
+  "consent_batch_fields": [
+    "leave_phone_messages",
+    "mail_correspondence",
+    "text_reminders",
+    "email_information"
+  ],
+  "skip_rules": [
+    {
+      "when_field": "is_minor",
+      "equals": "No",
+      "skip": [
+        "parent1_name", "parent1_mailing_address", "parent1_same_as_above",
+        "parent1_city_state_zip", "parent1_date_of_birth", "parent1_home_phone",
+        "parent1_work_phone", "parent1_cell_phone", "parent1_ssn",
+        "parent1_employer", "parent1_relationship",
+        "parent2_name", "parent2_mailing_address", "parent2_same_as_above",
+        "parent2_city_state_zip", "parent2_date_of_birth", "parent2_home_phone",
+        "parent2_work_phone", "parent2_cell_phone", "parent2_ssn",
+        "parent2_employer", "parent2_relationship"
+      ]
+    },
+    {
+      "when_field": "parent1_same_as_above",
+      "equals": "Yes",
+      "skip": ["parent1_city_state_zip"]
+    },
+    {
+      "when_field": "parent2_same_as_above",
+      "equals": "Yes",
+      "skip": ["parent2_city_state_zip"]
+    }
+  ],
+  "sections": [
+    {
+      "name": "Personal Information",
+      "fields": [
+        {
+          "id": "last_name",
+          "label": "Last Name",
+          "type": "text",
+          "required": true,
+          "question": "What is your last name?",
+          "i18n": {
+            "es": { "question": "¿Cuál es su apellido?", "label": "Apellido" }
+          }
+        },
+        {
+          "id": "first_name",
+          "label": "First Name",
+          "type": "text",
+          "required": true,
+          "question": "What is your first name?",
+          "i18n": {
+            "es": { "question": "¿Cuál es su nombre?", "label": "Nombre" }
+          }
+        },
+        {
+          "id": "middle_name",
+          "label": "Middle Name",
+          "type": "text",
+          "required": false,
+          "question": "What is your middle name? Say 'skip' if you don't have one.",
+          "i18n": {
+            "es": { "question": "¿Cuál es su segundo nombre? Diga 'omitir' si no tiene.", "label": "Segundo nombre" }
+          }
+        },
+        {
+          "id": "social_security_number",
+          "label": "Social Security Number",
+          "type": "text",
+          "required": false,
+          "ai_note": "Sensitive — collected at review step, not during voice intake.",
+          "question": "What is your Social Security Number?",
+          "i18n": {
+            "es": { "question": "¿Cuál es su número de seguro social?", "label": "Número de Seguro Social" }
+          }
+        },
+        {
+          "id": "age",
+          "label": "Age",
+          "type": "number",
+          "required": false,
+          "ai_note": "Collected at review — can be derived from date of birth.",
+          "question": "How old are you?",
+          "i18n": {
+            "es": { "question": "¿Cuántos años tiene?", "label": "Edad" }
+          }
+        },
+        {
+          "id": "date_of_birth",
+          "label": "Date of Birth",
+          "type": "date",
+          "required": true,
+          "question": "What is your date of birth?",
+          "i18n": {
+            "es": { "question": "¿Cuál es su fecha de nacimiento?", "label": "Fecha de nacimiento" }
+          }
+        },
+        {
+          "id": "is_minor",
+          "label": "Is Patient a Minor?",
+          "type": "radio",
+          "required": true,
+          "options": ["Yes", "No"],
+          "ai_note": "Ask immediately after DOB. If Yes, parent/guardian section is required.",
+          "question": "Are you under 18 years old?",
+          "i18n": {
+            "es": {
+              "question": "¿Es menor de 18 años?",
+              "label": "¿Es menor de edad?",
+              "options": ["Sí", "No"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Address",
+      "fields": [
+        {
+          "id": "mailing_address",
+          "label": "Mailing Address",
+          "type": "text",
+          "required": true,
+          "question": "What is your mailing address — street number and name?",
+          "i18n": {
+            "es": { "question": "¿Cuál es su dirección postal?", "label": "Dirección postal" }
+          }
+        },
+        {
+          "id": "apt_no",
+          "label": "Apt / Unit No.",
+          "type": "text",
+          "required": false,
+          "question": "Do you have an apartment or unit number? Say 'none' if not.",
+          "i18n": {
+            "es": { "question": "¿Tiene número de apartamento? Diga 'ninguno' si no.", "label": "Número de apartamento" }
+          }
+        },
+        {
+          "id": "city",
+          "label": "City",
+          "type": "text",
+          "required": true,
+          "question": "What city do you live in?",
+          "i18n": {
+            "es": { "question": "¿En qué ciudad vive?", "label": "Ciudad" }
+          }
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "type": "text",
+          "required": true,
+          "question": "What state?",
+          "i18n": {
+            "es": { "question": "¿En qué estado?", "label": "Estado" }
+          }
+        },
+        {
+          "id": "zip",
+          "label": "ZIP Code",
+          "type": "zip",
+          "required": true,
+          "question": "What is your ZIP code?",
+          "i18n": {
+            "es": { "question": "¿Cuál es su código postal?", "label": "Código postal" }
+          }
+        },
+        {
+          "id": "county",
+          "label": "County",
+          "type": "text",
+          "required": false,
+          "question": "What county do you live in? Optional — say 'skip' to continue.",
+          "i18n": {
+            "es": { "question": "¿En qué condado vive? Opcional.", "label": "Condado" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contact Information",
+      "fields": [
+        {
+          "id": "home_phone",
+          "label": "Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your home phone number? Say 'none' if you don't have one.",
+          "i18n": {
+            "es": { "question": "¿Cuál es su teléfono de casa?", "label": "Teléfono de casa" }
+          }
+        },
+        {
+          "id": "work_phone",
+          "label": "Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your work phone number? Optional.",
+          "i18n": {
+            "es": { "question": "¿Cuál es su teléfono del trabajo?", "label": "Teléfono del trabajo" }
+          }
+        },
+        {
+          "id": "cell_phone",
+          "label": "Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your cell phone number? Optional.",
+          "i18n": {
+            "es": { "question": "¿Cuál es su número de celular?", "label": "Celular" }
+          }
+        },
+        {
+          "id": "emergency_contact_name",
+          "label": "Emergency Contact Name",
+          "type": "text",
+          "required": false,
+          "question": "Who should we contact in an emergency? Please give their name.",
+          "i18n": {
+            "es": { "question": "¿A quién debemos contactar en una emergencia?", "label": "Nombre del contacto de emergencia" }
+          }
+        },
+        {
+          "id": "emergency_contact_phone",
+          "label": "Emergency Contact Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is their phone number?",
+          "i18n": {
+            "es": { "question": "¿Cuál es su número de teléfono?", "label": "Teléfono del contacto de emergencia" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Demographics",
+      "fields": [
+        {
+          "id": "birth_sex",
+          "label": "Birth Sex",
+          "type": "radio",
+          "required": true,
+          "options": ["Male", "Female"],
+          "question": "What is your sex assigned at birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su sexo de nacimiento?",
+              "label": "Sexo de nacimiento",
+              "options": ["Masculino", "Femenino"]
+            }
+          }
+        },
+        {
+          "id": "current_gender",
+          "label": "Current Gender",
+          "type": "radio",
+          "required": true,
+          "options": ["Male", "Female", "Undifferentiated"],
+          "question": "What is your current gender?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su género actual?",
+              "label": "Género actual",
+              "options": ["Masculino", "Femenino", "No diferenciado"]
+            }
+          }
+        },
+        {
+          "id": "gender_identity",
+          "label": "Gender Identity",
+          "type": "radio",
+          "required": false,
+          "ai_note": "Optional for patients under 18. Present warmly and note it is optional.",
+          "options": ["Male", "Female", "Transgender Male / FTM / Trans Man", "Transgender Female / MTF / Trans Woman", "Genderqueer - Neither Male nor Female", "Other", "Choose Not To Answer"],
+          "question": "How do you identify your gender? This section is optional — you may choose not to answer.",
+          "i18n": {
+            "es": {
+              "question": "¿Cómo se identifica en cuanto a su género? Esta sección es opcional.",
+              "label": "Identidad de género",
+              "options": ["Masculino", "Femenino", "Hombre transgénero / FTM", "Mujer transgénero / MTF", "Genderqueer - Ni masculino ni femenino", "Otro", "Prefiero no responder"]
+            }
+          }
+        },
+        {
+          "id": "sexual_orientation",
+          "label": "Sexual Orientation",
+          "type": "radio",
+          "required": false,
+          "ai_note": "Optional for patients under 18. Present warmly and note it is optional.",
+          "options": ["Straight or Heterosexual", "Lesbian, Gay, or Homosexual", "Bisexual", "Something Else", "Choose Not To Answer", "Don't Know"],
+          "question": "What is your sexual orientation? This section is optional.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su orientación sexual? Esta sección es opcional.",
+              "label": "Orientación sexual",
+              "options": ["Heterosexual", "Lesbiana, gay u homosexual", "Bisexual", "Otra", "Prefiero no responder", "No sé"]
+            }
+          }
+        },
+        {
+          "id": "race",
+          "label": "Race",
+          "type": "multi_select",
+          "required": false,
+          "options": ["American Indian or Alaska Native", "Asian", "Black or African American", "Native Hawaiian or Other Pacific Islander", "White", "Choose Not To Answer"],
+          "question": "What is your race? You may select more than one.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su raza? Puede seleccionar más de una.",
+              "label": "Raza",
+              "options": ["Indígena americano o nativo de Alaska", "Asiático", "Negro o afroamericano", "Nativo de Hawái u otras islas del Pacífico", "Blanco", "Prefiero no responder"]
+            }
+          }
+        },
+        {
+          "id": "preferred_pronoun",
+          "label": "Preferred Pronoun",
+          "type": "radio",
+          "required": false,
+          "options": ["He, Him, His", "She, Her, Hers", "They, Them, Theirs", "Ze, Hir", "Other", "Decline To Answer"],
+          "question": "What is your preferred pronoun?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su pronombre preferido?",
+              "label": "Pronombre preferido",
+              "options": ["Él", "Ella", "Elle", "Ze, Hir", "Otro", "Prefiero no responder"]
+            }
+          }
+        },
+        {
+          "id": "ethnicity",
+          "label": "Ethnicity",
+          "type": "radio",
+          "required": false,
+          "options": ["Hispanic or Latino", "Not Hispanic or Latino", "Choose Not To Answer", "Other", "Unknown"],
+          "question": "What is your ethnicity?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su etnia?",
+              "label": "Etnia",
+              "options": ["Hispano o Latino", "No hispano o Latino", "Prefiero no responder", "Otro", "Desconocido"]
+            }
+          }
+        },
+        {
+          "id": "preferred_language",
+          "label": "Preferred Language",
+          "type": "radio",
+          "required": true,
+          "ai_note": "Important — ask early so intake can switch languages if needed.",
+          "options": ["English", "Spanish", "Other"],
+          "question": "What is your preferred language?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su idioma preferido?",
+              "label": "Idioma preferido",
+              "options": ["Inglés", "Español", "Otro"]
+            }
+          }
+        },
+        {
+          "id": "marital_status",
+          "label": "Marital Status",
+          "type": "radio",
+          "required": false,
+          "options": ["Married", "Single", "Divorced/Separated", "Widowed"],
+          "question": "What is your marital status?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su estado civil?",
+              "label": "Estado civil",
+              "options": ["Casado/a", "Soltero/a", "Divorciado/a o separado/a", "Viudo/a"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Insurance",
+      "fields": [
+        {
+          "id": "primary_insurance_name",
+          "label": "Primary Insurance Name",
+          "type": "text",
+          "required": false,
+          "ai_note": "Remind patient to give insurance card to staff if they have one.",
+          "question": "What is the name of your primary health insurance? Say 'none' if you don't have insurance.",
+          "i18n": {
+            "es": { "question": "¿Cuál es el nombre de su seguro médico principal?", "label": "Seguro médico principal" }
+          }
+        },
+        {
+          "id": "secondary_insurance_name",
+          "label": "Secondary Insurance Name",
+          "type": "text",
+          "required": false,
+          "question": "Do you have a secondary insurance? If so, what is its name? Say 'none' if not.",
+          "i18n": {
+            "es": { "question": "¿Tiene un seguro médico secundario?", "label": "Seguro médico secundario" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Background Questions",
+      "fields": [
+        {
+          "id": "us_veteran",
+          "label": "US Veteran",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "Are you a US veteran?",
+          "i18n": {
+            "es": {
+              "question": "¿Es usted veterano de los Estados Unidos?",
+              "label": "Veterano de EE. UU.",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "agriculture_work_2yr",
+          "label": "Agricultural Work (Last 2 Years)",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "ai_note": "Farm work includes planting, picking, preparing soil, packing house, driving trucks, working with animals.",
+          "question": "In the last 2 years, have you or anyone in your family worked in any type of agriculture — such as planting, picking, packing, or working with animals?",
+          "i18n": {
+            "es": {
+              "question": "En los últimos 2 años, ¿usted o algún familiar ha trabajado en agricultura?",
+              "label": "Trabajo agrícola (últimos 2 años)",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "agriculture_away_from_home",
+          "label": "Lived Away from Home for Agriculture",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "In the last 2 years, have you or a family member lived away from home to work in agriculture?",
+          "i18n": {
+            "es": {
+              "question": "¿En los últimos 2 años, usted o un familiar vivió fuera de casa para trabajar en agricultura?",
+              "label": "Vivió fuera por trabajo agrícola",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "agriculture_disability_stopped",
+          "label": "Stopped Migrating Due to Disability",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "Have you or a family member stopped migrating to work in agriculture because of a disability?",
+          "i18n": {
+            "es": {
+              "question": "¿Usted o un familiar dejó de migrar para trabajar en agricultura debido a una discapacidad?",
+              "label": "Dejó de migrar por discapacidad",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "homeless_status",
+          "label": "Homeless Status",
+          "type": "radio",
+          "required": false,
+          "options": ["Not Homeless", "Doubling Up", "Shelter", "Street", "Transitional", "Other"],
+          "question": "What best describes your current housing situation?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál describe mejor su situación de vivienda actual?",
+              "label": "Situación de vivienda",
+              "options": ["Sin situación de calle", "Compartiendo vivienda", "Refugio", "Calle", "Transitorio", "Otro"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Communication Preferences",
+      "fields": [
+        {
+          "id": "leave_phone_messages",
+          "label": "May We Leave Phone Messages?",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "May we leave detailed phone messages for you?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos dejarle mensajes detallados por teléfono?",
+              "label": "¿Podemos dejar mensajes de voz?",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "mail_correspondence",
+          "label": "May We Mail Correspondence?",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "May we mail detailed correspondence to your address?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos enviarle correspondencia a su dirección?",
+              "label": "¿Podemos enviar correo?",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "text_reminders",
+          "label": "May We Text Reminders?",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "May we text you important reminders?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos enviarle recordatorios por mensaje de texto?",
+              "label": "¿Podemos enviar mensajes de texto?",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "email_information",
+          "label": "May We Email You?",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "May we email you information?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos enviarle información por correo electrónico?",
+              "label": "¿Podemos enviar correos?",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "email_address",
+          "label": "Email Address",
+          "type": "email",
+          "required": false,
+          "question": "What is your email address? Say 'none' to skip.",
+          "i18n": {
+            "es": { "question": "¿Cuál es su correo electrónico? Diga 'ninguno' para omitir.", "label": "Correo electrónico" }
+          }
+        },
+        {
+          "id": "how_heard_about",
+          "label": "How Did You Hear About AccelHealth?",
+          "type": "radio",
+          "required": false,
+          "options": ["Billboard", "Event Sponsor", "Friend/Family", "Insurance", "Internet", "Newspaper", "Publication", "Radio", "Social Media", "Other"],
+          "question": "How did you hear about AccelHealth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cómo se enteró de AccelHealth?",
+              "label": "¿Cómo nos conoció?",
+              "options": ["Anuncio exterior", "Evento patrocinador", "Amigo o familiar", "Seguro médico", "Internet", "Periódico", "Publicación", "Radio", "Redes sociales", "Otro"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parent / Guardian Information",
+      "fields": [
+        {
+          "id": "parent1_name",
+          "label": "Parent / Guardian #1 Name",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only collected if is_minor = Yes",
+          "question": "What is the name of Parent or Guardian #1?",
+          "i18n": {
+            "es": { "question": "¿Cuál es el nombre del tutor #1?", "label": "Nombre del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_mailing_address",
+          "label": "Parent #1 Mailing Address",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #1's mailing address?",
+          "i18n": {
+            "es": { "question": "¿Cuál es la dirección postal del tutor #1?", "label": "Dirección del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_same_as_above",
+          "label": "Parent #1 Address Same as Patient?",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "Is Parent/Guardian #1's address the same as the patient's address we collected earlier?",
+          "i18n": {
+            "es": {
+              "question": "¿La dirección del tutor #1 es la misma que la del paciente?",
+              "label": "¿Misma dirección que el paciente?",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "parent1_city_state_zip",
+          "label": "Parent #1 City / State / ZIP",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #1's city, state, and ZIP code?",
+          "i18n": {
+            "es": { "question": "¿Ciudad, estado y código postal del tutor #1?", "label": "Ciudad / Estado / ZIP del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_date_of_birth",
+          "label": "Parent #1 Date of Birth",
+          "type": "date",
+          "required": false,
+          "question": "What is Parent/Guardian #1's date of birth?",
+          "i18n": {
+            "es": { "question": "¿Fecha de nacimiento del tutor #1?", "label": "Fecha de nacimiento del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_home_phone",
+          "label": "Parent #1 Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #1's home phone?",
+          "i18n": {
+            "es": { "question": "¿Teléfono de casa del tutor #1?", "label": "Teléfono de casa del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_work_phone",
+          "label": "Parent #1 Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #1's work phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": { "question": "¿Teléfono del trabajo del tutor #1?", "label": "Teléfono del trabajo del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_cell_phone",
+          "label": "Parent #1 Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #1's cell phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": { "question": "¿Celular del tutor #1?", "label": "Celular del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_ssn",
+          "label": "Parent #1 Social Security Number",
+          "type": "text",
+          "required": false,
+          "ai_note": "Sensitive — collected at review step.",
+          "question": "What is Parent/Guardian #1's Social Security Number?",
+          "i18n": {
+            "es": { "question": "¿Número de seguro social del tutor #1?", "label": "SSN del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_employer",
+          "label": "Parent #1 Employer",
+          "type": "text",
+          "required": false,
+          "question": "Who is Parent/Guardian #1's employer? Say 'none' if not employed.",
+          "i18n": {
+            "es": { "question": "¿Empleador del tutor #1?", "label": "Empleador del tutor #1" }
+          }
+        },
+        {
+          "id": "parent1_relationship",
+          "label": "Parent #1 Relationship to Child",
+          "type": "radio",
+          "required": false,
+          "options": ["Mother", "Father", "Grandparent", "Foster Parent", "Other"],
+          "question": "What is Parent/Guardian #1's relationship to the patient?",
+          "i18n": {
+            "es": {
+              "question": "¿Qué relación tiene el tutor #1 con el paciente?",
+              "label": "Relación del tutor #1",
+              "options": ["Madre", "Padre", "Abuelo/a", "Padre de acogida", "Otro"]
+            }
+          }
+        },
+        {
+          "id": "parent2_name",
+          "label": "Parent / Guardian #2 Name",
+          "type": "text",
+          "required": false,
+          "question": "What is the name of Parent or Guardian #2? Say 'none' if there is only one guardian.",
+          "i18n": {
+            "es": { "question": "¿Nombre del tutor #2? Diga 'ninguno' si solo hay un tutor.", "label": "Nombre del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_mailing_address",
+          "label": "Parent #2 Mailing Address",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #2's mailing address?",
+          "i18n": {
+            "es": { "question": "¿Dirección postal del tutor #2?", "label": "Dirección del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_same_as_above",
+          "label": "Parent #2 Address Same as Patient?",
+          "type": "radio",
+          "required": false,
+          "options": ["Yes", "No"],
+          "question": "Is Parent/Guardian #2's address the same as the patient's address?",
+          "i18n": {
+            "es": {
+              "question": "¿La dirección del tutor #2 es la misma que la del paciente?",
+              "label": "¿Misma dirección?",
+              "options": ["Sí", "No"]
+            }
+          }
+        },
+        {
+          "id": "parent2_city_state_zip",
+          "label": "Parent #2 City / State / ZIP",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #2's city, state, and ZIP code?",
+          "i18n": {
+            "es": { "question": "¿Ciudad, estado y código postal del tutor #2?", "label": "Ciudad / Estado / ZIP del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_date_of_birth",
+          "label": "Parent #2 Date of Birth",
+          "type": "date",
+          "required": false,
+          "question": "What is Parent/Guardian #2's date of birth?",
+          "i18n": {
+            "es": { "question": "¿Fecha de nacimiento del tutor #2?", "label": "Fecha de nacimiento del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_home_phone",
+          "label": "Parent #2 Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #2's home phone?",
+          "i18n": {
+            "es": { "question": "¿Teléfono de casa del tutor #2?", "label": "Teléfono de casa del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_work_phone",
+          "label": "Parent #2 Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #2's work phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": { "question": "¿Teléfono del trabajo del tutor #2?", "label": "Teléfono del trabajo del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_cell_phone",
+          "label": "Parent #2 Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #2's cell phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": { "question": "¿Celular del tutor #2?", "label": "Celular del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_ssn",
+          "label": "Parent #2 Social Security Number",
+          "type": "text",
+          "required": false,
+          "ai_note": "Sensitive — collected at review step.",
+          "question": "What is Parent/Guardian #2's Social Security Number?",
+          "i18n": {
+            "es": { "question": "¿Número de seguro social del tutor #2?", "label": "SSN del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_employer",
+          "label": "Parent #2 Employer",
+          "type": "text",
+          "required": false,
+          "question": "Who is Parent/Guardian #2's employer? Say 'none' if not employed.",
+          "i18n": {
+            "es": { "question": "¿Empleador del tutor #2?", "label": "Empleador del tutor #2" }
+          }
+        },
+        {
+          "id": "parent2_relationship",
+          "label": "Parent #2 Relationship to Child",
+          "type": "radio",
+          "required": false,
+          "options": ["Mother", "Father", "Grandparent", "Foster Parent", "Other"],
+          "question": "What is Parent/Guardian #2's relationship to the patient?",
+          "i18n": {
+            "es": {
+              "question": "¿Qué relación tiene el tutor #2 con el paciente?",
+              "label": "Relación del tutor #2",
+              "options": ["Madre", "Padre", "Abuelo/a", "Padre de acogida", "Otro"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consent & Signature",
+      "fields": [
+        {
+          "id": "patient_signature",
+          "label": "Patient or Authorized Signature",
+          "type": "signature",
+          "required": true,
+          "ai_note": "Collected at review step. Authorizes AccelHealth to release medical information for insurance claims and confirms consent to treatment.",
+          "question": "Please provide your signature to authorize release of information and consent to treatment.",
+          "i18n": {
+            "es": { "question": "Por favor firme para autorizar la divulgación de información y el consentimiento para tratamiento.", "label": "Firma del paciente o autorizado" }
+          }
+        },
+        {
+          "id": "signature_date",
+          "label": "Date",
+          "type": "date",
+          "required": true,
+          "ai_note": "Auto-populated with today's date at the review step.",
+          "question": "What is today's date?",
+          "i18n": {
+            "es": { "question": "¿Cuál es la fecha de hoy?", "label": "Fecha" }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">Patient Intake — Registration, Health History, Consents</string>
     <string name="form_medicaid_renewal_title">Medicaid Coverage Renewal</string>
     <string name="form_medicaid_renewal_desc">Household, Income &amp; Coverage Verification</string>
+    <string name="form_patient_registration_title">Brownswood Patient Registration</string>
+    <string name="form_patient_registration_desc">New Patient Registration — Demographics, Insurance &amp; Consents</string>
     <string name="form_available_forms">Available Forms</string>
     <string name="form_uploaded_forms">Uploaded Forms</string>
     <string name="form_status_ready">Ready</string>
