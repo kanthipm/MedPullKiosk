@@ -64,8 +64,6 @@
     <string name="form_coastal_gateway_desc">患者入院——登记、健康史、同意书</string>
     <string name="form_medicaid_renewal_title">医疗补助保险续保</string>
     <string name="form_medicaid_renewal_desc">家庭、收入和承保范围验证</string>
-    <string name="form_brownwood_title">AccelHealth 患者登记</string>
-    <string name="form_brownwood_desc">登记 — 人口统计、保险、同意书</string>
     <string name="form_available_forms">可用表格</string>
     <string name="form_uploaded_forms">已上传的表格</string>
     <string name="form_status_ready">准备好了</string>

@@ -33,7 +33,7 @@ import java.util.*
 
 private const val COASTAL_GATEWAY_FORM_ID = "coastal_gateway_intake"
 private const val MEDICAID_RENEWAL_FORM_ID = "medicaid_renewal_intake"
-private const val BROWNWOOD_FORM_ID = "brownwood_intake"
+private const val PATIENT_REGISTRATION_FORM_ID = "patient_registration"
 
 /**
  * Form selection screen — patient picks which medical intake form to complete.
@@ -174,7 +174,7 @@ fun FormSelectionScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     OutlinedButton(
-                        onClick = { onFormSelected(BROWNWOOD_FORM_ID) },
+                        onClick = { onFormSelected(PATIENT_REGISTRATION_FORM_ID) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(100.dp),
@@ -183,13 +183,13 @@ fun FormSelectionScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = stringResource(R.string.form_brownwood_title),
+                                text = stringResource(R.string.form_patient_registration_title),
                                 style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = stringResource(R.string.form_brownwood_desc),
+                                text = stringResource(R.string.form_patient_registration_desc),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                 textAlign = TextAlign.Center

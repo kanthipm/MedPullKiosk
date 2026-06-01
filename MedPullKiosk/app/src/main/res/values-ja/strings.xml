@@ -64,8 +64,6 @@
     <string name="form_coastal_gateway_desc">患者登録 — 登録、病歴、同意</string>
     <string name="form_medicaid_renewal_title">メディケイド補償範囲の更新</string>
     <string name="form_medicaid_renewal_desc">世帯、収入、補償範囲の検証</string>
-    <string name="form_brownwood_title">AccelHealth 患者登録</string>
-    <string name="form_brownwood_desc">登録 — 人口統計、保険、同意書</string>
     <string name="form_available_forms">使用可能なフォーム</string>
     <string name="form_uploaded_forms">アップロードされたフォーム</string>
     <string name="form_status_ready">準備完了</string>

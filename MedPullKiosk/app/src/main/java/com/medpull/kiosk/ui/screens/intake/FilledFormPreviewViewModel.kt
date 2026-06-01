@@ -82,8 +82,8 @@ class FilledFormPreviewViewModel @Inject constructor(
                     when (formId) {
                         "coastal_gateway_intake" ->
                             pdfFormFiller.fillCoastalGatewayForm(form.fields, outputDir)
-                        "brownwood_intake" ->
-                            pdfFormFiller.fillBrownwoodForm(form.fields, outputDir)
+                        "patient_registration" ->
+                            pdfFormFiller.fillPatientRegistrationForm(form.fields, outputDir)
                         else ->
                             pdfFormFiller.fillForm(form.fields, "forms/${formId}.pdf", form.fileName, outputDir)
                     }

@@ -1,0 +1,3595 @@
+{
+  "form_id": "patient_registration",
+  "form_name": "Brownswood Patient Registration",
+  "version": "1.0",
+  "ai_instructions": "This is the AccelHealth Patient Registration form. Collect all required fields conversationally and warmly. Gender identity and sexual orientation sections are optional for patients under 18 — present them but make clear they are optional. The parent/guardian section only applies if the patient is a minor. SSN, signature, and age are collected at the review step.",
+  "skip_during_intake": [
+    "social_security_number",
+    "parent1_ssn",
+    "parent2_ssn",
+    "patient_signature",
+    "signature_date"
+  ],
+  "consent_batch_fields": [
+    "leave_phone_messages",
+    "mail_correspondence",
+    "text_reminders",
+    "email_information"
+  ],
+  "skip_rules": [
+    {
+      "when_field": "is_minor",
+      "equals": "No",
+      "skip": [
+        "parent1_name",
+        "parent1_mailing_address",
+        "parent1_same_as_above",
+        "parent1_city_state_zip",
+        "parent1_date_of_birth",
+        "parent1_home_phone",
+        "parent1_work_phone",
+        "parent1_cell_phone",
+        "parent1_ssn",
+        "parent1_employer",
+        "parent1_relationship",
+        "parent2_name",
+        "parent2_mailing_address",
+        "parent2_same_as_above",
+        "parent2_city_state_zip",
+        "parent2_date_of_birth",
+        "parent2_home_phone",
+        "parent2_work_phone",
+        "parent2_cell_phone",
+        "parent2_ssn",
+        "parent2_employer",
+        "parent2_relationship"
+      ]
+    },
+    {
+      "when_field": "parent1_same_as_above",
+      "equals": "Yes",
+      "skip": [
+        "parent1_city_state_zip"
+      ]
+    },
+    {
+      "when_field": "parent2_same_as_above",
+      "equals": "Yes",
+      "skip": [
+        "parent2_city_state_zip"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "name": "Personal Information",
+      "fields": [
+        {
+          "id": "last_name",
+          "label": "Last Name",
+          "type": "text",
+          "required": true,
+          "question": "What is your last name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su apellido?",
+              "label": "Apellido"
+            },
+            "zh": {
+              "question": "请问您的姓是什么？",
+              "label": "姓"
+            },
+            "fr": {
+              "question": "Quel est votre nom de famille ?",
+              "label": "Nom de famille"
+            },
+            "ja": {
+              "question": "苗字を教えていただけますか？",
+              "label": "姓"
+            },
+            "pt": {
+              "question": "Qual é o seu sobrenome?",
+              "label": "Sobrenome"
+            },
+            "ar": {
+              "question": "ما هو اسم عائلتك؟",
+              "label": "اسم العائلة"
+            },
+            "ru": {
+              "question": "Как ваша фамилия?",
+              "label": "Фамилия"
+            }
+          }
+        },
+        {
+          "id": "first_name",
+          "label": "First Name",
+          "type": "text",
+          "required": true,
+          "question": "What is your first name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su nombre?",
+              "label": "Nombre"
+            },
+            "zh": {
+              "question": "请问您的名字是什么？",
+              "label": "名字"
+            },
+            "fr": {
+              "question": "Quel est votre prénom ?",
+              "label": "Prénom"
+            },
+            "ja": {
+              "question": "お名前を教えていただけますか？",
+              "label": "名"
+            },
+            "pt": {
+              "question": "Qual é o seu primeiro nome?",
+              "label": "Primeiro Nome"
+            },
+            "ar": {
+              "question": "ما هو اسمك الأول؟",
+              "label": "الاسم الأول"
+            },
+            "ru": {
+              "question": "Как ваше имя?",
+              "label": "Имя"
+            }
+          }
+        },
+        {
+          "id": "middle_name",
+          "label": "Middle Name",
+          "type": "text",
+          "required": false,
+          "question": "What is your middle name? Say 'skip' if you don't have one.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su segundo nombre? Diga 'omitir' si no tiene.",
+              "label": "Segundo nombre"
+            },
+            "zh": {
+              "question": "请问您的中间名是什么？如果没有，请说“跳过”。",
+              "label": "中间名"
+            },
+            "fr": {
+              "question": "Quel est votre deuxième prénom ? Dites « passer » si vous n'en avez pas.",
+              "label": "Deuxième prénom"
+            },
+            "ja": {
+              "question": "ミドルネームを教えていただけますか？ お持ちでない場合は「スキップ」とおっしゃってください。",
+              "label": "ミドルネーム"
+            },
+            "pt": {
+              "question": "Qual é o seu nome do meio? Diga 'pular' se você não tiver um.",
+              "label": "Nome do Meio"
+            },
+            "ar": {
+              "question": "ما هو اسمك الأوسط؟ قل \"تخطٍّ\" إذا لم يكن لديك واحد.",
+              "label": "الاسم الأوسط"
+            },
+            "ru": {
+              "question": "Как ваше отчество? Скажите «пропустить», если у вас его нет.",
+              "label": "Отчество"
+            }
+          }
+        },
+        {
+          "id": "social_security_number",
+          "label": "Social Security Number",
+          "type": "text",
+          "required": false,
+          "ai_note": "Sensitive — collected at review step, not during voice intake.",
+          "question": "What is your Social Security Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de seguro social?",
+              "label": "Número de Seguro Social"
+            },
+            "zh": {
+              "question": "请问您的社会安全号码是多少？",
+              "label": "社会安全号码"
+            },
+            "fr": {
+              "question": "Quel est votre numéro de sécurité sociale ?",
+              "label": "Numéro de sécurité sociale"
+            },
+            "ja": {
+              "question": "社会保障番号を教えていただけますか？",
+              "label": "社会保障番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de Seguro Social?",
+              "label": "Número de Seguro Social"
+            },
+            "ar": {
+              "question": "ما هو رقم الضمان الاجتماعي الخاص بك؟",
+              "label": "رقم الضمان الاجتماعي"
+            },
+            "ru": {
+              "question": "Какой у вас номер социального страхования?",
+              "label": "Номер социального страхования"
+            }
+          }
+        },
+        {
+          "id": "age",
+          "label": "Age",
+          "type": "number",
+          "required": false,
+          "ai_note": "Collected at review — can be derived from date of birth.",
+          "question": "How old are you?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuántos años tiene?",
+              "label": "Edad"
+            },
+            "zh": {
+              "question": "请问您今年多大年纪？",
+              "label": "年龄"
+            },
+            "fr": {
+              "question": "Quel âge avez-vous ?",
+              "label": "Âge"
+            },
+            "ja": {
+              "question": "年齢を教えていただけますか？",
+              "label": "年齢"
+            },
+            "pt": {
+              "question": "Quantos anos você tem?",
+              "label": "Idade"
+            },
+            "ar": {
+              "question": "كم عمرك؟",
+              "label": "العمر"
+            },
+            "ru": {
+              "question": "Сколько вам лет?",
+              "label": "Возраст"
+            }
+          }
+        },
+        {
+          "id": "date_of_birth",
+          "label": "Date of Birth",
+          "type": "date",
+          "required": true,
+          "question": "What is your date of birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su fecha de nacimiento?",
+              "label": "Fecha de nacimiento"
+            },
+            "zh": {
+              "question": "请问您的出生日期是哪一天？",
+              "label": "出生日期"
+            },
+            "fr": {
+              "question": "Quelle est votre date de naissance ?",
+              "label": "Date de naissance"
+            },
+            "ja": {
+              "question": "生年月日を教えていただけますか？",
+              "label": "生年月日"
+            },
+            "pt": {
+              "question": "Qual é a sua data de nascimento?",
+              "label": "Data de Nascimento"
+            },
+            "ar": {
+              "question": "ما هو تاريخ ميلادك؟",
+              "label": "تاريخ الميلاد"
+            },
+            "ru": {
+              "question": "Какая у вас дата рождения?",
+              "label": "Дата рождения"
+            }
+          }
+        },
+        {
+          "id": "is_minor",
+          "label": "Is Patient a Minor?",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "ai_note": "Ask immediately after DOB. If Yes, parent/guardian section is required.",
+          "question": "Are you under 18 years old?",
+          "i18n": {
+            "es": {
+              "question": "¿Es menor de 18 años?",
+              "label": "¿Es menor de edad?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "请问您未满18岁吗？",
+              "label": "患者是否为未成年人？",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Avez-vous moins de 18 ans ?",
+              "label": "Le patient est-il mineur ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "18歳未満でいらっしゃいますか？",
+              "label": "患者様は未成年ですか？",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Você tem menos de 18 anos?",
+              "label": "O Paciente é Menor de Idade?",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل عمرك أقل من 18 عامًا؟",
+              "label": "هل المريض قاصر؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Вам меньше 18 лет?",
+              "label": "Является ли пациент несовершеннолетним?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Address",
+      "fields": [
+        {
+          "id": "mailing_address",
+          "label": "Mailing Address",
+          "type": "text",
+          "required": true,
+          "question": "What is your mailing address — street number and name?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su dirección postal?",
+              "label": "Dirección postal"
+            },
+            "zh": {
+              "question": "请问您的通讯地址是什么——门牌号和街道名称？",
+              "label": "通讯地址"
+            },
+            "fr": {
+              "question": "Quelle est votre adresse postale — numéro et nom de rue ?",
+              "label": "Adresse postale"
+            },
+            "ja": {
+              "question": "郵送先住所の番地と通り名を教えていただけますか？",
+              "label": "郵送先住所"
+            },
+            "pt": {
+              "question": "Qual é o seu endereço postal — número e nome da rua?",
+              "label": "Endereço Postal"
+            },
+            "ar": {
+              "question": "ما هو عنوانك البريدي — رقم الشارع واسمه؟",
+              "label": "العنوان البريدي"
+            },
+            "ru": {
+              "question": "Какой у вас почтовый адрес — номер дома и название улицы?",
+              "label": "Почтовый адрес"
+            }
+          }
+        },
+        {
+          "id": "apt_no",
+          "label": "Apt / Unit No.",
+          "type": "text",
+          "required": false,
+          "question": "Do you have an apartment or unit number? Say 'none' if not.",
+          "i18n": {
+            "es": {
+              "question": "¿Tiene número de apartamento? Diga 'ninguno' si no.",
+              "label": "Número de apartamento"
+            },
+            "zh": {
+              "question": "请问您有公寓号或单元号吗？如果没有，请说“无”。",
+              "label": "公寓 / 单元号"
+            },
+            "fr": {
+              "question": "Avez-vous un numéro d'appartement ou d'unité ? Dites « aucun » si ce n'est pas le cas.",
+              "label": "N° d'appartement / d'unité"
+            },
+            "ja": {
+              "question": "アパートまたは部屋番号はございますか？ ない場合は「なし」とおっしゃってください。",
+              "label": "アパート／部屋番号"
+            },
+            "pt": {
+              "question": "Você tem número de apartamento ou unidade? Diga 'nenhum' se não tiver.",
+              "label": "Apto / Unidade Nº"
+            },
+            "ar": {
+              "question": "هل لديك رقم شقة أو وحدة سكنية؟ قل \"لا يوجد\" إذا لم يكن لديك.",
+              "label": "رقم الشقة / الوحدة"
+            },
+            "ru": {
+              "question": "У вас есть номер квартиры или помещения? Скажите «нет», если его нет.",
+              "label": "Кв. / Пом. №"
+            }
+          }
+        },
+        {
+          "id": "city",
+          "label": "City",
+          "type": "text",
+          "required": true,
+          "question": "What city do you live in?",
+          "i18n": {
+            "es": {
+              "question": "¿En qué ciudad vive?",
+              "label": "Ciudad"
+            },
+            "zh": {
+              "question": "请问您住在哪个城市？",
+              "label": "城市"
+            },
+            "fr": {
+              "question": "Dans quelle ville habitez-vous ?",
+              "label": "Ville"
+            },
+            "ja": {
+              "question": "お住まいの市区町村を教えていただけますか？",
+              "label": "市区町村"
+            },
+            "pt": {
+              "question": "Em qual cidade você mora?",
+              "label": "Cidade"
+            },
+            "ar": {
+              "question": "في أي مدينة تسكن؟",
+              "label": "المدينة"
+            },
+            "ru": {
+              "question": "В каком городе вы живёте?",
+              "label": "Город"
+            }
+          }
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "type": "text",
+          "required": true,
+          "question": "What state?",
+          "i18n": {
+            "es": {
+              "question": "¿En qué estado?",
+              "label": "Estado"
+            },
+            "zh": {
+              "question": "请问是哪个州？",
+              "label": "州"
+            },
+            "fr": {
+              "question": "Dans quel État ?",
+              "label": "État"
+            },
+            "ja": {
+              "question": "州を教えていただけますか？",
+              "label": "州"
+            },
+            "pt": {
+              "question": "Qual estado?",
+              "label": "Estado"
+            },
+            "ar": {
+              "question": "في أي ولاية؟",
+              "label": "الولاية"
+            },
+            "ru": {
+              "question": "В каком штате?",
+              "label": "Штат"
+            }
+          }
+        },
+        {
+          "id": "zip",
+          "label": "ZIP Code",
+          "type": "zip",
+          "required": true,
+          "question": "What is your ZIP code?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su código postal?",
+              "label": "Código postal"
+            },
+            "zh": {
+              "question": "请问您的邮政编码是多少？",
+              "label": "邮政编码"
+            },
+            "fr": {
+              "question": "Quel est votre code postal ?",
+              "label": "Code postal"
+            },
+            "ja": {
+              "question": "郵便番号を教えていただけますか？",
+              "label": "郵便番号"
+            },
+            "pt": {
+              "question": "Qual é o seu código postal (CEP)?",
+              "label": "Código Postal (CEP)"
+            },
+            "ar": {
+              "question": "ما هو الرمز البريدي الخاص بك؟",
+              "label": "الرمز البريدي"
+            },
+            "ru": {
+              "question": "Какой у вас почтовый индекс?",
+              "label": "Почтовый индекс"
+            }
+          }
+        },
+        {
+          "id": "county",
+          "label": "County",
+          "type": "text",
+          "required": false,
+          "question": "What county do you live in? Optional — say 'skip' to continue.",
+          "i18n": {
+            "es": {
+              "question": "¿En qué condado vive? Opcional.",
+              "label": "Condado"
+            },
+            "zh": {
+              "question": "请问您住在哪个县？此项为选填——可以说“跳过”继续。",
+              "label": "县"
+            },
+            "fr": {
+              "question": "Dans quel comté habitez-vous ? Facultatif — dites « passer » pour continuer.",
+              "label": "Comté"
+            },
+            "ja": {
+              "question": "お住まいの郡を教えていただけますか？ 任意です。続けるには「スキップ」とおっしゃってください。",
+              "label": "郡"
+            },
+            "pt": {
+              "question": "Em qual condado você mora? Opcional — diga 'pular' para continuar.",
+              "label": "Condado"
+            },
+            "ar": {
+              "question": "في أي مقاطعة تسكن؟ اختياري — قل \"تخطٍّ\" للمتابعة.",
+              "label": "المقاطعة"
+            },
+            "ru": {
+              "question": "В каком округе вы живёте? Необязательно — скажите «пропустить», чтобы продолжить.",
+              "label": "Округ"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contact Information",
+      "fields": [
+        {
+          "id": "home_phone",
+          "label": "Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your home phone number? Say 'none' if you don't have one.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su teléfono de casa?",
+              "label": "Teléfono de casa"
+            },
+            "zh": {
+              "question": "请问您的家庭电话号码是多少？如果没有，请说“无”。",
+              "label": "家庭电话"
+            },
+            "fr": {
+              "question": "Quel est votre numéro de téléphone fixe ? Dites « aucun » si vous n'en avez pas.",
+              "label": "Téléphone fixe"
+            },
+            "ja": {
+              "question": "ご自宅の電話番号を教えていただけますか？ お持ちでない場合は「なし」とおっしゃってください。",
+              "label": "自宅電話番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de telefone residencial? Diga 'nenhum' se você não tiver um.",
+              "label": "Telefone Residencial"
+            },
+            "ar": {
+              "question": "ما هو رقم هاتف منزلك؟ قل \"لا يوجد\" إذا لم يكن لديك واحد.",
+              "label": "هاتف المنزل"
+            },
+            "ru": {
+              "question": "Какой у вас домашний номер телефона? Скажите «нет», если у вас его нет.",
+              "label": "Домашний телефон"
+            }
+          }
+        },
+        {
+          "id": "work_phone",
+          "label": "Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your work phone number? Optional.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su teléfono del trabajo?",
+              "label": "Teléfono del trabajo"
+            },
+            "zh": {
+              "question": "请问您的工作电话号码是多少？此项为选填。",
+              "label": "工作电话"
+            },
+            "fr": {
+              "question": "Quel est votre numéro de téléphone professionnel ? Facultatif.",
+              "label": "Téléphone professionnel"
+            },
+            "ja": {
+              "question": "勤務先の電話番号を教えていただけますか？ 任意です。",
+              "label": "勤務先電話番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de telefone do trabalho? Opcional.",
+              "label": "Telefone do Trabalho"
+            },
+            "ar": {
+              "question": "ما هو رقم هاتف عملك؟ اختياري.",
+              "label": "هاتف العمل"
+            },
+            "ru": {
+              "question": "Какой у вас рабочий номер телефона? Необязательно.",
+              "label": "Рабочий телефон"
+            }
+          }
+        },
+        {
+          "id": "cell_phone",
+          "label": "Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your cell phone number? Optional.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de celular?",
+              "label": "Celular"
+            },
+            "zh": {
+              "question": "请问您的手机号码是多少？此项为选填。",
+              "label": "手机"
+            },
+            "fr": {
+              "question": "Quel est votre numéro de téléphone portable ? Facultatif.",
+              "label": "Téléphone portable"
+            },
+            "ja": {
+              "question": "携帯電話の番号を教えていただけますか？ 任意です。",
+              "label": "携帯電話番号"
+            },
+            "pt": {
+              "question": "Qual é o seu número de celular? Opcional.",
+              "label": "Celular"
+            },
+            "ar": {
+              "question": "ما هو رقم هاتفك المحمول؟ اختياري.",
+              "label": "الهاتف المحمول"
+            },
+            "ru": {
+              "question": "Какой у вас номер мобильного телефона? Необязательно.",
+              "label": "Мобильный телефон"
+            }
+          }
+        },
+        {
+          "id": "emergency_contact_name",
+          "label": "Emergency Contact Name",
+          "type": "text",
+          "required": false,
+          "question": "Who should we contact in an emergency? Please give their name.",
+          "i18n": {
+            "es": {
+              "question": "¿A quién debemos contactar en una emergencia?",
+              "label": "Nombre del contacto de emergencia"
+            },
+            "zh": {
+              "question": "如遇紧急情况，我们应联系谁？请提供他/她的姓名。",
+              "label": "紧急联系人姓名"
+            },
+            "fr": {
+              "question": "Qui devons-nous contacter en cas d'urgence ? Veuillez nous indiquer son nom.",
+              "label": "Nom du contact d'urgence"
+            },
+            "ja": {
+              "question": "緊急時にご連絡する方はどなたですか？ お名前を教えていただけますか？",
+              "label": "緊急連絡先のお名前"
+            },
+            "pt": {
+              "question": "Quem devemos contatar em caso de emergência? Por favor, informe o nome da pessoa.",
+              "label": "Nome do Contato de Emergência"
+            },
+            "ar": {
+              "question": "بمن يجب أن نتصل في حالة الطوارئ؟ يرجى ذكر اسمه.",
+              "label": "اسم جهة الاتصال في حالات الطوارئ"
+            },
+            "ru": {
+              "question": "С кем нам связаться в экстренном случае? Пожалуйста, назовите его имя.",
+              "label": "Имя контактного лица для экстренной связи"
+            }
+          }
+        },
+        {
+          "id": "emergency_contact_phone",
+          "label": "Emergency Contact Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is their phone number?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su número de teléfono?",
+              "label": "Teléfono del contacto de emergencia"
+            },
+            "zh": {
+              "question": "请问他/她的电话号码是多少？",
+              "label": "紧急联系人电话"
+            },
+            "fr": {
+              "question": "Quel est son numéro de téléphone ?",
+              "label": "Téléphone du contact d'urgence"
+            },
+            "ja": {
+              "question": "その方の電話番号を教えていただけますか？",
+              "label": "緊急連絡先の電話番号"
+            },
+            "pt": {
+              "question": "Qual é o número de telefone dessa pessoa?",
+              "label": "Telefone do Contato de Emergência"
+            },
+            "ar": {
+              "question": "ما هو رقم هاتفه؟",
+              "label": "هاتف جهة الاتصال في حالات الطوارئ"
+            },
+            "ru": {
+              "question": "Какой у него номер телефона?",
+              "label": "Телефон контактного лица для экстренной связи"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Demographics",
+      "fields": [
+        {
+          "id": "birth_sex",
+          "label": "Birth Sex",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Male",
+            "Female"
+          ],
+          "question": "What is your sex assigned at birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su sexo de nacimiento?",
+              "label": "Sexo de nacimiento",
+              "options": [
+                "Masculino",
+                "Femenino"
+              ]
+            },
+            "zh": {
+              "question": "请问您出生时的性别是什么？",
+              "label": "出生性别",
+              "options": [
+                "男",
+                "女"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre sexe assigné à la naissance ?",
+              "label": "Sexe à la naissance",
+              "options": [
+                "Masculin",
+                "Féminin"
+              ]
+            },
+            "ja": {
+              "question": "出生時に割り当てられた性別を教えていただけますか？",
+              "label": "出生時の性別",
+              "options": [
+                "男性",
+                "女性"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o sexo atribuído a você ao nascer?",
+              "label": "Sexo ao Nascer",
+              "options": [
+                "Masculino",
+                "Feminino"
+              ]
+            },
+            "ar": {
+              "question": "ما هو الجنس الذي حُدِّد لك عند الولادة؟",
+              "label": "الجنس عند الولادة",
+              "options": [
+                "ذكر",
+                "أنثى"
+              ]
+            },
+            "ru": {
+              "question": "Какой пол был присвоен вам при рождении?",
+              "label": "Пол при рождении",
+              "options": [
+                "Мужской",
+                "Женский"
+              ]
+            }
+          }
+        },
+        {
+          "id": "current_gender",
+          "label": "Current Gender",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Male",
+            "Female",
+            "Undifferentiated"
+          ],
+          "question": "What is your current gender?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su género actual?",
+              "label": "Género actual",
+              "options": [
+                "Masculino",
+                "Femenino",
+                "No diferenciado"
+              ]
+            },
+            "zh": {
+              "question": "请问您目前的性别是什么？",
+              "label": "当前性别",
+              "options": [
+                "男",
+                "女",
+                "未分化"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre genre actuel ?",
+              "label": "Genre actuel",
+              "options": [
+                "Masculin",
+                "Féminin",
+                "Indifférencié"
+              ]
+            },
+            "ja": {
+              "question": "現在の性別を教えていただけますか？",
+              "label": "現在の性別",
+              "options": [
+                "男性",
+                "女性",
+                "未分化"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu gênero atual?",
+              "label": "Gênero Atual",
+              "options": [
+                "Masculino",
+                "Feminino",
+                "Indiferenciado"
+              ]
+            },
+            "ar": {
+              "question": "ما هو نوعك الاجتماعي الحالي؟",
+              "label": "النوع الاجتماعي الحالي",
+              "options": [
+                "ذكر",
+                "أنثى",
+                "غير محدد"
+              ]
+            },
+            "ru": {
+              "question": "Каков ваш текущий пол?",
+              "label": "Текущий пол",
+              "options": [
+                "Мужской",
+                "Женский",
+                "Недифференцированный"
+              ]
+            }
+          }
+        },
+        {
+          "id": "gender_identity",
+          "label": "Gender Identity",
+          "type": "radio",
+          "required": false,
+          "ai_note": "Optional for patients under 18. Present warmly and note it is optional.",
+          "options": [
+            "Male",
+            "Female",
+            "Transgender Male / FTM / Trans Man",
+            "Transgender Female / MTF / Trans Woman",
+            "Genderqueer - Neither Male nor Female",
+            "Other",
+            "Choose Not To Answer"
+          ],
+          "question": "How do you identify your gender? This section is optional — you may choose not to answer.",
+          "i18n": {
+            "es": {
+              "question": "¿Cómo se identifica en cuanto a su género? Esta sección es opcional.",
+              "label": "Identidad de género",
+              "options": [
+                "Masculino",
+                "Femenino",
+                "Hombre transgénero / FTM",
+                "Mujer transgénero / MTF",
+                "Genderqueer - Ni masculino ni femenino",
+                "Otro",
+                "Prefiero no responder"
+              ]
+            },
+            "zh": {
+              "question": "请问您如何认同自己的性别？此部分为选填——您可以选择不回答。",
+              "label": "性别认同",
+              "options": [
+                "男",
+                "女",
+                "跨性别男性 / 女转男 / 跨性别男人",
+                "跨性别女性 / 男转女 / 跨性别女人",
+                "性别酷儿——既非男性也非女性",
+                "其他",
+                "选择不回答"
+              ]
+            },
+            "fr": {
+              "question": "Comment définissez-vous votre identité de genre ? Cette section est facultative — vous pouvez choisir de ne pas répondre.",
+              "label": "Identité de genre",
+              "options": [
+                "Homme",
+                "Femme",
+                "Homme transgenre / FTM / Trans homme",
+                "Femme transgenre / MTF / Trans femme",
+                "Genderqueer - Ni homme ni femme",
+                "Autre",
+                "Je préfère ne pas répondre"
+              ]
+            },
+            "ja": {
+              "question": "ご自身の性自認をどのように認識されていますか？ この項目は任意です。お答えにならなくても構いません。",
+              "label": "性自認",
+              "options": [
+                "男性",
+                "女性",
+                "トランスジェンダー男性／FTM／トランス男性",
+                "トランスジェンダー女性／MTF／トランス女性",
+                "ジェンダークィア（男性でも女性でもない）",
+                "その他",
+                "回答しない"
+              ]
+            },
+            "pt": {
+              "question": "Como você identifica o seu gênero? Esta seção é opcional — você pode optar por não responder.",
+              "label": "Identidade de Gênero",
+              "options": [
+                "Masculino",
+                "Feminino",
+                "Homem Transgênero / FTM / Homem Trans",
+                "Mulher Transgênero / MTF / Mulher Trans",
+                "Genderqueer - Nem Masculino nem Feminino",
+                "Outro",
+                "Prefiro Não Responder"
+              ]
+            },
+            "ar": {
+              "question": "كيف تعرّف هويتك الجندرية؟ هذا القسم اختياري — يمكنك اختيار عدم الإجابة.",
+              "label": "الهوية الجندرية",
+              "options": [
+                "ذكر",
+                "أنثى",
+                "رجل متحول جنسيًا / من أنثى إلى ذكر",
+                "امرأة متحولة جنسيًا / من ذكر إلى أنثى",
+                "خارج التصنيف الجندري - لا ذكر ولا أنثى",
+                "غير ذلك",
+                "أفضّل عدم الإجابة"
+              ]
+            },
+            "ru": {
+              "question": "Как вы определяете свою гендерную идентичность? Этот раздел необязателен — вы можете не отвечать.",
+              "label": "Гендерная идентичность",
+              "options": [
+                "Мужчина",
+                "Женщина",
+                "Трансгендерный мужчина / FTM / Транс-мужчина",
+                "Трансгендерная женщина / MTF / Транс-женщина",
+                "Гендерквир — ни мужчина, ни женщина",
+                "Другое",
+                "Предпочитаю не отвечать"
+              ]
+            }
+          }
+        },
+        {
+          "id": "sexual_orientation",
+          "label": "Sexual Orientation",
+          "type": "radio",
+          "required": false,
+          "ai_note": "Optional for patients under 18. Present warmly and note it is optional.",
+          "options": [
+            "Straight or Heterosexual",
+            "Lesbian, Gay, or Homosexual",
+            "Bisexual",
+            "Something Else",
+            "Choose Not To Answer",
+            "Don't Know"
+          ],
+          "question": "What is your sexual orientation? This section is optional.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su orientación sexual? Esta sección es opcional.",
+              "label": "Orientación sexual",
+              "options": [
+                "Heterosexual",
+                "Lesbiana, gay u homosexual",
+                "Bisexual",
+                "Otra",
+                "Prefiero no responder",
+                "No sé"
+              ]
+            },
+            "zh": {
+              "question": "请问您的性取向是什么？此部分为选填。",
+              "label": "性取向",
+              "options": [
+                "异性恋",
+                "女同性恋、男同性恋或同性恋",
+                "双性恋",
+                "其他",
+                "选择不回答",
+                "不知道"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre orientation sexuelle ? Cette section est facultative.",
+              "label": "Orientation sexuelle",
+              "options": [
+                "Hétérosexuel(le)",
+                "Lesbienne, gay ou homosexuel(le)",
+                "Bisexuel(le)",
+                "Autre chose",
+                "Je préfère ne pas répondre",
+                "Je ne sais pas"
+              ]
+            },
+            "ja": {
+              "question": "ご自身の性的指向を教えていただけますか？ この項目は任意です。",
+              "label": "性的指向",
+              "options": [
+                "ストレートまたは異性愛",
+                "レズビアン、ゲイ、または同性愛",
+                "バイセクシュアル",
+                "その他",
+                "回答しない",
+                "わからない"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua orientação sexual? Esta seção é opcional.",
+              "label": "Orientação Sexual",
+              "options": [
+                "Heterossexual",
+                "Lésbica, Gay ou Homossexual",
+                "Bissexual",
+                "Outra",
+                "Prefiro Não Responder",
+                "Não Sei"
+              ]
+            },
+            "ar": {
+              "question": "ما هو ميلك الجنسي؟ هذا القسم اختياري.",
+              "label": "الميل الجنسي",
+              "options": [
+                "مغاير الجنس",
+                "مثلي أو مثلية",
+                "ثنائي الميل الجنسي",
+                "شيء آخر",
+                "أفضّل عدم الإجابة",
+                "لا أعرف"
+              ]
+            },
+            "ru": {
+              "question": "Какова ваша сексуальная ориентация? Этот раздел необязателен.",
+              "label": "Сексуальная ориентация",
+              "options": [
+                "Гетеросексуальная",
+                "Лесбиянка, гей или гомосексуальная",
+                "Бисексуальная",
+                "Другое",
+                "Предпочитаю не отвечать",
+                "Не знаю"
+              ]
+            }
+          }
+        },
+        {
+          "id": "race",
+          "label": "Race",
+          "type": "multi_select",
+          "required": false,
+          "options": [
+            "American Indian or Alaska Native",
+            "Asian",
+            "Black or African American",
+            "Native Hawaiian or Other Pacific Islander",
+            "White",
+            "Choose Not To Answer"
+          ],
+          "question": "What is your race? You may select more than one.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su raza? Puede seleccionar más de una.",
+              "label": "Raza",
+              "options": [
+                "Indígena americano o nativo de Alaska",
+                "Asiático",
+                "Negro o afroamericano",
+                "Nativo de Hawái u otras islas del Pacífico",
+                "Blanco",
+                "Prefiero no responder"
+              ]
+            },
+            "zh": {
+              "question": "请问您的种族是什么？您可以选择多项。",
+              "label": "种族",
+              "options": [
+                "美洲印第安人或阿拉斯加原住民",
+                "亚裔",
+                "黑人或非裔美国人",
+                "夏威夷原住民或其他太平洋岛民",
+                "白人",
+                "选择不回答"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre origine ethnique (race) ? Vous pouvez en sélectionner plusieurs.",
+              "label": "Origine ethnique (race)",
+              "options": [
+                "Amérindien(ne) ou Autochtone de l'Alaska",
+                "Asiatique",
+                "Noir(e) ou Afro-Américain(e)",
+                "Hawaïen(ne) autochtone ou autre insulaire du Pacifique",
+                "Blanc(he)",
+                "Je préfère ne pas répondre"
+              ]
+            },
+            "ja": {
+              "question": "ご自身の人種を教えていただけますか？ 複数選択していただけます。",
+              "label": "人種",
+              "options": [
+                "アメリカインディアンまたはアラスカ先住民",
+                "アジア系",
+                "黒人またはアフリカ系アメリカ人",
+                "ネイティブハワイアンまたはその他の太平洋諸島系",
+                "白人",
+                "回答しない"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua raça? Você pode selecionar mais de uma.",
+              "label": "Raça",
+              "options": [
+                "Indígena Americano ou Nativo do Alasca",
+                "Asiático",
+                "Negro ou Afro-Americano",
+                "Nativo do Havaí ou de Outras Ilhas do Pacífico",
+                "Branco",
+                "Prefiro Não Responder"
+              ]
+            },
+            "ar": {
+              "question": "ما هو عِرقك؟ يمكنك اختيار أكثر من واحد.",
+              "label": "العِرق",
+              "options": [
+                "هندي أمريكي أو من سكان ألاسكا الأصليين",
+                "آسيوي",
+                "أسود أو أمريكي من أصل أفريقي",
+                "من سكان هاواي الأصليين أو من جزر المحيط الهادئ الأخرى",
+                "أبيض",
+                "أفضّل عدم الإجابة"
+              ]
+            },
+            "ru": {
+              "question": "Какая у вас раса? Вы можете выбрать несколько вариантов.",
+              "label": "Раса",
+              "options": [
+                "Американский индеец или коренной житель Аляски",
+                "Азиат",
+                "Чернокожий или афроамериканец",
+                "Коренной гаваец или другой житель тихоокеанских островов",
+                "Белый",
+                "Предпочитаю не отвечать"
+              ]
+            }
+          }
+        },
+        {
+          "id": "preferred_pronoun",
+          "label": "Preferred Pronoun",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "He, Him, His",
+            "She, Her, Hers",
+            "They, Them, Theirs",
+            "Ze, Hir",
+            "Other",
+            "Decline To Answer"
+          ],
+          "question": "What is your preferred pronoun?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su pronombre preferido?",
+              "label": "Pronombre preferido",
+              "options": [
+                "Él",
+                "Ella",
+                "Elle",
+                "Ze, Hir",
+                "Otro",
+                "Prefiero no responder"
+              ]
+            },
+            "zh": {
+              "question": "请问您倾向使用哪种人称代词？",
+              "label": "首选人称代词",
+              "options": [
+                "他（He, Him, His）",
+                "她（She, Her, Hers）",
+                "他们（They, Them, Theirs）",
+                "Ze, Hir",
+                "其他",
+                "拒绝回答"
+              ]
+            },
+            "fr": {
+              "question": "Quel est votre pronom préféré ?",
+              "label": "Pronom préféré",
+              "options": [
+                "Il, lui, son/sa",
+                "Elle, elle, son/sa",
+                "Iel, ellui, leur",
+                "Ze, hir",
+                "Autre",
+                "Je préfère ne pas répondre"
+              ]
+            },
+            "ja": {
+              "question": "ご希望の人称代名詞を教えていただけますか？",
+              "label": "希望する人称代名詞",
+              "options": [
+                "彼（He, Him, His）",
+                "彼女（She, Her, Hers）",
+                "その方（They, Them, Theirs）",
+                "Ze, Hir",
+                "その他",
+                "回答を控える"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu pronome preferido?",
+              "label": "Pronome Preferido",
+              "options": [
+                "Ele, Dele",
+                "Ela, Dela",
+                "Elu, Delu",
+                "Ze, Hir",
+                "Outro",
+                "Prefiro Não Responder"
+              ]
+            },
+            "ar": {
+              "question": "ما هو الضمير الذي تفضّل استخدامه؟",
+              "label": "الضمير المفضّل",
+              "options": [
+                "هو",
+                "هي",
+                "هم / هما",
+                "ضمير محايد (Ze, Hir)",
+                "غير ذلك",
+                "أرفض الإجابة"
+              ]
+            },
+            "ru": {
+              "question": "Какое местоимение вы предпочитаете?",
+              "label": "Предпочитаемое местоимение",
+              "options": [
+                "Он, его, ему",
+                "Она, её, ей",
+                "Они, их, им",
+                "Зе, хир",
+                "Другое",
+                "Отказываюсь отвечать"
+              ]
+            }
+          }
+        },
+        {
+          "id": "ethnicity",
+          "label": "Ethnicity",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Hispanic or Latino",
+            "Not Hispanic or Latino",
+            "Choose Not To Answer",
+            "Other",
+            "Unknown"
+          ],
+          "question": "What is your ethnicity?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su etnia?",
+              "label": "Etnia",
+              "options": [
+                "Hispano o Latino",
+                "No hispano o Latino",
+                "Prefiero no responder",
+                "Otro",
+                "Desconocido"
+              ]
+            },
+            "zh": {
+              "question": "请问您的族裔是什么？",
+              "label": "族裔",
+              "options": [
+                "西班牙裔或拉丁裔",
+                "非西班牙裔或拉丁裔",
+                "选择不回答",
+                "其他",
+                "未知"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre appartenance ethnique ?",
+              "label": "Appartenance ethnique",
+              "options": [
+                "Hispanique ou Latino",
+                "Non hispanique ou non latino",
+                "Je préfère ne pas répondre",
+                "Autre",
+                "Inconnu"
+              ]
+            },
+            "ja": {
+              "question": "ご自身の民族的背景を教えていただけますか？",
+              "label": "民族的背景",
+              "options": [
+                "ヒスパニックまたはラテン系",
+                "ヒスパニックまたはラテン系ではない",
+                "回答しない",
+                "その他",
+                "不明"
+              ]
+            },
+            "pt": {
+              "question": "Qual é a sua etnia?",
+              "label": "Etnia",
+              "options": [
+                "Hispânico ou Latino",
+                "Não Hispânico ou Latino",
+                "Prefiro Não Responder",
+                "Outra",
+                "Desconhecida"
+              ]
+            },
+            "ar": {
+              "question": "ما هو أصلك الإثني؟",
+              "label": "الأصل الإثني",
+              "options": [
+                "من أصل إسباني أو لاتيني",
+                "ليس من أصل إسباني أو لاتيني",
+                "أفضّل عدم الإجابة",
+                "غير ذلك",
+                "غير معروف"
+              ]
+            },
+            "ru": {
+              "question": "Какова ваша этническая принадлежность?",
+              "label": "Этническая принадлежность",
+              "options": [
+                "Латиноамериканского происхождения",
+                "Не латиноамериканского происхождения",
+                "Предпочитаю не отвечать",
+                "Другое",
+                "Неизвестно"
+              ]
+            }
+          }
+        },
+        {
+          "id": "preferred_language",
+          "label": "Preferred Language",
+          "type": "radio",
+          "required": true,
+          "ai_note": "Important — ask early so intake can switch languages if needed.",
+          "options": [
+            "English",
+            "Spanish",
+            "Other"
+          ],
+          "question": "What is your preferred language?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su idioma preferido?",
+              "label": "Idioma preferido",
+              "options": [
+                "Inglés",
+                "Español",
+                "Otro"
+              ]
+            },
+            "zh": {
+              "question": "请问您倾向使用哪种语言？",
+              "label": "首选语言",
+              "options": [
+                "英语",
+                "西班牙语",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre langue préférée ?",
+              "label": "Langue préférée",
+              "options": [
+                "Anglais",
+                "Espagnol",
+                "Autre"
+              ]
+            },
+            "ja": {
+              "question": "ご希望の言語を教えていただけますか？",
+              "label": "希望する言語",
+              "options": [
+                "英語",
+                "スペイン語",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu idioma preferido?",
+              "label": "Idioma Preferido",
+              "options": [
+                "Inglês",
+                "Espanhol",
+                "Outro"
+              ]
+            },
+            "ar": {
+              "question": "ما هي لغتك المفضّلة؟",
+              "label": "اللغة المفضّلة",
+              "options": [
+                "الإنجليزية",
+                "الإسبانية",
+                "غير ذلك"
+              ]
+            },
+            "ru": {
+              "question": "Какой язык вы предпочитаете?",
+              "label": "Предпочитаемый язык",
+              "options": [
+                "Английский",
+                "Испанский",
+                "Другой"
+              ]
+            }
+          }
+        },
+        {
+          "id": "marital_status",
+          "label": "Marital Status",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Married",
+            "Single",
+            "Divorced/Separated",
+            "Widowed"
+          ],
+          "question": "What is your marital status?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su estado civil?",
+              "label": "Estado civil",
+              "options": [
+                "Casado/a",
+                "Soltero/a",
+                "Divorciado/a o separado/a",
+                "Viudo/a"
+              ]
+            },
+            "zh": {
+              "question": "请问您的婚姻状况是什么？",
+              "label": "婚姻状况",
+              "options": [
+                "已婚",
+                "单身",
+                "离异/分居",
+                "丧偶"
+              ]
+            },
+            "fr": {
+              "question": "Quelle est votre situation matrimoniale ?",
+              "label": "Situation matrimoniale",
+              "options": [
+                "Marié(e)",
+                "Célibataire",
+                "Divorcé(e)/Séparé(e)",
+                "Veuf/Veuve"
+              ]
+            },
+            "ja": {
+              "question": "婚姻状況を教えていただけますか？",
+              "label": "婚姻状況",
+              "options": [
+                "既婚",
+                "未婚",
+                "離婚／別居",
+                "死別"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o seu estado civil?",
+              "label": "Estado Civil",
+              "options": [
+                "Casado(a)",
+                "Solteiro(a)",
+                "Divorciado(a)/Separado(a)",
+                "Viúvo(a)"
+              ]
+            },
+            "ar": {
+              "question": "ما هي حالتك الاجتماعية؟",
+              "label": "الحالة الاجتماعية",
+              "options": [
+                "متزوج",
+                "أعزب",
+                "مطلّق / منفصل",
+                "أرمل"
+              ]
+            },
+            "ru": {
+              "question": "Каково ваше семейное положение?",
+              "label": "Семейное положение",
+              "options": [
+                "Женат / замужем",
+                "Холост / не замужем",
+                "В разводе / раздельно проживающие",
+                "Вдовец / вдова"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Insurance",
+      "fields": [
+        {
+          "id": "primary_insurance_name",
+          "label": "Primary Insurance Name",
+          "type": "text",
+          "required": false,
+          "ai_note": "Remind patient to give insurance card to staff if they have one.",
+          "question": "What is the name of your primary health insurance? Say 'none' if you don't have insurance.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el nombre de su seguro médico principal?",
+              "label": "Seguro médico principal"
+            },
+            "zh": {
+              "question": "请问您的主要医疗保险名称是什么？如果您没有保险，请说“无”。",
+              "label": "主要保险名称"
+            },
+            "fr": {
+              "question": "Quel est le nom de votre assurance maladie principale ? Dites « aucune » si vous n'avez pas d'assurance.",
+              "label": "Nom de l'assurance principale"
+            },
+            "ja": {
+              "question": "主たる健康保険の名称を教えていただけますか？ 保険にご加入でない場合は「なし」とおっしゃってください。",
+              "label": "主たる保険の名称"
+            },
+            "pt": {
+              "question": "Qual é o nome do seu plano de saúde principal? Diga 'nenhum' se você não tiver plano de saúde.",
+              "label": "Nome do Plano de Saúde Principal"
+            },
+            "ar": {
+              "question": "ما اسم شركة التأمين الصحي الأساسي الخاص بك؟ قل \"لا يوجد\" إذا لم يكن لديك تأمين.",
+              "label": "اسم التأمين الأساسي"
+            },
+            "ru": {
+              "question": "Как называется ваша основная медицинская страховка? Скажите «нет», если у вас нет страховки.",
+              "label": "Название основной страховки"
+            }
+          }
+        },
+        {
+          "id": "secondary_insurance_name",
+          "label": "Secondary Insurance Name",
+          "type": "text",
+          "required": false,
+          "question": "Do you have a secondary insurance? If so, what is its name? Say 'none' if not.",
+          "i18n": {
+            "es": {
+              "question": "¿Tiene un seguro médico secundario?",
+              "label": "Seguro médico secundario"
+            },
+            "zh": {
+              "question": "请问您有第二份保险吗？如果有，名称是什么？如果没有，请说“无”。",
+              "label": "次要保险名称"
+            },
+            "fr": {
+              "question": "Avez-vous une assurance secondaire ? Si oui, quel est son nom ? Dites « aucune » si ce n'est pas le cas.",
+              "label": "Nom de l'assurance secondaire"
+            },
+            "ja": {
+              "question": "第二の保険にご加入ですか？ その場合は名称を教えていただけますか？ ない場合は「なし」とおっしゃってください。",
+              "label": "第二の保険の名称"
+            },
+            "pt": {
+              "question": "Você tem um plano de saúde secundário? Se tiver, qual é o nome dele? Diga 'nenhum' se não tiver.",
+              "label": "Nome do Plano de Saúde Secundário"
+            },
+            "ar": {
+              "question": "هل لديك تأمين ثانوي؟ إن كان لديك، فما اسمه؟ قل \"لا يوجد\" إذا لم يكن لديك.",
+              "label": "اسم التأمين الثانوي"
+            },
+            "ru": {
+              "question": "У вас есть дополнительная страховка? Если да, как она называется? Скажите «нет», если её нет.",
+              "label": "Название дополнительной страховки"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Background Questions",
+      "fields": [
+        {
+          "id": "us_veteran",
+          "label": "US Veteran",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Are you a US veteran?",
+          "i18n": {
+            "es": {
+              "question": "¿Es usted veterano de los Estados Unidos?",
+              "label": "Veterano de EE. UU.",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "请问您是美国退伍军人吗？",
+              "label": "美国退伍军人",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Êtes-vous un ancien combattant des États-Unis ?",
+              "label": "Ancien combattant des États-Unis",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "米国の退役軍人でいらっしゃいますか？",
+              "label": "米国退役軍人",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Você é veterano(a) das forças armadas dos EUA?",
+              "label": "Veterano dos EUA",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل أنت من المحاربين القدامى في الجيش الأمريكي؟",
+              "label": "محارب قديم في الجيش الأمريكي",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Вы ветеран вооружённых сил США?",
+              "label": "Ветеран вооружённых сил США",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "agriculture_work_2yr",
+          "label": "Agricultural Work (Last 2 Years)",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "ai_note": "Farm work includes planting, picking, preparing soil, packing house, driving trucks, working with animals.",
+          "question": "In the last 2 years, have you or anyone in your family worked in any type of agriculture — such as planting, picking, packing, or working with animals?",
+          "i18n": {
+            "es": {
+              "question": "En los últimos 2 años, ¿usted o algún familiar ha trabajado en agricultura?",
+              "label": "Trabajo agrícola (últimos 2 años)",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "在过去两年里，您或您家中的任何人是否从事过任何农业工作——例如种植、采摘、包装或照料动物？",
+              "label": "农业工作（过去两年）",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Au cours des 2 dernières années, vous ou un membre de votre famille avez-vous travaillé dans un domaine agricole — comme la plantation, la cueillette, l'emballage ou le travail avec des animaux ?",
+              "label": "Travail agricole (2 dernières années)",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "過去2年間に、ご本人またはご家族の方が、植え付け、収穫、梱包、動物の世話など、何らかの農業に従事されたことはありますか？",
+              "label": "農業従事（過去2年間）",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Nos últimos 2 anos, você ou algum membro da sua família trabalhou em algum tipo de agricultura — como plantio, colheita, embalagem ou cuidado com animais?",
+              "label": "Trabalho Agrícola (Últimos 2 Anos)",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "خلال العامين الماضيين، هل عملت أنت أو أي فرد من عائلتك في أي نوع من الزراعة — مثل الزراعة أو الحصاد أو التعبئة أو العمل مع الحيوانات؟",
+              "label": "العمل الزراعي (آخر عامين)",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "За последние 2 года вы или кто-либо из вашей семьи работали в сельском хозяйстве — например, посадка, сбор урожая, упаковка или работа с животными?",
+              "label": "Работа в сельском хозяйстве (за последние 2 года)",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "agriculture_away_from_home",
+          "label": "Lived Away from Home for Agriculture",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "In the last 2 years, have you or a family member lived away from home to work in agriculture?",
+          "i18n": {
+            "es": {
+              "question": "¿En los últimos 2 años, usted o un familiar vivió fuera de casa para trabajar en agricultura?",
+              "label": "Vivió fuera por trabajo agrícola",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "在过去两年里，您或您的家庭成员是否曾离家外出从事农业工作？",
+              "label": "为农业工作离家居住",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Au cours des 2 dernières années, vous ou un membre de votre famille avez-vous vécu loin de votre domicile pour travailler dans l'agriculture ?",
+              "label": "A vécu loin du domicile pour l'agriculture",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "過去2年間に、ご本人またはご家族の方が、農業に従事するために自宅を離れて生活されたことはありますか？",
+              "label": "農業のため自宅を離れて生活",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Nos últimos 2 anos, você ou algum membro da família morou longe de casa para trabalhar na agricultura?",
+              "label": "Morou Longe de Casa por Trabalho Agrícola",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "خلال العامين الماضيين، هل عشت أنت أو أحد أفراد عائلتك بعيدًا عن المنزل من أجل العمل في الزراعة؟",
+              "label": "العيش بعيدًا عن المنزل للعمل الزراعي",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "За последние 2 года вы или член вашей семьи жили вдали от дома, чтобы работать в сельском хозяйстве?",
+              "label": "Проживание вдали от дома ради работы в сельском хозяйстве",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "agriculture_disability_stopped",
+          "label": "Stopped Migrating Due to Disability",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Have you or a family member stopped migrating to work in agriculture because of a disability?",
+          "i18n": {
+            "es": {
+              "question": "¿Usted o un familiar dejó de migrar para trabajar en agricultura debido a una discapacidad?",
+              "label": "Dejó de migrar por discapacidad",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "您或您的家庭成员是否因残疾而停止迁移从事农业工作？",
+              "label": "因残疾停止迁移",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Vous ou un membre de votre famille avez-vous cessé de migrer pour travailler dans l'agriculture en raison d'un handicap ?",
+              "label": "A cessé de migrer en raison d'un handicap",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "ご本人またはご家族の方が、障がいのために農業に従事するための移動をやめられたことはありますか？",
+              "label": "障がいにより移動を中止",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Você ou algum membro da família deixou de migrar para trabalhar na agricultura por causa de uma deficiência?",
+              "label": "Parou de Migrar Devido a Deficiência",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل توقفت أنت أو أحد أفراد عائلتك عن التنقل للعمل في الزراعة بسبب إعاقة؟",
+              "label": "التوقف عن التنقل بسبب إعاقة",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Вы или член вашей семьи перестали переезжать ради работы в сельском хозяйстве из-за инвалидности?",
+              "label": "Прекращение переездов из-за инвалидности",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "homeless_status",
+          "label": "Homeless Status",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Not Homeless",
+            "Doubling Up",
+            "Shelter",
+            "Street",
+            "Transitional",
+            "Other"
+          ],
+          "question": "What best describes your current housing situation?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál describe mejor su situación de vivienda actual?",
+              "label": "Situación de vivienda",
+              "options": [
+                "Sin situación de calle",
+                "Compartiendo vivienda",
+                "Refugio",
+                "Calle",
+                "Transitorio",
+                "Otro"
+              ]
+            },
+            "zh": {
+              "question": "以下哪一项最能描述您目前的居住状况？",
+              "label": "无家可归状况",
+              "options": [
+                "并非无家可归",
+                "与他人合住",
+                "收容所",
+                "露宿街头",
+                "过渡性住所",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Qu'est-ce qui décrit le mieux votre situation de logement actuelle ?",
+              "label": "Situation de logement",
+              "options": [
+                "Pas sans abri",
+                "Hébergement chez des proches",
+                "Refuge / Centre d'hébergement",
+                "Rue",
+                "Logement de transition",
+                "Autre"
+              ]
+            },
+            "ja": {
+              "question": "現在の住居の状況に最も近いものはどれですか？",
+              "label": "住居の状況",
+              "options": [
+                "住居あり",
+                "他世帯との同居",
+                "シェルター",
+                "路上生活",
+                "一時的な住居",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "O que melhor descreve a sua situação de moradia atual?",
+              "label": "Situação de Moradia",
+              "options": [
+                "Tenho Moradia",
+                "Morando com Outras Pessoas",
+                "Abrigo",
+                "Rua",
+                "Moradia Temporária",
+                "Outra"
+              ]
+            },
+            "ar": {
+              "question": "ما الذي يصف وضعك السكني الحالي على أفضل وجه؟",
+              "label": "حالة التشرّد",
+              "options": [
+                "غير متشرّد",
+                "السكن المشترك مع آخرين",
+                "مأوى إيواء",
+                "في الشارع",
+                "سكن انتقالي مؤقت",
+                "غير ذلك"
+              ]
+            },
+            "ru": {
+              "question": "Что лучше всего описывает вашу текущую жилищную ситуацию?",
+              "label": "Статус бездомности",
+              "options": [
+                "Не бездомный",
+                "Временное проживание у других",
+                "Приют",
+                "Улица",
+                "Временное жильё",
+                "Другое"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Communication Preferences",
+      "fields": [
+        {
+          "id": "leave_phone_messages",
+          "label": "May We Leave Phone Messages?",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we leave detailed phone messages for you?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos dejarle mensajes detallados por teléfono?",
+              "label": "¿Podemos dejar mensajes de voz?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "我们可以为您留下详细的电话留言吗？",
+              "label": "我们可以留电话留言吗？",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Pouvons-nous vous laisser des messages téléphoniques détaillés ?",
+              "label": "Pouvons-nous laisser des messages téléphoniques ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "詳細な内容を電話の留守番メッセージに残してもよろしいですか？",
+              "label": "電話メッセージを残してよいか",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Podemos deixar mensagens telefônicas detalhadas para você?",
+              "label": "Podemos Deixar Mensagens Telefônicas?",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل تسمح لنا بترك رسائل هاتفية تفصيلية لك؟",
+              "label": "هل نترك رسائل هاتفية؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Можем ли мы оставлять вам подробные голосовые сообщения?",
+              "label": "Можем ли мы оставлять голосовые сообщения?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "mail_correspondence",
+          "label": "May We Mail Correspondence?",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we mail detailed correspondence to your address?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos enviarle correspondencia a su dirección?",
+              "label": "¿Podemos enviar correo?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "我们可以向您的地址邮寄详细的信函吗？",
+              "label": "我们可以邮寄信函吗？",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Pouvons-nous vous envoyer de la correspondance détaillée à votre adresse ?",
+              "label": "Pouvons-nous envoyer de la correspondance ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "詳細な内容のお手紙をご住所宛にお送りしてもよろしいですか？",
+              "label": "郵便物を送付してよいか",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Podemos enviar correspondências detalhadas para o seu endereço?",
+              "label": "Podemos Enviar Correspondências?",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل تسمح لنا بإرسال مراسلات تفصيلية إلى عنوانك بالبريد؟",
+              "label": "هل نرسل مراسلات بالبريد؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Можем ли мы отправлять подробную корреспонденцию на ваш адрес?",
+              "label": "Можем ли мы отправлять корреспонденцию?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "text_reminders",
+          "label": "May We Text Reminders?",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we text you important reminders?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos enviarle recordatorios por mensaje de texto?",
+              "label": "¿Podemos enviar mensajes de texto?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "我们可以向您发送重要提醒短信吗？",
+              "label": "我们可以发送提醒短信吗？",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Pouvons-nous vous envoyer des rappels importants par SMS ?",
+              "label": "Pouvons-nous envoyer des rappels par SMS ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "大切なお知らせをショートメッセージでお送りしてもよろしいですか？",
+              "label": "リマインダーを送信してよいか",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Podemos enviar lembretes importantes por mensagem de texto?",
+              "label": "Podemos Enviar Lembretes por Texto?",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل تسمح لنا بإرسال رسائل نصية بتذكيرات مهمة؟",
+              "label": "هل نرسل تذكيرات نصية؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Можем ли мы отправлять вам важные напоминания по SMS?",
+              "label": "Можем ли мы отправлять напоминания по SMS?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "email_information",
+          "label": "May We Email You?",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we email you information?",
+          "i18n": {
+            "es": {
+              "question": "¿Podemos enviarle información por correo electrónico?",
+              "label": "¿Podemos enviar correos?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "我们可以通过电子邮件向您发送信息吗？",
+              "label": "我们可以给您发电子邮件吗？",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "Pouvons-nous vous envoyer des informations par courriel ?",
+              "label": "Pouvons-nous vous envoyer des courriels ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "情報をメールでお送りしてもよろしいですか？",
+              "label": "メールを送信してよいか",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "Podemos enviar informações para você por e-mail?",
+              "label": "Podemos Enviar E-mails?",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل تسمح لنا بإرسال معلومات إليك عبر البريد الإلكتروني؟",
+              "label": "هل نراسلك عبر البريد الإلكتروني؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Можем ли мы отправлять вам информацию по электронной почте?",
+              "label": "Можем ли мы писать вам по электронной почте?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "email_address",
+          "label": "Email Address",
+          "type": "email",
+          "required": false,
+          "question": "What is your email address? Say 'none' to skip.",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es su correo electrónico? Diga 'ninguno' para omitir.",
+              "label": "Correo electrónico"
+            },
+            "zh": {
+              "question": "请问您的电子邮箱地址是什么？如需跳过，请说“无”。",
+              "label": "电子邮箱地址"
+            },
+            "fr": {
+              "question": "Quelle est votre adresse courriel ? Dites « aucune » pour passer.",
+              "label": "Adresse courriel"
+            },
+            "ja": {
+              "question": "メールアドレスを教えていただけますか？ 省略する場合は「なし」とおっしゃってください。",
+              "label": "メールアドレス"
+            },
+            "pt": {
+              "question": "Qual é o seu endereço de e-mail? Diga 'nenhum' para pular.",
+              "label": "Endereço de E-mail"
+            },
+            "ar": {
+              "question": "ما هو عنوان بريدك الإلكتروني؟ قل \"لا يوجد\" للتخطّي.",
+              "label": "البريد الإلكتروني"
+            },
+            "ru": {
+              "question": "Какой у вас адрес электронной почты? Скажите «нет», чтобы пропустить.",
+              "label": "Адрес электронной почты"
+            }
+          }
+        },
+        {
+          "id": "how_heard_about",
+          "label": "How Did You Hear About AccelHealth?",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Billboard",
+            "Event Sponsor",
+            "Friend/Family",
+            "Insurance",
+            "Internet",
+            "Newspaper",
+            "Publication",
+            "Radio",
+            "Social Media",
+            "Other"
+          ],
+          "question": "How did you hear about AccelHealth?",
+          "i18n": {
+            "es": {
+              "question": "¿Cómo se enteró de AccelHealth?",
+              "label": "¿Cómo nos conoció?",
+              "options": [
+                "Anuncio exterior",
+                "Evento patrocinador",
+                "Amigo o familiar",
+                "Seguro médico",
+                "Internet",
+                "Periódico",
+                "Publicación",
+                "Radio",
+                "Redes sociales",
+                "Otro"
+              ]
+            },
+            "zh": {
+              "question": "请问您是如何了解到 AccelHealth 的？",
+              "label": "您是如何了解到 AccelHealth 的？",
+              "options": [
+                "广告牌",
+                "活动赞助商",
+                "朋友/家人",
+                "保险",
+                "互联网",
+                "报纸",
+                "刊物",
+                "广播",
+                "社交媒体",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Comment avez-vous entendu parler d'AccelHealth ?",
+              "label": "Comment avez-vous entendu parler d'AccelHealth ?",
+              "options": [
+                "Panneau d'affichage",
+                "Commanditaire d'un événement",
+                "Ami(e)/Famille",
+                "Assurance",
+                "Internet",
+                "Journal",
+                "Publication",
+                "Radio",
+                "Réseaux sociaux",
+                "Autre"
+              ]
+            },
+            "ja": {
+              "question": "AccelHealthをどちらでお知りになりましたか？",
+              "label": "AccelHealthをどちらでお知りになりましたか？",
+              "options": [
+                "看板広告",
+                "イベントの協賛",
+                "友人／家族",
+                "保険",
+                "インターネット",
+                "新聞",
+                "出版物",
+                "ラジオ",
+                "ソーシャルメディア",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Como você ficou sabendo da AccelHealth?",
+              "label": "Como Você Ficou Sabendo da AccelHealth?",
+              "options": [
+                "Outdoor",
+                "Patrocinador de Evento",
+                "Amigo/Família",
+                "Plano de Saúde",
+                "Internet",
+                "Jornal",
+                "Publicação",
+                "Rádio",
+                "Redes Sociais",
+                "Outro"
+              ]
+            },
+            "ar": {
+              "question": "كيف سمعت عن AccelHealth؟",
+              "label": "كيف سمعت عن AccelHealth؟",
+              "options": [
+                "لوحة إعلانية",
+                "راعٍ لفعالية",
+                "صديق / أحد أفراد العائلة",
+                "شركة التأمين",
+                "الإنترنت",
+                "صحيفة",
+                "منشور",
+                "الراديو",
+                "وسائل التواصل الاجتماعي",
+                "غير ذلك"
+              ]
+            },
+            "ru": {
+              "question": "Откуда вы узнали об AccelHealth?",
+              "label": "Откуда вы узнали об AccelHealth?",
+              "options": [
+                "Рекламный щит",
+                "Спонсор мероприятия",
+                "Друг / семья",
+                "Страховая компания",
+                "Интернет",
+                "Газета",
+                "Печатное издание",
+                "Радио",
+                "Социальные сети",
+                "Другое"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parent / Guardian Information",
+      "fields": [
+        {
+          "id": "parent1_name",
+          "label": "Parent / Guardian #1 Name",
+          "type": "text",
+          "required": false,
+          "ai_note": "Only collected if is_minor = Yes",
+          "question": "What is the name of Parent or Guardian #1?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es el nombre del tutor #1?",
+              "label": "Nombre del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长或监护人 #1 的姓名是什么？",
+              "label": "家长 / 监护人 #1 姓名"
+            },
+            "fr": {
+              "question": "Quel est le nom du parent ou tuteur n° 1 ?",
+              "label": "Nom du parent / tuteur n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）のお名前を教えていただけますか？",
+              "label": "保護者（1人目）のお名前"
+            },
+            "pt": {
+              "question": "Qual é o nome do Pai/Mãe ou Responsável nº 1?",
+              "label": "Nome do Pai / Mãe / Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما اسم الوالد أو الوصي رقم 1؟",
+              "label": "اسم الوالد / الوصي رقم 1"
+            },
+            "ru": {
+              "question": "Как зовут родителя или опекуна №1?",
+              "label": "Имя родителя / опекуна №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_mailing_address",
+          "label": "Parent #1 Mailing Address",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #1's mailing address?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es la dirección postal del tutor #1?",
+              "label": "Dirección del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 的通讯地址是什么？",
+              "label": "家长 #1 通讯地址"
+            },
+            "fr": {
+              "question": "Quelle est l'adresse postale du parent/tuteur n° 1 ?",
+              "label": "Adresse postale du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の郵送先住所を教えていただけますか？",
+              "label": "保護者1の郵送先住所"
+            },
+            "pt": {
+              "question": "Qual é o endereço postal do Pai/Mãe/Responsável nº 1?",
+              "label": "Endereço Postal do Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما هو العنوان البريدي للوالد / الوصي رقم 1؟",
+              "label": "العنوان البريدي للوالد رقم 1"
+            },
+            "ru": {
+              "question": "Какой почтовый адрес у родителя / опекуна №1?",
+              "label": "Почтовый адрес родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_same_as_above",
+          "label": "Parent #1 Address Same as Patient?",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Is Parent/Guardian #1's address the same as the patient's address we collected earlier?",
+          "i18n": {
+            "es": {
+              "question": "¿La dirección del tutor #1 es la misma que la del paciente?",
+              "label": "¿Misma dirección que el paciente?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "家长/监护人 #1 的地址与我们之前采集的患者地址相同吗？",
+              "label": "家长 #1 地址与患者相同？",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "L'adresse du parent/tuteur n° 1 est-elle la même que l'adresse du patient que nous avons recueillie précédemment ?",
+              "label": "L'adresse du parent n° 1 est-elle la même que celle du patient ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "保護者（1人目）のご住所は、先ほどお伺いした患者様のご住所と同じですか？",
+              "label": "保護者1の住所は患者様と同じか",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "O endereço do Pai/Mãe/Responsável nº 1 é o mesmo endereço do paciente que coletamos anteriormente?",
+              "label": "Endereço do Responsável nº 1 é Igual ao do Paciente?",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل عنوان الوالد / الوصي رقم 1 هو نفسه عنوان المريض الذي سجّلناه سابقًا؟",
+              "label": "عنوان الوالد رقم 1 نفس عنوان المريض؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Совпадает ли адрес родителя / опекуна №1 с адресом пациента, который мы собрали ранее?",
+              "label": "Адрес родителя №1 совпадает с адресом пациента?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "parent1_city_state_zip",
+          "label": "Parent #1 City / State / ZIP",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #1's city, state, and ZIP code?",
+          "i18n": {
+            "es": {
+              "question": "¿Ciudad, estado y código postal del tutor #1?",
+              "label": "Ciudad / Estado / ZIP del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 所在的城市、州和邮政编码是什么？",
+              "label": "家长 #1 城市 / 州 / 邮政编码"
+            },
+            "fr": {
+              "question": "Quels sont la ville, l'État et le code postal du parent/tuteur n° 1 ?",
+              "label": "Ville / État / Code postal du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の市区町村、州、郵便番号を教えていただけますか？",
+              "label": "保護者1の市区町村／州／郵便番号"
+            },
+            "pt": {
+              "question": "Qual é a cidade, o estado e o código postal (CEP) do Pai/Mãe/Responsável nº 1?",
+              "label": "Cidade / Estado / CEP do Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما هي مدينة وولاية والرمز البريدي للوالد / الوصي رقم 1؟",
+              "label": "مدينة / ولاية / رمز بريدي للوالد رقم 1"
+            },
+            "ru": {
+              "question": "Укажите город, штат и почтовый индекс родителя / опекуна №1.",
+              "label": "Город / штат / индекс родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_date_of_birth",
+          "label": "Parent #1 Date of Birth",
+          "type": "date",
+          "required": false,
+          "question": "What is Parent/Guardian #1's date of birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Fecha de nacimiento del tutor #1?",
+              "label": "Fecha de nacimiento del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 的出生日期是哪一天？",
+              "label": "家长 #1 出生日期"
+            },
+            "fr": {
+              "question": "Quelle est la date de naissance du parent/tuteur n° 1 ?",
+              "label": "Date de naissance du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の生年月日を教えていただけますか？",
+              "label": "保護者1の生年月日"
+            },
+            "pt": {
+              "question": "Qual é a data de nascimento do Pai/Mãe/Responsável nº 1?",
+              "label": "Data de Nascimento do Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما هو تاريخ ميلاد الوالد / الوصي رقم 1؟",
+              "label": "تاريخ ميلاد الوالد رقم 1"
+            },
+            "ru": {
+              "question": "Какая дата рождения у родителя / опекуна №1?",
+              "label": "Дата рождения родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_home_phone",
+          "label": "Parent #1 Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #1's home phone?",
+          "i18n": {
+            "es": {
+              "question": "¿Teléfono de casa del tutor #1?",
+              "label": "Teléfono de casa del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 的家庭电话是多少？",
+              "label": "家长 #1 家庭电话"
+            },
+            "fr": {
+              "question": "Quel est le téléphone fixe du parent/tuteur n° 1 ?",
+              "label": "Téléphone fixe du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の自宅電話番号を教えていただけますか？",
+              "label": "保護者1の自宅電話番号"
+            },
+            "pt": {
+              "question": "Qual é o telefone residencial do Pai/Mãe/Responsável nº 1?",
+              "label": "Telefone Residencial do Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما هو هاتف منزل الوالد / الوصي رقم 1؟",
+              "label": "هاتف منزل الوالد رقم 1"
+            },
+            "ru": {
+              "question": "Какой домашний телефон у родителя / опекуна №1?",
+              "label": "Домашний телефон родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_work_phone",
+          "label": "Parent #1 Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #1's work phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": {
+              "question": "¿Teléfono del trabajo del tutor #1?",
+              "label": "Teléfono del trabajo del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 的工作电话是多少？如不适用，请说“无”。",
+              "label": "家长 #1 工作电话"
+            },
+            "fr": {
+              "question": "Quel est le téléphone professionnel du parent/tuteur n° 1 ? Dites « aucun » si cela ne s'applique pas.",
+              "label": "Téléphone professionnel du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の勤務先電話番号を教えていただけますか？ 該当しない場合は「なし」とおっしゃってください。",
+              "label": "保護者1の勤務先電話番号"
+            },
+            "pt": {
+              "question": "Qual é o telefone do trabalho do Pai/Mãe/Responsável nº 1? Diga 'nenhum' se não se aplicar.",
+              "label": "Telefone do Trabalho do Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما هو هاتف عمل الوالد / الوصي رقم 1؟ قل \"لا يوجد\" إذا لم يكن منطبقًا.",
+              "label": "هاتف عمل الوالد رقم 1"
+            },
+            "ru": {
+              "question": "Какой рабочий телефон у родителя / опекуна №1? Скажите «нет», если неприменимо.",
+              "label": "Рабочий телефон родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_cell_phone",
+          "label": "Parent #1 Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #1's cell phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": {
+              "question": "¿Celular del tutor #1?",
+              "label": "Celular del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 的手机号码是多少？如不适用，请说“无”。",
+              "label": "家长 #1 手机"
+            },
+            "fr": {
+              "question": "Quel est le téléphone portable du parent/tuteur n° 1 ? Dites « aucun » si cela ne s'applique pas.",
+              "label": "Téléphone portable du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の携帯電話番号を教えていただけますか？ 該当しない場合は「なし」とおっしゃってください。",
+              "label": "保護者1の携帯電話番号"
+            },
+            "pt": {
+              "question": "Qual é o celular do Pai/Mãe/Responsável nº 1? Diga 'nenhum' se não se aplicar.",
+              "label": "Celular do Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما هو الهاتف المحمول للوالد / الوصي رقم 1؟ قل \"لا يوجد\" إذا لم يكن منطبقًا.",
+              "label": "الهاتف المحمول للوالد رقم 1"
+            },
+            "ru": {
+              "question": "Какой мобильный телефон у родителя / опекуна №1? Скажите «нет», если неприменимо.",
+              "label": "Мобильный телефон родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_ssn",
+          "label": "Parent #1 Social Security Number",
+          "type": "text",
+          "required": false,
+          "ai_note": "Sensitive — collected at review step.",
+          "question": "What is Parent/Guardian #1's Social Security Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Número de seguro social del tutor #1?",
+              "label": "SSN del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 的社会安全号码是多少？",
+              "label": "家长 #1 社会安全号码"
+            },
+            "fr": {
+              "question": "Quel est le numéro de sécurité sociale du parent/tuteur n° 1 ?",
+              "label": "Numéro de sécurité sociale du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の社会保障番号を教えていただけますか？",
+              "label": "保護者1の社会保障番号"
+            },
+            "pt": {
+              "question": "Qual é o número de Seguro Social do Pai/Mãe/Responsável nº 1?",
+              "label": "Número de Seguro Social do Responsável nº 1"
+            },
+            "ar": {
+              "question": "ما هو رقم الضمان الاجتماعي للوالد / الوصي رقم 1؟",
+              "label": "رقم الضمان الاجتماعي للوالد رقم 1"
+            },
+            "ru": {
+              "question": "Какой номер социального страхования у родителя / опекуна №1?",
+              "label": "Номер социального страхования родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_employer",
+          "label": "Parent #1 Employer",
+          "type": "text",
+          "required": false,
+          "question": "Who is Parent/Guardian #1's employer? Say 'none' if not employed.",
+          "i18n": {
+            "es": {
+              "question": "¿Empleador del tutor #1?",
+              "label": "Empleador del tutor #1"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 的雇主是谁？如未就业，请说“无”。",
+              "label": "家长 #1 雇主"
+            },
+            "fr": {
+              "question": "Qui est l'employeur du parent/tuteur n° 1 ? Dites « aucun » s'il n'a pas d'emploi.",
+              "label": "Employeur du parent n° 1"
+            },
+            "ja": {
+              "question": "保護者（1人目）の勤務先を教えていただけますか？ 就労されていない場合は「なし」とおっしゃってください。",
+              "label": "保護者1の勤務先"
+            },
+            "pt": {
+              "question": "Quem é o empregador do Pai/Mãe/Responsável nº 1? Diga 'nenhum' se não estiver empregado.",
+              "label": "Empregador do Responsável nº 1"
+            },
+            "ar": {
+              "question": "من هو صاحب عمل الوالد / الوصي رقم 1؟ قل \"لا يوجد\" إذا لم يكن يعمل.",
+              "label": "صاحب عمل الوالد رقم 1"
+            },
+            "ru": {
+              "question": "Кто работодатель родителя / опекуна №1? Скажите «нет», если не трудоустроен.",
+              "label": "Работодатель родителя №1"
+            }
+          }
+        },
+        {
+          "id": "parent1_relationship",
+          "label": "Parent #1 Relationship to Child",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Mother",
+            "Father",
+            "Grandparent",
+            "Foster Parent",
+            "Other"
+          ],
+          "question": "What is Parent/Guardian #1's relationship to the patient?",
+          "i18n": {
+            "es": {
+              "question": "¿Qué relación tiene el tutor #1 con el paciente?",
+              "label": "Relación del tutor #1",
+              "options": [
+                "Madre",
+                "Padre",
+                "Abuelo/a",
+                "Padre de acogida",
+                "Otro"
+              ]
+            },
+            "zh": {
+              "question": "请问家长/监护人 #1 与患者是什么关系？",
+              "label": "家长 #1 与孩子的关系",
+              "options": [
+                "母亲",
+                "父亲",
+                "祖父母/外祖父母",
+                "寄养父母",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Quel est le lien de parenté du parent/tuteur n° 1 avec le patient ?",
+              "label": "Lien du parent n° 1 avec l'enfant",
+              "options": [
+                "Mère",
+                "Père",
+                "Grand-parent",
+                "Famille d'accueil",
+                "Autre"
+              ]
+            },
+            "ja": {
+              "question": "保護者（1人目）の患者様との続柄を教えていただけますか？",
+              "label": "保護者1の患者様との続柄",
+              "options": [
+                "母",
+                "父",
+                "祖父母",
+                "里親",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o parentesco do Pai/Mãe/Responsável nº 1 com o paciente?",
+              "label": "Parentesco do Responsável nº 1 com a Criança",
+              "options": [
+                "Mãe",
+                "Pai",
+                "Avô/Avó",
+                "Pai/Mãe de Acolhimento",
+                "Outro"
+              ]
+            },
+            "ar": {
+              "question": "ما هي صلة قرابة الوالد / الوصي رقم 1 بالمريض؟",
+              "label": "صلة قرابة الوالد رقم 1 بالطفل",
+              "options": [
+                "الأم",
+                "الأب",
+                "أحد الأجداد",
+                "والد حاضن",
+                "غير ذلك"
+              ]
+            },
+            "ru": {
+              "question": "Кем приходится родитель / опекун №1 пациенту?",
+              "label": "Степень родства родителя №1 с ребёнком",
+              "options": [
+                "Мать",
+                "Отец",
+                "Бабушка / дедушка",
+                "Приёмный родитель",
+                "Другое"
+              ]
+            }
+          }
+        },
+        {
+          "id": "parent2_name",
+          "label": "Parent / Guardian #2 Name",
+          "type": "text",
+          "required": false,
+          "question": "What is the name of Parent or Guardian #2? Say 'none' if there is only one guardian.",
+          "i18n": {
+            "es": {
+              "question": "¿Nombre del tutor #2? Diga 'ninguno' si solo hay un tutor.",
+              "label": "Nombre del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长或监护人 #2 的姓名是什么？如果只有一位监护人，请说“无”。",
+              "label": "家长 / 监护人 #2 姓名"
+            },
+            "fr": {
+              "question": "Quel est le nom du parent ou tuteur n° 2 ? Dites « aucun » s'il n'y a qu'un seul tuteur.",
+              "label": "Nom du parent / tuteur n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）のお名前を教えていただけますか？ 保護者がお一人のみの場合は「なし」とおっしゃってください。",
+              "label": "保護者（2人目）のお名前"
+            },
+            "pt": {
+              "question": "Qual é o nome do Pai/Mãe ou Responsável nº 2? Diga 'nenhum' se houver apenas um responsável.",
+              "label": "Nome do Pai / Mãe / Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما اسم الوالد أو الوصي رقم 2؟ قل \"لا يوجد\" إذا كان هناك وصي واحد فقط.",
+              "label": "اسم الوالد / الوصي رقم 2"
+            },
+            "ru": {
+              "question": "Как зовут родителя или опекуна №2? Скажите «нет», если опекун только один.",
+              "label": "Имя родителя / опекуна №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_mailing_address",
+          "label": "Parent #2 Mailing Address",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #2's mailing address?",
+          "i18n": {
+            "es": {
+              "question": "¿Dirección postal del tutor #2?",
+              "label": "Dirección del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 的通讯地址是什么？",
+              "label": "家长 #2 通讯地址"
+            },
+            "fr": {
+              "question": "Quelle est l'adresse postale du parent/tuteur n° 2 ?",
+              "label": "Adresse postale du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の郵送先住所を教えていただけますか？",
+              "label": "保護者2の郵送先住所"
+            },
+            "pt": {
+              "question": "Qual é o endereço postal do Pai/Mãe/Responsável nº 2?",
+              "label": "Endereço Postal do Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما هو العنوان البريدي للوالد / الوصي رقم 2؟",
+              "label": "العنوان البريدي للوالد رقم 2"
+            },
+            "ru": {
+              "question": "Какой почтовый адрес у родителя / опекуна №2?",
+              "label": "Почтовый адрес родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_same_as_above",
+          "label": "Parent #2 Address Same as Patient?",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Is Parent/Guardian #2's address the same as the patient's address?",
+          "i18n": {
+            "es": {
+              "question": "¿La dirección del tutor #2 es la misma que la del paciente?",
+              "label": "¿Misma dirección?",
+              "options": [
+                "Sí",
+                "No"
+              ]
+            },
+            "zh": {
+              "question": "家长/监护人 #2 的地址与患者地址相同吗？",
+              "label": "家长 #2 地址与患者相同？",
+              "options": [
+                "是",
+                "否"
+              ]
+            },
+            "fr": {
+              "question": "L'adresse du parent/tuteur n° 2 est-elle la même que l'adresse du patient ?",
+              "label": "L'adresse du parent n° 2 est-elle la même que celle du patient ?",
+              "options": [
+                "Oui",
+                "Non"
+              ]
+            },
+            "ja": {
+              "question": "保護者（2人目）のご住所は、患者様のご住所と同じですか？",
+              "label": "保護者2の住所は患者様と同じか",
+              "options": [
+                "はい",
+                "いいえ"
+              ]
+            },
+            "pt": {
+              "question": "O endereço do Pai/Mãe/Responsável nº 2 é o mesmo endereço do paciente?",
+              "label": "Endereço do Responsável nº 2 é Igual ao do Paciente?",
+              "options": [
+                "Sim",
+                "Não"
+              ]
+            },
+            "ar": {
+              "question": "هل عنوان الوالد / الوصي رقم 2 هو نفسه عنوان المريض؟",
+              "label": "عنوان الوالد رقم 2 نفس عنوان المريض؟",
+              "options": [
+                "نعم",
+                "لا"
+              ]
+            },
+            "ru": {
+              "question": "Совпадает ли адрес родителя / опекуна №2 с адресом пациента?",
+              "label": "Адрес родителя №2 совпадает с адресом пациента?",
+              "options": [
+                "Да",
+                "Нет"
+              ]
+            }
+          }
+        },
+        {
+          "id": "parent2_city_state_zip",
+          "label": "Parent #2 City / State / ZIP",
+          "type": "text",
+          "required": false,
+          "question": "What is Parent/Guardian #2's city, state, and ZIP code?",
+          "i18n": {
+            "es": {
+              "question": "¿Ciudad, estado y código postal del tutor #2?",
+              "label": "Ciudad / Estado / ZIP del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 所在的城市、州和邮政编码是什么？",
+              "label": "家长 #2 城市 / 州 / 邮政编码"
+            },
+            "fr": {
+              "question": "Quels sont la ville, l'État et le code postal du parent/tuteur n° 2 ?",
+              "label": "Ville / État / Code postal du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の市区町村、州、郵便番号を教えていただけますか？",
+              "label": "保護者2の市区町村／州／郵便番号"
+            },
+            "pt": {
+              "question": "Qual é a cidade, o estado e o código postal (CEP) do Pai/Mãe/Responsável nº 2?",
+              "label": "Cidade / Estado / CEP do Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما هي مدينة وولاية والرمز البريدي للوالد / الوصي رقم 2؟",
+              "label": "مدينة / ولاية / رمز بريدي للوالد رقم 2"
+            },
+            "ru": {
+              "question": "Укажите город, штат и почтовый индекс родителя / опекуна №2.",
+              "label": "Город / штат / индекс родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_date_of_birth",
+          "label": "Parent #2 Date of Birth",
+          "type": "date",
+          "required": false,
+          "question": "What is Parent/Guardian #2's date of birth?",
+          "i18n": {
+            "es": {
+              "question": "¿Fecha de nacimiento del tutor #2?",
+              "label": "Fecha de nacimiento del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 的出生日期是哪一天？",
+              "label": "家长 #2 出生日期"
+            },
+            "fr": {
+              "question": "Quelle est la date de naissance du parent/tuteur n° 2 ?",
+              "label": "Date de naissance du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の生年月日を教えていただけますか？",
+              "label": "保護者2の生年月日"
+            },
+            "pt": {
+              "question": "Qual é a data de nascimento do Pai/Mãe/Responsável nº 2?",
+              "label": "Data de Nascimento do Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما هو تاريخ ميلاد الوالد / الوصي رقم 2؟",
+              "label": "تاريخ ميلاد الوالد رقم 2"
+            },
+            "ru": {
+              "question": "Какая дата рождения у родителя / опекуна №2?",
+              "label": "Дата рождения родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_home_phone",
+          "label": "Parent #2 Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #2's home phone?",
+          "i18n": {
+            "es": {
+              "question": "¿Teléfono de casa del tutor #2?",
+              "label": "Teléfono de casa del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 的家庭电话是多少？",
+              "label": "家长 #2 家庭电话"
+            },
+            "fr": {
+              "question": "Quel est le téléphone fixe du parent/tuteur n° 2 ?",
+              "label": "Téléphone fixe du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の自宅電話番号を教えていただけますか？",
+              "label": "保護者2の自宅電話番号"
+            },
+            "pt": {
+              "question": "Qual é o telefone residencial do Pai/Mãe/Responsável nº 2?",
+              "label": "Telefone Residencial do Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما هو هاتف منزل الوالد / الوصي رقم 2؟",
+              "label": "هاتف منزل الوالد رقم 2"
+            },
+            "ru": {
+              "question": "Какой домашний телефон у родителя / опекуна №2?",
+              "label": "Домашний телефон родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_work_phone",
+          "label": "Parent #2 Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #2's work phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": {
+              "question": "¿Teléfono del trabajo del tutor #2?",
+              "label": "Teléfono del trabajo del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 的工作电话是多少？如不适用，请说“无”。",
+              "label": "家长 #2 工作电话"
+            },
+            "fr": {
+              "question": "Quel est le téléphone professionnel du parent/tuteur n° 2 ? Dites « aucun » si cela ne s'applique pas.",
+              "label": "Téléphone professionnel du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の勤務先電話番号を教えていただけますか？ 該当しない場合は「なし」とおっしゃってください。",
+              "label": "保護者2の勤務先電話番号"
+            },
+            "pt": {
+              "question": "Qual é o telefone do trabalho do Pai/Mãe/Responsável nº 2? Diga 'nenhum' se não se aplicar.",
+              "label": "Telefone do Trabalho do Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما هو هاتف عمل الوالد / الوصي رقم 2؟ قل \"لا يوجد\" إذا لم يكن منطبقًا.",
+              "label": "هاتف عمل الوالد رقم 2"
+            },
+            "ru": {
+              "question": "Какой рабочий телефон у родителя / опекуна №2? Скажите «нет», если неприменимо.",
+              "label": "Рабочий телефон родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_cell_phone",
+          "label": "Parent #2 Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is Parent/Guardian #2's cell phone? Say 'none' if not applicable.",
+          "i18n": {
+            "es": {
+              "question": "¿Celular del tutor #2?",
+              "label": "Celular del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 的手机号码是多少？如不适用，请说“无”。",
+              "label": "家长 #2 手机"
+            },
+            "fr": {
+              "question": "Quel est le téléphone portable du parent/tuteur n° 2 ? Dites « aucun » si cela ne s'applique pas.",
+              "label": "Téléphone portable du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の携帯電話番号を教えていただけますか？ 該当しない場合は「なし」とおっしゃってください。",
+              "label": "保護者2の携帯電話番号"
+            },
+            "pt": {
+              "question": "Qual é o celular do Pai/Mãe/Responsável nº 2? Diga 'nenhum' se não se aplicar.",
+              "label": "Celular do Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما هو الهاتف المحمول للوالد / الوصي رقم 2؟ قل \"لا يوجد\" إذا لم يكن منطبقًا.",
+              "label": "الهاتف المحمول للوالد رقم 2"
+            },
+            "ru": {
+              "question": "Какой мобильный телефон у родителя / опекуна №2? Скажите «нет», если неприменимо.",
+              "label": "Мобильный телефон родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_ssn",
+          "label": "Parent #2 Social Security Number",
+          "type": "text",
+          "required": false,
+          "ai_note": "Sensitive — collected at review step.",
+          "question": "What is Parent/Guardian #2's Social Security Number?",
+          "i18n": {
+            "es": {
+              "question": "¿Número de seguro social del tutor #2?",
+              "label": "SSN del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 的社会安全号码是多少？",
+              "label": "家长 #2 社会安全号码"
+            },
+            "fr": {
+              "question": "Quel est le numéro de sécurité sociale du parent/tuteur n° 2 ?",
+              "label": "Numéro de sécurité sociale du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の社会保障番号を教えていただけますか？",
+              "label": "保護者2の社会保障番号"
+            },
+            "pt": {
+              "question": "Qual é o número de Seguro Social do Pai/Mãe/Responsável nº 2?",
+              "label": "Número de Seguro Social do Responsável nº 2"
+            },
+            "ar": {
+              "question": "ما هو رقم الضمان الاجتماعي للوالد / الوصي رقم 2؟",
+              "label": "رقم الضمان الاجتماعي للوالد رقم 2"
+            },
+            "ru": {
+              "question": "Какой номер социального страхования у родителя / опекуна №2?",
+              "label": "Номер социального страхования родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_employer",
+          "label": "Parent #2 Employer",
+          "type": "text",
+          "required": false,
+          "question": "Who is Parent/Guardian #2's employer? Say 'none' if not employed.",
+          "i18n": {
+            "es": {
+              "question": "¿Empleador del tutor #2?",
+              "label": "Empleador del tutor #2"
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 的雇主是谁？如未就业，请说“无”。",
+              "label": "家长 #2 雇主"
+            },
+            "fr": {
+              "question": "Qui est l'employeur du parent/tuteur n° 2 ? Dites « aucun » s'il n'a pas d'emploi.",
+              "label": "Employeur du parent n° 2"
+            },
+            "ja": {
+              "question": "保護者（2人目）の勤務先を教えていただけますか？ 就労されていない場合は「なし」とおっしゃってください。",
+              "label": "保護者2の勤務先"
+            },
+            "pt": {
+              "question": "Quem é o empregador do Pai/Mãe/Responsável nº 2? Diga 'nenhum' se não estiver empregado.",
+              "label": "Empregador do Responsável nº 2"
+            },
+            "ar": {
+              "question": "من هو صاحب عمل الوالد / الوصي رقم 2؟ قل \"لا يوجد\" إذا لم يكن يعمل.",
+              "label": "صاحب عمل الوالد رقم 2"
+            },
+            "ru": {
+              "question": "Кто работодатель родителя / опекуна №2? Скажите «нет», если не трудоустроен.",
+              "label": "Работодатель родителя №2"
+            }
+          }
+        },
+        {
+          "id": "parent2_relationship",
+          "label": "Parent #2 Relationship to Child",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Mother",
+            "Father",
+            "Grandparent",
+            "Foster Parent",
+            "Other"
+          ],
+          "question": "What is Parent/Guardian #2's relationship to the patient?",
+          "i18n": {
+            "es": {
+              "question": "¿Qué relación tiene el tutor #2 con el paciente?",
+              "label": "Relación del tutor #2",
+              "options": [
+                "Madre",
+                "Padre",
+                "Abuelo/a",
+                "Padre de acogida",
+                "Otro"
+              ]
+            },
+            "zh": {
+              "question": "请问家长/监护人 #2 与患者是什么关系？",
+              "label": "家长 #2 与孩子的关系",
+              "options": [
+                "母亲",
+                "父亲",
+                "祖父母/外祖父母",
+                "寄养父母",
+                "其他"
+              ]
+            },
+            "fr": {
+              "question": "Quel est le lien de parenté du parent/tuteur n° 2 avec le patient ?",
+              "label": "Lien du parent n° 2 avec l'enfant",
+              "options": [
+                "Mère",
+                "Père",
+                "Grand-parent",
+                "Famille d'accueil",
+                "Autre"
+              ]
+            },
+            "ja": {
+              "question": "保護者（2人目）の患者様との続柄を教えていただけますか？",
+              "label": "保護者2の患者様との続柄",
+              "options": [
+                "母",
+                "父",
+                "祖父母",
+                "里親",
+                "その他"
+              ]
+            },
+            "pt": {
+              "question": "Qual é o parentesco do Pai/Mãe/Responsável nº 2 com o paciente?",
+              "label": "Parentesco do Responsável nº 2 com a Criança",
+              "options": [
+                "Mãe",
+                "Pai",
+                "Avô/Avó",
+                "Pai/Mãe de Acolhimento",
+                "Outro"
+              ]
+            },
+            "ar": {
+              "question": "ما هي صلة قرابة الوالد / الوصي رقم 2 بالمريض؟",
+              "label": "صلة قرابة الوالد رقم 2 بالطفل",
+              "options": [
+                "الأم",
+                "الأب",
+                "أحد الأجداد",
+                "والد حاضن",
+                "غير ذلك"
+              ]
+            },
+            "ru": {
+              "question": "Кем приходится родитель / опекун №2 пациенту?",
+              "label": "Степень родства родителя №2 с ребёнком",
+              "options": [
+                "Мать",
+                "Отец",
+                "Бабушка / дедушка",
+                "Приёмный родитель",
+                "Другое"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consent & Signature",
+      "fields": [
+        {
+          "id": "patient_signature",
+          "label": "Patient or Authorized Signature",
+          "type": "signature",
+          "required": true,
+          "ai_note": "Collected at review step. Authorizes AccelHealth to release medical information for insurance claims and confirms consent to treatment.",
+          "question": "Please provide your signature to authorize release of information and consent to treatment.",
+          "i18n": {
+            "es": {
+              "question": "Por favor firme para autorizar la divulgación de información y el consentimiento para tratamiento.",
+              "label": "Firma del paciente o autorizado"
+            },
+            "zh": {
+              "question": "请提供您的签名，以授权发布信息并同意接受治疗。",
+              "label": "患者或授权人签名"
+            },
+            "fr": {
+              "question": "Veuillez fournir votre signature pour autoriser la divulgation des informations et consentir au traitement.",
+              "label": "Signature du patient ou de la personne autorisée"
+            },
+            "ja": {
+              "question": "情報の開示および治療への同意を承認するため、ご署名をお願いいたします。",
+              "label": "患者様またはご本人に代わる方のご署名"
+            },
+            "pt": {
+              "question": "Por favor, forneça a sua assinatura para autorizar a divulgação de informações e consentir com o tratamento.",
+              "label": "Assinatura do Paciente ou Pessoa Autorizada"
+            },
+            "ar": {
+              "question": "يرجى تقديم توقيعك للإذن بالإفصاح عن المعلومات والموافقة على العلاج.",
+              "label": "توقيع المريض أو الشخص المفوّض"
+            },
+            "ru": {
+              "question": "Пожалуйста, поставьте свою подпись, чтобы разрешить передачу информации и дать согласие на лечение.",
+              "label": "Подпись пациента или уполномоченного лица"
+            }
+          }
+        },
+        {
+          "id": "signature_date",
+          "label": "Date",
+          "type": "date",
+          "required": true,
+          "ai_note": "Auto-populated with today's date at the review step.",
+          "question": "What is today's date?",
+          "i18n": {
+            "es": {
+              "question": "¿Cuál es la fecha de hoy?",
+              "label": "Fecha"
+            },
+            "zh": {
+              "question": "请问今天是几月几日？",
+              "label": "日期"
+            },
+            "fr": {
+              "question": "Quelle est la date d'aujourd'hui ?",
+              "label": "Date"
+            },
+            "ja": {
+              "question": "本日の日付を教えていただけますか？",
+              "label": "日付"
+            },
+            "pt": {
+              "question": "Qual é a data de hoje?",
+              "label": "Data"
+            },
+            "ar": {
+              "question": "ما هو تاريخ اليوم؟",
+              "label": "التاريخ"
+            },
+            "ru": {
+              "question": "Какое сегодня число?",
+              "label": "Дата"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

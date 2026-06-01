@@ -44,7 +44,7 @@ class PdfFormFiller @Inject constructor(
     companion object {
         private const val TAG = "PdfFormFiller"
         private const val COASTAL_GATEWAY_PDF = "forms/Coastal_Gateway_Intake_Form.pdf"
-        private const val BROWNWOOD_PDF = "forms/AccelHealth_Patient_Registration.pdf"
+        private const val PATIENT_REG_PDF = "forms/patient_registration.pdf"
         private const val ANSWER_FONT_SIZE = 9f
         private const val LABEL_MATCH_THRESHOLD = 0.55
     }
@@ -281,13 +281,15 @@ class PdfFormFiller @Inject constructor(
     // generic names ("Check Box0".."Check Box85") so each option's checkbox is
     // mapped explicitly below. Schema field ids → AcroForm field names.
 
-    // Schema text field id → AcroForm text field name.
+    // Schema text field id → AcroForm text field name. (Field ids match Kanthi's
+    // patient_registration schema; the PDF/AcroForm is identical to before.)
     private val brownwoodText: Map<String, String> = mapOf(
-        "patient_first_name" to "FIRST NAME",
-        "patient_last_name" to "LAST NAME",
-        "patient_middle_name" to "MIDDLE NAME",
+        "first_name" to "FIRST NAME",
+        "last_name" to "LAST NAME",
+        "middle_name" to "MIDDLE NAME",
         "social_security_number" to "SOCIAL SECURITY NUMBER",
         "date_of_birth" to "DATE OF BIRTH",
+        "age" to "AGE",
         "mailing_address" to "MAILING ADDRESS",
         "apt_no" to "APT NO",
         "city" to "CITY",
@@ -297,53 +299,57 @@ class PdfFormFiller @Inject constructor(
         "cell_phone" to "CELL PHONE",
         "home_phone" to "HOME PHONE",
         "work_phone" to "WORK PHONE",
-        // emergency_contact is handled by a manual overlay (its AcroForm widget is
-        // mis-placed: it starts mid-cell and overlaps the printed "Phone:" label).
+        // emergency_contact_name / _phone are drawn via manual overlay (the AcroForm
+        // widget is mis-placed: it starts mid-cell and overlaps the "Phone:" label).
         "primary_insurance_name" to "PRIMARY INSURANCE NAMEPlease give card to staff",
         "secondary_insurance_name" to "SECONDARY INSURANCE NAMEPlease give card to staff",
-        "guardian1_name" to "PARENT  GUARDIAN 1",
-        "guardian1_city_state_zip" to "Text Field2",
-        "guardian1_dob" to "Text Field4",
-        "guardian1_cell_phone" to "CELL PHONE1",
-        "guardian1_home_phone" to "HOME PHONE1",
-        "guardian1_work_phone" to "WORK PHONE1",
-        "guardian1_employer" to "EMPLOYER",
-        "guardian1_ssn" to "Text Field5",
-        "guardian2_name" to "PARENT  GUARDIAN 2",
-        "guardian2_city_state_zip" to "Text Field3",
-        "guardian2_dob" to "DATE OF BIRTH2",
-        "guardian2_cell_phone" to "CELL PHONE2",
-        "guardian2_home_phone" to "HOME PHONE2",
-        "guardian2_work_phone" to "WORK PHONE2",
-        "guardian2_employer" to "EMPLOYER1",
-        "guardian2_ssn" to "Text Field6"
+        // The guardian "mailing address" line has no AcroForm widget on the form, so
+        // parent*_mailing_address is intentionally not mapped (city/state/zip is).
+        "parent1_name" to "PARENT  GUARDIAN 1",
+        "parent1_city_state_zip" to "Text Field2",
+        "parent1_date_of_birth" to "Text Field4",
+        "parent1_cell_phone" to "CELL PHONE1",
+        "parent1_home_phone" to "HOME PHONE1",
+        "parent1_work_phone" to "WORK PHONE1",
+        "parent1_employer" to "EMPLOYER",
+        "parent1_ssn" to "Text Field5",
+        "parent2_name" to "PARENT  GUARDIAN 2",
+        "parent2_city_state_zip" to "Text Field3",
+        "parent2_date_of_birth" to "DATE OF BIRTH2",
+        "parent2_cell_phone" to "CELL PHONE2",
+        "parent2_home_phone" to "HOME PHONE2",
+        "parent2_work_phone" to "WORK PHONE2",
+        "parent2_employer" to "EMPLOYER1",
+        "parent2_ssn" to "Text Field6"
     )
 
-    // Single-choice (radio) schema id → (canonical option → checkbox name).
+    // Single-choice (radio) schema id → (option → checkbox name).
     private val brownwoodChoice: Map<String, Map<String, String>> = mapOf(
         "preferred_language" to mapOf(
             "English" to "Check Box41", "Spanish" to "Check Box42", "Other" to "Check Box43"),
-        "ag_work_history" to mapOf("Yes" to "Check Box0", "No" to "Check Box1"),
-        "ag_lived_away" to mapOf("Yes" to "Check Box2", "No" to "Check Box3"),
-        "ag_stopped_disability" to mapOf("Yes" to "Check Box4", "No" to "Check Box5"),
+        "agriculture_work_2yr" to mapOf("Yes" to "Check Box0", "No" to "Check Box1"),
+        "agriculture_away_from_home" to mapOf("Yes" to "Check Box2", "No" to "Check Box3"),
+        "agriculture_disability_stopped" to mapOf("Yes" to "Check Box4", "No" to "Check Box5"),
         "birth_sex" to mapOf("Male" to "Check Box6", "Female" to "Check Box7"),
         "current_gender" to mapOf(
             "Male" to "Check Box8", "Female" to "Check Box9", "Undifferentiated" to "Check Box10"),
         "gender_identity" to mapOf(
             "Male" to "Check Box11", "Female" to "Check Box12",
-            "Transgender Man (FTM)" to "Check Box13", "Transgender Woman (MTF)" to "Check Box14",
-            "Genderqueer" to "Check Box15", "Other" to "Check Box16", "Choose not to answer" to "Check Box17"),
+            "Transgender Male / FTM / Trans Man" to "Check Box13",
+            "Transgender Female / MTF / Trans Woman" to "Check Box14",
+            "Genderqueer - Neither Male nor Female" to "Check Box15",
+            "Other" to "Check Box16", "Choose Not To Answer" to "Check Box17"),
         "sexual_orientation" to mapOf(
             "Straight or Heterosexual" to "Check Box18", "Lesbian, Gay, or Homosexual" to "Check Box19",
-            "Bisexual" to "Check Box20", "Something else" to "Check Box21",
-            "Choose not to answer" to "Check Box22", "Don't know" to "Check Box23"),
+            "Bisexual" to "Check Box20", "Something Else" to "Check Box21",
+            "Choose Not To Answer" to "Check Box22", "Don't Know" to "Check Box23"),
         "preferred_pronoun" to mapOf(
-            "He, him, his" to "Check Box30", "She, her, hers" to "Check Box32",
-            "They, them, theirs" to "Check Box34", "Ze, hir" to "Check Box33",
-            "Other" to "Check Box31", "Decline to answer" to "Check Box35"),
+            "He, Him, His" to "Check Box30", "She, Her, Hers" to "Check Box32",
+            "They, Them, Theirs" to "Check Box34", "Ze, Hir" to "Check Box33",
+            "Other" to "Check Box31", "Decline To Answer" to "Check Box35"),
         "ethnicity" to mapOf(
             "Hispanic or Latino" to "Check Box36", "Not Hispanic or Latino" to "Check Box37",
-            "Choose not to answer" to "Check Box38", "Other" to "Check Box39", "Unknown" to "Check Box40"),
+            "Choose Not To Answer" to "Check Box38", "Other" to "Check Box39", "Unknown" to "Check Box40"),
         "marital_status" to mapOf(
             "Married" to "Check Box44", "Single" to "Check Box45",
             "Divorced/Separated" to "Check Box46", "Widowed" to "Check Box47"),
@@ -351,49 +357,50 @@ class PdfFormFiller @Inject constructor(
         "homeless_status" to mapOf(
             "Not Homeless" to "Check Box50", "Doubling Up" to "Check Box51", "Shelter" to "Check Box52",
             "Street" to "Check Box53", "Transitional" to "Check Box54", "Other" to "Check Box55"),
-        "consent_phone_messages" to mapOf("Yes" to "Check Box66", "No" to "Check Box67"),
-        "consent_mail" to mapOf("Yes" to "Check Box68", "No" to "Check Box69"),
-        "consent_text" to mapOf("Yes" to "Check Box70", "No" to "Check Box71"),
-        "consent_email" to mapOf("Yes" to "Check Box72", "No" to "Check Box73"),
-        "guardian1_same_address" to mapOf("Yes" to "Check Box74"),
-        "guardian2_same_address" to mapOf("Yes" to "Check Box75"),
-        "guardian1_relationship" to mapOf(
+        "leave_phone_messages" to mapOf("Yes" to "Check Box66", "No" to "Check Box67"),
+        "mail_correspondence" to mapOf("Yes" to "Check Box68", "No" to "Check Box69"),
+        "text_reminders" to mapOf("Yes" to "Check Box70", "No" to "Check Box71"),
+        "email_information" to mapOf("Yes" to "Check Box72", "No" to "Check Box73"),
+        "parent1_same_as_above" to mapOf("Yes" to "Check Box74"),
+        "parent2_same_as_above" to mapOf("Yes" to "Check Box75"),
+        "parent1_relationship" to mapOf(
             "Mother" to "Check Box76", "Father" to "Check Box77", "Grandparent" to "Check Box78",
             "Foster Parent" to "Check Box79", "Other" to "Check Box80"),
-        "guardian2_relationship" to mapOf(
+        "parent2_relationship" to mapOf(
             "Mother" to "Check Box81", "Father" to "Check Box82", "Grandparent" to "Check Box83",
             "Foster Parent" to "Check Box84", "Other" to "Check Box85")
     )
 
-    // Multi-select schema id → (canonical option → checkbox name).
+    // Multi-value schema id → (option → checkbox name). Handles single (radio) and
+    // multi-select values alike (a single value just ticks one box).
     private val brownwoodMulti: Map<String, Map<String, String>> = mapOf(
         "race" to mapOf(
             "American Indian or Alaska Native" to "Check Box24", "Asian" to "Check Box25",
             "Black or African American" to "Check Box28",
             "Native Hawaiian or Other Pacific Islander" to "Check Box26",
-            "White" to "Check Box27", "Choose not to answer" to "Check Box29"),
-        "how_heard" to mapOf(
-            "Billboard" to "Check Box56", "Newspaper" to "Check Box61", "Event Sponsor" to "Check Box57",
-            "Publication" to "Check Box62", "Friend/Family" to "Check Box58", "Radio" to "Check Box63",
-            "Insurance" to "Check Box59", "Social Media" to "Check Box64", "Internet" to "Check Box60",
+            "White" to "Check Box27", "Choose Not To Answer" to "Check Box29"),
+        "how_heard_about" to mapOf(
+            "Billboard" to "Check Box56", "Event Sponsor" to "Check Box57", "Friend/Family" to "Check Box58",
+            "Insurance" to "Check Box59", "Internet" to "Check Box60", "Newspaper" to "Check Box61",
+            "Publication" to "Check Box62", "Radio" to "Check Box63", "Social Media" to "Check Box64",
             "Other" to "Check Box65")
     )
 
-    fun fillBrownwoodForm(fields: List<FormField>, outputDir: File): File? {
+    fun fillPatientRegistrationForm(fields: List<FormField>, outputDir: File): File? {
         return try {
-            fillBrownwoodAcro(fields, outputDir)
+            fillPatientRegistrationAcro(fields, outputDir)
                 ?: createFormattedSummaryPdf(coastalSummaryFields(fields), outputDir, "AccelHealth — Patient Registration")
         } catch (e: Exception) {
-            Log.e(TAG, "Brownwood fill failed — using summary", e)
+            Log.e(TAG, "Patient Registration fill failed — using summary", e)
             createFormattedSummaryPdf(coastalSummaryFields(fields), outputDir, "AccelHealth — Patient Registration")
         }
     }
 
     private fun normName(s: String): String = s.trim().replace(Regex("\\s+"), " ").lowercase()
 
-    private fun fillBrownwoodAcro(fields: List<FormField>, outputDir: File): File? {
+    private fun fillPatientRegistrationAcro(fields: List<FormField>, outputDir: File): File? {
         outputDir.mkdirs()
-        val document = PDDocument.load(context.assets.open(BROWNWOOD_PDF))
+        val document = PDDocument.load(context.assets.open(PATIENT_REG_PDF))
         try {
             val acro = document.documentCatalog?.acroForm ?: return null
             // Iterate the full field tree (the form is flat, but be safe) and key
@@ -433,10 +440,14 @@ class PdfFormFiller @Inject constructor(
             // Text fields
             for ((id, name) in brownwoodText) valueOf(id)?.let { setText(name, it) }
 
-            // Age (computed) + signature date (today)
-            valueOf("date_of_birth")?.let { computeAge(it)?.let { age -> setText("AGE", age) } }
-            setText("DATE", java.text.SimpleDateFormat("MM/dd/yyyy", java.util.Locale.US)
-                .format(java.util.Date()))
+            // Age: prefer the patient's answer; if blank, compute it from DOB.
+            if (valueOf("age") == null)
+                valueOf("date_of_birth")?.let { computeAge(it)?.let { age -> setText("AGE", age) } }
+
+            // Signature date: use the patient's value if present, else stamp today.
+            val sigDate = valueOf("signature_date")
+                ?: java.text.SimpleDateFormat("MM/dd/yyyy", java.util.Locale.US).format(java.util.Date())
+            setText("DATE", sigDate)
 
             // Single-choice checkboxes
             for ((id, optMap) in brownwoodChoice) {
@@ -472,17 +483,15 @@ class PdfFormFiller @Inject constructor(
                 }
             }
 
-            // Emergency contact: split "Name (phone)" and draw each into its own
-            // blank on the page (Name: ~x393, Phone: ~x521; baseline ~y224 top-left).
-            valueOf("emergency_contact")?.let { ec ->
-                val page0 = document.getPage(0)
-                val cut = ec.indexOfFirst { it.isDigit() || it == '(' }
-                val name = if (cut > 0) ec.substring(0, cut).trim().trimEnd(',', '-', ' ') else ec
-                val phone = if (cut > 0) ec.substring(cut).trim() else ""
-                runCatching {
-                    if (name.isNotBlank()) { drawFittedText(document, page0, 394f, 224f, 100f, name); placed++ }
-                    if (phone.isNotBlank()) drawFittedText(document, page0, 521f, 224f, 60f, phone)
-                }
+            // Emergency contact: name and phone go into their own blanks on the page
+            // (Name: ~x394, Phone: ~x521; baseline ~y224 top-left). Drawn manually
+            // because the AcroForm widget is mis-placed and overlaps the "Phone:" label.
+            val page0 = document.getPage(0)
+            valueOf("emergency_contact_name")?.let {
+                runCatching { drawFittedText(document, page0, 394f, 224f, 100f, it) }.onSuccess { placed++ }
+            }
+            valueOf("emergency_contact_phone")?.let {
+                runCatching { drawFittedText(document, page0, 521f, 224f, 60f, it) }
             }
 
             if (placed == 0) { document.close(); return null }

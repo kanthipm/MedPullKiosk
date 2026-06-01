@@ -64,8 +64,6 @@
     <string name="form_coastal_gateway_desc">تناول المريض - التسجيل والتاريخ الصحي والموافقات</string>
     <string name="form_medicaid_renewal_title">تجديد تغطية ميديكيد</string>
     <string name="form_medicaid_renewal_desc">التحقق من الأسرة والدخل والتغطية</string>
-    <string name="form_brownwood_title">تسجيل مرضى AccelHealth</string>
-    <string name="form_brownwood_desc">التسجيل - البيانات الديموغرافية، التأمين، الموافقات</string>
     <string name="form_available_forms">النماذج المتاحة</string>
     <string name="form_uploaded_forms">النماذج التي تم تحميلها</string>
     <string name="form_status_ready">جاهز</string>

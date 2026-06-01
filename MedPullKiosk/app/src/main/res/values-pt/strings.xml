@@ -64,8 +64,6 @@
     <string name="form_coastal_gateway_desc">Admissão de pacientes — registro, histórico de saúde, consentimentos</string>
     <string name="form_medicaid_renewal_title">Renovação da cobertura do Medicaid</string>
     <string name="form_medicaid_renewal_desc">Verificação de domicílio, renda e cobertura</string>
-    <string name="form_brownwood_title">Registro de pacientes da AccelHealth</string>
-    <string name="form_brownwood_desc">Registro — Dados demográficos, seguro, consentimentos</string>
     <string name="form_available_forms">Formulários disponíveis</string>
     <string name="form_uploaded_forms">Formulários carregados</string>
     <string name="form_status_ready">Pronto</string>
