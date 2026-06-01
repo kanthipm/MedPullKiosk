@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">患者登録 — 登録、病歴、同意</string>
     <string name="form_medicaid_renewal_title">メディケイド補償範囲の更新</string>
     <string name="form_medicaid_renewal_desc">世帯、収入、補償範囲の検証</string>
+    <string name="form_patient_registration_title">Brownswood 患者登録</string>
+    <string name="form_patient_registration_desc">新規患者登録 — 人口統計、保険、同意書</string>
     <string name="form_available_forms">使用可能なフォーム</string>
     <string name="form_uploaded_forms">アップロードされたフォーム</string>
     <string name="form_status_ready">準備完了</string>
@@ -372,6 +374,7 @@
     <string name="validate_state">有効な米国の州をご入力ください。例：TX または Texas。</string>
     <string name="validate_date">日付は月、日、年の形式でご入力ください。例：03/14/1985。</string>
     <string name="validate_number">ここは数字である必要があります。もう一度お試しいただけますか？</string>
+    <string name="require_one_of">ご連絡のため、少なくとも1つが必要です。1つ選んで入力してください：%1$s。</string>
     <string name="msg_staff_help">問題ありません。スタッフがその部分を手伝ってくれます。続けましょう。</string>
     <string name="msg_consent_recorded">ありがとうございます。お客様の同意内容が記録されました。</string>
     <string name="err_no_user_logged_in">ログインしているユーザーはいません</string>

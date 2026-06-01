@@ -53,6 +53,51 @@ object FieldValidation {
         "wisconsin" to "WI", "wyoming" to "WY", "district of columbia" to "DC", "puerto rico" to "PR"
     )
 
+    // Decline / "I don't have one" words across all supported languages. Only applied
+    // to free-text fields (see the caller), so single words like "no"/"non"/"нет" can't
+    // hijack a Yes/No radio answer.
+    private val DECLINE_EXACT = setOf(
+        // English
+        "none", "no", "n/a", "na", "skip", "skipped", "decline", "declined", "nope",
+        "-", "—", "x", "nil", "null",
+        // Spanish
+        "ninguno", "ninguna", "nada", "omitir", "saltar",
+        // French
+        "aucun", "aucune", "non", "passer",
+        // Portuguese
+        "nenhum", "nenhuma", "não", "nao", "pular",
+        // Russian
+        "нет", "нету", "отсутствует", "пропустить"
+    )
+    private val DECLINE_CONTAINS = listOf(
+        // English
+        "don't have", "dont have", "do not have", "no phone", "no number", "no email",
+        "none of", "rather not", "prefer not", "leave blank", "leave it blank", "no thanks",
+        // Spanish / Portuguese / French phrases
+        "no tengo", "no aplica", "não tenho", "nao tenho", "não se aplica", "nao se aplica",
+        "je n'en ai pas", "pas de", "sans objet", "non applicable",
+        // Chinese
+        "没有", "沒有", "无", "跳过", "不适用",
+        // Japanese
+        "なし", "ありません", "スキップ", "該当なし", "無し",
+        // Arabic
+        "لا يوجد", "لا أملك", "تخطي", "لا ينطبق", "غير متوفر", "لا شيء",
+        // Russian phrases
+        "не имею", "нет телефона", "нет номера"
+    )
+
+    /**
+     * True when the patient is declining/skipping a field rather than giving a value
+     * ("none", "ninguno", "没有", "なし", "لا يوجد", …). Used by the caller for free-text
+     * fields so such answers pass instead of being rejected as a malformed phone/email.
+     */
+    fun isDecline(raw: String): Boolean {
+        val t = raw.trim().lowercase().trimEnd('.', '!', '。', '،')
+        if (t.isEmpty()) return false
+        if (t in DECLINE_EXACT) return true
+        return DECLINE_CONTAINS.any { t.contains(it) }
+    }
+
     fun kindOf(field: FormField): Kind {
         val id = field.id.lowercase()
         return when {

@@ -374,6 +374,7 @@
     <string name="validate_state">Please give a valid U.S. state — for example TX or Texas.</string>
     <string name="validate_date">Please give the date as month, day, and year — for example 03/14/1985.</string>
     <string name="validate_number">That should be a number — could you try again?</string>
+    <string name="require_one_of">We need at least one of these to reach you — please pick one and enter it: %1$s.</string>
     <string name="msg_staff_help">No problem — a staff member can help with that part. Let\'s keep going.</string>
     <string name="msg_consent_recorded">Thank you — your consent selections have been recorded.</string>
     <string name="err_no_user_logged_in">No user logged in</string>

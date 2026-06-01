@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">Прием пациентов — регистрация, история болезни, согласие</string>
     <string name="form_medicaid_renewal_title">Возобновление страхового покрытия Medicaid</string>
     <string name="form_medicaid_renewal_desc">Проверка домохозяйства, дохода и страхового покрытия</string>
+    <string name="form_patient_registration_title">Регистрация пациентов Brownswood</string>
+    <string name="form_patient_registration_desc">Регистрация нового пациента — демография, страховка и согласия</string>
     <string name="form_available_forms">Доступные формы</string>
     <string name="form_uploaded_forms">Загруженные формы</string>
     <string name="form_status_ready">Готово</string>
@@ -372,6 +374,7 @@
     <string name="validate_state">Пожалуйста, укажите действительный штат США — например, TX или Texas.</string>
     <string name="validate_date">Пожалуйста, укажите дату в формате месяц, день и год — например, 03/14/1985.</string>
     <string name="validate_number">Здесь должно быть число. Не могли бы вы попробовать ещё раз?</string>
+    <string name="require_one_of">Нам нужен хотя бы один из них, чтобы связаться с вами — выберите один и введите его: %1$s.</string>
     <string name="msg_staff_help">Нет проблем — с этим может помочь сотрудник. Давайте продолжим.</string>
     <string name="msg_consent_recorded">Спасибо, ваш выбор согласия зарегистрирован.</string>
     <string name="err_no_user_logged_in">Ни один пользователь не вошел в систему</string>

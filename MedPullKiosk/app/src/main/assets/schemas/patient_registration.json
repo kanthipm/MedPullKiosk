@@ -60,6 +60,13 @@
       ]
     }
   ],
+  "require_one_of": [
+    [
+      "cell_phone",
+      "home_phone",
+      "work_phone"
+    ]
+  ],
   "sections": [
     {
       "name": "Personal Information",

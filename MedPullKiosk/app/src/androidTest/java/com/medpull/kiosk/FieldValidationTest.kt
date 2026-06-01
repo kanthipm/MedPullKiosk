@@ -68,6 +68,27 @@ class FieldValidationTest {
         assertFalse(FieldValidation.validate(f, "Maria3").ok)
     }
 
+    @Test fun declineTokensRecognized() {
+        // "None"/skip-style answers are declines (so they pass instead of erroring).
+        assertTrue(FieldValidation.isDecline("none"))
+        assertTrue(FieldValidation.isDecline("N/A"))
+        assertTrue(FieldValidation.isDecline("skip"))
+        assertTrue(FieldValidation.isDecline("I don't have one"))
+        assertTrue(FieldValidation.isDecline("no phone"))
+        // …in every supported language.
+        assertTrue(FieldValidation.isDecline("ninguno"))        // es
+        assertTrue(FieldValidation.isDecline("no tengo"))       // es
+        assertTrue(FieldValidation.isDecline("aucun"))          // fr
+        assertTrue(FieldValidation.isDecline("nenhum"))         // pt
+        assertTrue(FieldValidation.isDecline("没有"))            // zh
+        assertTrue(FieldValidation.isDecline("なし"))            // ja
+        assertTrue(FieldValidation.isDecline("لا يوجد"))         // ar
+        assertTrue(FieldValidation.isDecline("нет"))            // ru
+        // Real values are not declines.
+        assertFalse(FieldValidation.isDecline("(361) 555-0142"))
+        assertFalse(FieldValidation.isDecline("Maria"))
+    }
+
     @Test fun optionFieldsAndInsuranceArePassthrough() {
         // Radio options are never format-checked.
         assertTrue(FieldValidation.validate(field("marital_status", FieldType.RADIO), "Married").ok)

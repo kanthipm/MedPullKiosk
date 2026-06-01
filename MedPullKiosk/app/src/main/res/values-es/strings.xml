@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">Admisión de pacientes: registro, historial médico, consentimientos</string>
     <string name="form_medicaid_renewal_title">Renovación de cobertura de Medicaid</string>
     <string name="form_medicaid_renewal_desc">Verificación del hogar, los ingresos y la cobertura</string>
+    <string name="form_patient_registration_title">Registro de pacientes de Brownswood</string>
+    <string name="form_patient_registration_desc">Registro de pacientes nuevos: datos demográficos, seguro y consentimientos</string>
     <string name="form_available_forms">Formularios disponibles</string>
     <string name="form_uploaded_forms">Formularios cargados</string>
     <string name="form_status_ready">Listo</string>
@@ -372,6 +374,7 @@
     <string name="validate_state">Por favor indique un estado de EE. UU. válido; por ejemplo, TX o Texas.</string>
     <string name="validate_date">Por favor indique la fecha como mes, día y año; por ejemplo, 03/14/1985.</string>
     <string name="validate_number">Eso debería ser un número, ¿podría intentarlo de nuevo, por favor?</string>
+    <string name="require_one_of">Necesitamos al menos uno de estos para comunicarnos con usted; elija uno e ingréselo: %1$s.</string>
     <string name="msg_staff_help">No hay problema, un miembro del personal puede ayudar con esa parte. Sigamos adelante.</string>
     <string name="msg_consent_recorded">Gracias, se han registrado sus selecciones de consentimiento.</string>
     <string name="err_no_user_logged_in">Ningún usuario ha iniciado sesión</string>

@@ -86,7 +86,9 @@ class GuidedIntakeViewModel @Inject constructor(
             /** Consent fields surfaced together in the batch panel. */
             val consentGroupFieldIds: Set<String>,
             /** Fields handled by the review step, not asked during the conversation. */
-            val skipDuringIntakeIds: Set<String>
+            val skipDuringIntakeIds: Set<String>,
+            /** Groups where at least one field must be filled (e.g. the phone numbers). */
+            val requireOneOf: List<List<String>>
         )
 
         /**
@@ -208,6 +210,13 @@ class GuidedIntakeViewModel @Inject constructor(
                     ?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
                     ?: emptySet()
 
+            // require_one_of: [["home_phone","work_phone","cell_phone"], ...]
+            val requireOneOf = root.optJSONArray("require_one_of")?.let { arr ->
+                (0 until arr.length()).mapNotNull { i ->
+                    arr.optJSONArray(i)?.let { g -> (0 until g.length()).map { g.getString(it) } }
+                }
+            } ?: emptyList()
+
             return LoadedSchema(
                 form = Form(
                     id = formId,
@@ -219,7 +228,8 @@ class GuidedIntakeViewModel @Inject constructor(
                 ),
                 skipRules = skipRules,
                 consentGroupFieldIds = stringSet("consent_batch_fields"),
-                skipDuringIntakeIds = stringSet("skip_during_intake")
+                skipDuringIntakeIds = stringSet("skip_during_intake"),
+                requireOneOf = requireOneOf
             )
         }
     }
@@ -234,6 +244,10 @@ class GuidedIntakeViewModel @Inject constructor(
     private var skipRules: Map<String, Map<String, List<String>>> = emptyMap()
     private var consentGroupFieldIds: Set<String> = emptySet()
     private var skipDuringIntakeIds: Set<String> = emptySet()
+    private var requireOneOf: List<List<String>> = emptyList()
+    // Optional fields the patient declined ("none") are added to skippedFieldIds so
+    // they aren't re-asked. A require_one_of group can later force one to be answered.
+    private var forcedRequiredIds: Set<String> = emptySet()
 
     private val _state = MutableStateFlow(GuidedIntakeState())
     val state: StateFlow<GuidedIntakeState> = _state.asStateFlow()
@@ -275,6 +289,8 @@ class GuidedIntakeViewModel @Inject constructor(
                     skipRules = loaded.skipRules
                     consentGroupFieldIds = loaded.consentGroupFieldIds
                     skipDuringIntakeIds = loaded.skipDuringIntakeIds
+                    requireOneOf = loaded.requireOneOf
+                    forcedRequiredIds = emptySet()
                     // Persist the pristine schema (blank values). saveForm REPLACEs
                     // the DB rows, so this also wipes any answers saved earlier —
                     // guaranteeing a clean start even across app relaunches.
@@ -287,6 +303,8 @@ class GuidedIntakeViewModel @Inject constructor(
                     skipRules = emptyMap()
                     consentGroupFieldIds = emptySet()
                     skipDuringIntakeIds = emptySet()
+                    requireOneOf = emptyList()
+                    forcedRequiredIds = emptySet()
                     // No pristine schema to re-save here, so blank any previously
                     // entered answers directly in the DB before we start, so the
                     // form opens fresh at its first question. Done once, before the
@@ -386,6 +404,35 @@ class GuidedIntakeViewModel @Inject constructor(
             }
             if (pendingConsentFields.isNotEmpty()) {
                 _state.update { it.copy(consentBatchFields = pendingConsentFields, isLoadingResponse = false) }
+                return
+            }
+        }
+
+        // Before finishing, enforce "at least one of" groups (e.g. the phone numbers):
+        // if every field in a group is still blank, force the patient to fill one.
+        if (next == null) {
+            val unmet = requireOneOf.firstOrNull { group ->
+                group.none { id -> state.fields.find { it.id == id }?.value?.isNullOrBlank() == false }
+            }
+            val targetId = unmet?.firstOrNull { id -> state.fields.any { it.id == id } }
+            if (targetId != null) {
+                val labels = unmet.mapNotNull { id ->
+                    state.fields.find { it.id == id }?.let { it.translatedText ?: it.fieldName }
+                }.joinToString(", ")
+                forcedRequiredIds = forcedRequiredIds + targetId
+                val target = state.fields.first { it.id == targetId }
+                _state.update {
+                    it.copy(
+                        skippedFieldIds = it.skippedFieldIds - unmet.toSet(),
+                        isComplete = false,
+                        chatMessages = it.chatMessages + ChatMessage(
+                            text = appStrings.get(R.string.require_one_of, labels),
+                            isFromUser = false,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                }
+                startAskingField(target)
                 return
             }
         }
@@ -591,7 +638,38 @@ class GuidedIntakeViewModel @Inject constructor(
                     allFields = state.fields
                 )
 
+                // "None" / "skip" / "I don't have one" on a FREE-TEXT field (phone,
+                // email, SSN, …): accept it as a deliberate decline and move on (no
+                // format error). Restricted to option-less text/number/date fields so a
+                // localized "no"/"non"/"нет" can never hijack a Yes/No radio answer. If
+                // the field is being forced by a require_one_of group, keep asking.
+                val isFreeText = targetField.options.isEmpty() && targetField.fieldType in listOf(
+                    FieldType.TEXT, FieldType.NUMBER, FieldType.DATE
+                )
+                val declined = isFreeText && (FieldValidation.isDecline(message) ||
+                    (result.value != null && FieldValidation.isDecline(result.value!!)))
+                val forced = targetField.id in forcedRequiredIds
+
                 when {
+                    declined && forced -> {
+                        val group = requireOneOf.firstOrNull { targetField.id in it } ?: emptyList()
+                        val labels = group.mapNotNull { id ->
+                            state.fields.find { it.id == id }?.let { it.translatedText ?: it.fieldName }
+                        }.joinToString(", ")
+                        _state.update {
+                            it.copy(
+                                isLoadingResponse = false,
+                                chatMessages = it.chatMessages + ChatMessage(
+                                    text = appStrings.get(R.string.require_one_of, labels),
+                                    isFromUser = false,
+                                    timestamp = System.currentTimeMillis()
+                                )
+                            )
+                        }
+                    }
+
+                    declined && !targetField.required -> skipFieldAndAdvance(targetField)
+
                     result.value != null && result.confidence >= CONFIDENCE_THRESHOLD -> {
                         // Format-check the parsed value (phone/email/zip/date/…). Valid
                         // values are normalized and saved; an ill-formed value is gently
@@ -793,6 +871,30 @@ class GuidedIntakeViewModel @Inject constructor(
                 Log.w(TAG, "Could not save patient cache", e)
             }
         }
+    }
+
+    /** Patient declined an optional field — leave it blank, mark it skipped so it
+     *  isn't re-asked, update progress, and move on. */
+    private suspend fun skipFieldAndAdvance(field: FormField) {
+        intakeRepository.markFieldsSkipped(formId, listOf(field.id))
+        val updatedSkipped = _state.value.skippedFieldIds + field.id
+        val skipSet = updatedSkipped + skipDuringIntakeIds
+        val filledCount = _state.value.fields.count { f ->
+            f.id !in skipSet && f.fieldType != FieldType.STATIC_LABEL && !f.value.isNullOrBlank()
+        }
+        val totalCount = _state.value.fields.count { f ->
+            f.id !in skipSet && f.fieldType != FieldType.STATIC_LABEL
+        }
+        _state.update {
+            it.copy(
+                skippedFieldIds = updatedSkipped,
+                isLoadingResponse = false,
+                filledCount = filledCount,
+                totalCount = totalCount
+            )
+        }
+        Log.d(TAG, "Declined/skipped ${field.id}")
+        advanceToNextField()
     }
 
     /** Save a field value (and any bonus fills), apply skip rules, update counts, advance. */
