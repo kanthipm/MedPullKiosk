@@ -51,8 +51,224 @@ class PdfFormFiller @Inject constructor(
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
-    fun fillCoastalGatewayForm(fields: List<FormField>, outputDir: File): File? =
-        fillForm(fields, COASTAL_GATEWAY_PDF, "Coastal Gateway — Patient Intake", outputDir)
+    fun fillCoastalGatewayForm(fields: List<FormField>, outputDir: File): File? {
+        // Coastal Gateway is a flat (non-AcroForm) printed form, so generic
+        // label-matching can't place values into its blanks/checkboxes. We use an
+        // explicit, hand-verified coordinate map instead. If that places nothing
+        // (e.g. the asset changed), fall back to the clean formatted summary.
+        return try {
+            fillCoastalGatewayPrecise(fields, outputDir)
+                ?: createFormattedSummaryPdf(coastalSummaryFields(fields), outputDir, "Coastal Gateway — Patient Intake")
+        } catch (e: Exception) {
+            Log.e(TAG, "Precise Coastal Gateway fill failed — using summary", e)
+            createFormattedSummaryPdf(coastalSummaryFields(fields), outputDir, "Coastal Gateway — Patient Intake")
+        }
+    }
+
+    private fun coastalSummaryFields(fields: List<FormField>): List<FormField> =
+        fields.filter { !it.value.isNullOrBlank() && it.fieldType != FieldType.STATIC_LABEL && it.value != "delivered" }
+
+    // ─── Coastal Gateway: explicit placement map ─────────────────────────────
+    //
+    // Coordinates are in the PDF's TOP-LEFT points (612 x 792), read directly
+    // from the form's text positions. They are converted to PDFBox's bottom-left
+    // origin at draw time via `pdfY = pageHeight - y`. `Opt` (x,y) is where an "X"
+    // is stamped on a "___option" blank; text is drawn with its baseline at y.
+
+    private data class Opt(val value: String, val x: Float, val y: Float)
+
+    private sealed interface Place {
+        val page: Int
+        data class Text(override val page: Int, val x: Float, val y: Float) : Place
+        data class Date3(override val page: Int, val x1: Float, val x2: Float, val x3: Float, val y: Float) : Place
+        data class Choice(override val page: Int, val opts: List<Opt>) : Place
+        data class Multi(override val page: Int, val opts: List<Opt>) : Place
+        data class Sign(override val page: Int, val x: Float, val y: Float) : Place
+    }
+
+    private val coastalPlacements: Map<String, List<Place>> = mapOf(
+        "patient_full_name" to listOf(Place.Text(0, 145f, 96f), Place.Text(1, 228f, 64f)),
+        "date_of_birth" to listOf(Place.Date3(0, 493f, 521f, 548f, 96f), Place.Text(1, 410f, 64f)),
+        "mailing_address_street" to listOf(Place.Text(0, 30f, 136f)),
+        "mailing_city" to listOf(Place.Text(0, 24f, 180f)),
+        "mailing_state" to listOf(Place.Text(0, 150f, 180f)),
+        "mailing_zip" to listOf(Place.Text(0, 199f, 180f)),
+        "physical_same_as_mailing" to listOf(Place.Choice(0, listOf(Opt("Yes", 106f, 214f)))),
+        "physical_address_street" to listOf(Place.Text(0, 30f, 240f)),
+        "physical_city" to listOf(Place.Text(0, 23f, 265f)),
+        "physical_state" to listOf(Place.Text(0, 91f, 265f)),
+        "physical_zip" to listOf(Place.Text(0, 140f, 265f)),
+        "cell_phone" to listOf(Place.Text(0, 70f, 317f)),
+        "home_phone" to listOf(Place.Text(0, 70f, 332f)),
+        "email" to listOf(Place.Text(0, 90f, 367f)),
+        "preferred_language" to listOf(Place.Choice(0, listOf(
+            Opt("English", 22f, 424f), Opt("Español", 69f, 424f), Opt("Tiếng Việt", 124f, 424f)
+        ))),
+        "sex_assigned_at_birth" to listOf(Place.Choice(0, listOf(
+            Opt("Female", 377f, 110f), Opt("Male", 441f, 110f)
+        ))),
+        "marital_status" to listOf(Place.Choice(0, listOf(
+            Opt("Single", 359f, 140f), Opt("Married", 437f, 140f),
+            Opt("Divorced", 359f, 152f), Opt("Widowed", 427f, 152f)
+        ))),
+        "gender_identity" to listOf(Place.Choice(0, listOf(
+            Opt("Female", 351f, 184f), Opt("Male", 390f, 184f),
+            Opt("Transgender Female", 351f, 197f), Opt("Transgender Male", 351f, 213f)
+        ))),
+        "race" to listOf(Place.Multi(0, listOf(
+            Opt("White", 351f, 300f), Opt("African American / Black", 388f, 300f), Opt("Asian", 482f, 300f),
+            Opt("American Indian or Alaska Native", 351f, 318f), Opt("Native Hawaiian", 495f, 318f),
+            Opt("Other Pacific Islander", 351f, 331f), Opt("Decline to specify", 440f, 331f)
+        ))),
+        "ethnicity" to listOf(Place.Choice(0, listOf(
+            Opt("Not Hispanic or Latino", 351f, 369f), Opt("Hispanic or Latino", 351f, 383f),
+            Opt("Decline to specify", 429f, 369f)
+        ))),
+        "emergency_contact_name" to listOf(Place.Text(0, 395f, 476f)),
+        "emergency_contact_phone" to listOf(Place.Text(0, 392f, 497f)),
+        "representative_name" to listOf(Place.Text(0, 70f, 476f)),
+        "representative_relationship" to listOf(Place.Text(0, 210f, 497f)),
+        "primary_insurance_provider" to listOf(Place.Text(0, 130f, 546f)),
+        "primary_insurance_id" to listOf(Place.Text(0, 45f, 573f)),
+        "primary_insurance_group" to listOf(Place.Text(0, 390f, 573f)),
+        "policyholder_name" to listOf(Place.Text(0, 80f, 601f)),
+        "policyholder_dob" to listOf(Place.Date3(0, 100f, 128f, 152f, 626f)),
+        "policyholder_relationship" to listOf(Place.Text(0, 390f, 626f)),
+        "secondary_insurance_provider" to listOf(Place.Text(0, 130f, 655f)),
+        "secondary_insurance_id" to listOf(Place.Text(0, 45f, 682f)),
+        "secondary_insurance_group" to listOf(Place.Text(0, 390f, 682f)),
+        "final_signature" to listOf(
+            Place.Sign(2, 130f, 562f), Place.Sign(2, 130f, 617f),
+            Place.Sign(6, 130f, 436f), Place.Sign(6, 130f, 477f)
+        )
+    )
+
+    private fun normalizeOpt(s: String): String = s.lowercase().filter { it.isLetterOrDigit() }
+
+    /**
+     * Fills the real Coastal Gateway PDF using [coastalPlacements]. Returns null
+     * (so the caller can fall back to a summary) if nothing could be placed.
+     */
+    private fun fillCoastalGatewayPrecise(fields: List<FormField>, outputDir: File): File? {
+        outputDir.mkdirs()
+        val document = PDDocument.load(context.assets.open(COASTAL_GATEWAY_PDF))
+        val streams = HashMap<Int, PDPageContentStream>()
+        var placed = 0
+        try {
+            fun streamFor(pageIdx: Int): PDPageContentStream = streams.getOrPut(pageIdx) {
+                PDPageContentStream(
+                    document, document.getPage(pageIdx),
+                    PDPageContentStream.AppendMode.APPEND, true, true
+                )
+            }
+            val byId = fields.associateBy { it.id }
+            for ((fieldId, places) in coastalPlacements) {
+                val field = byId[fieldId] ?: continue
+                val value = field.value
+                if (value.isNullOrBlank() || value == "delivered") continue
+                for (pl in places) {
+                    // Coordinates in `coastalPlacements` are relative to the page's
+                    // MediaBox top-left. Some pages of this form have a non-zero
+                    // MediaBox origin (e.g. [-11.96, 11.99, 600.04, 803.99]), so we
+                    // must anchor to the box's actual lower-left X and upper-right Y
+                    // rather than assuming (0,0)/pageHeight — otherwise everything is
+                    // shifted by the origin offset.
+                    val box = document.getPage(pl.page).mediaBox
+                    val ox = box.lowerLeftX          // content x = ox + placement x
+                    val topY = box.upperRightY        // content baseline y = topY - placement y
+                    try {
+                        when (pl) {
+                            is Place.Text -> {
+                                drawText(streamFor(pl.page), ox + pl.x, topY - pl.y, value)
+                                placed++
+                            }
+                            is Place.Date3 -> {
+                                val parts = value.split("/", "-").map { it.trim() }
+                                if (parts.size == 3) {
+                                    drawText(streamFor(pl.page), ox + pl.x1, topY - pl.y, parts[0])
+                                    drawText(streamFor(pl.page), ox + pl.x2, topY - pl.y, parts[1])
+                                    drawText(streamFor(pl.page), ox + pl.x3, topY - pl.y, parts[2])
+                                } else {
+                                    drawText(streamFor(pl.page), ox + pl.x1, topY - pl.y, value)
+                                }
+                                placed++
+                            }
+                            is Place.Choice -> {
+                                val key = normalizeOpt(value)
+                                pl.opts.firstOrNull { normalizeOpt(it.value) == key }?.let { o ->
+                                    drawX(streamFor(pl.page), ox + o.x, topY - o.y); placed++
+                                }
+                            }
+                            is Place.Multi -> {
+                                val selected = value.split(",").map { normalizeOpt(it) }.filter { it.isNotBlank() }
+                                for (o in pl.opts) {
+                                    if (normalizeOpt(o.value) in selected) {
+                                        drawX(streamFor(pl.page), ox + o.x, topY - o.y); placed++
+                                    }
+                                }
+                            }
+                            is Place.Sign -> {
+                                if (drawSignature(document, streamFor(pl.page), ox + pl.x, topY - pl.y, value)) placed++
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Could not place $fieldId on page ${pl.page}", e)
+                    }
+                }
+            }
+            streams.values.forEach { it.close() }
+            streams.clear()
+            if (placed == 0) return null
+            val out = File(outputDir, "filled_${System.currentTimeMillis()}.pdf")
+            document.save(out)
+            Log.d(TAG, "Coastal Gateway precise fill: $placed marks placed")
+            return out
+        } finally {
+            streams.values.forEach { runCatching { it.close() } }
+            document.close()
+        }
+    }
+
+    private fun drawText(stream: PDPageContentStream, x: Float, y: Float, raw: String) {
+        val text = raw.replace('\n', ' ').replace('\r', ' ').trim().take(60)
+        stream.setFont(PDType1Font.HELVETICA, ANSWER_FONT_SIZE)
+        stream.setNonStrokingColor(0.07f, 0.25f, 0.70f)
+        stream.beginText()
+        stream.newLineAtOffset(x, y)
+        try {
+            stream.showText(text)
+        } catch (e: Exception) {
+            // Standard-14 Helvetica can't encode some glyphs (e.g. diacritics) —
+            // fall back to an ASCII-only rendering so the field still shows.
+            stream.showText(text.replace(Regex("[^\\x20-\\x7E]"), ""))
+        }
+        stream.endText()
+    }
+
+    private fun drawX(stream: PDPageContentStream, x: Float, y: Float) {
+        stream.setFont(PDType1Font.HELVETICA_BOLD, 10f)
+        stream.setNonStrokingColor(0.07f, 0.25f, 0.70f)
+        stream.beginText()
+        stream.newLineAtOffset(x, y)
+        stream.showText("X")
+        stream.endText()
+    }
+
+    private fun drawSignature(
+        document: PDDocument, stream: PDPageContentStream, x: Float, yBaseline: Float, value: String
+    ): Boolean {
+        val path = value.removePrefix("signature:")
+        val file = File(path).takeIf { it.exists() } ?: return false
+        val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: return false
+        val maxW = 150f
+        val maxH = 26f
+        val scale = minOf(maxW / bmp.width, maxH / bmp.height, 1f)
+        val w = bmp.width * scale
+        val h = bmp.height * scale
+        val image = LosslessFactory.createFromImage(document, bmp)
+        stream.drawImage(image, x, yBaseline, w, h)
+        return true
+    }
 
     fun fillForm(
         fields: List<FormField>,
