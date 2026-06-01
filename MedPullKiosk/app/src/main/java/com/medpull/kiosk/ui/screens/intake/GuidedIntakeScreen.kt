@@ -916,13 +916,8 @@ fun GuidedIntakeScreen(
                                         Spacer(Modifier.height(40.dp))
                                     }
                                 } else {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 48.dp),
-                                        horizontalAlignment = Alignment.Start
-                                    ) {
-                                        // Question text
+                                    // Question text, shared by every inline answer type.
+                                    val questionHeader = @Composable {
                                         Text(
                                             text = displayText,
                                             style = MaterialTheme.typography.headlineMedium.copy(
@@ -932,12 +927,19 @@ fun GuidedIntakeScreen(
                                             ),
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
+                                    }
 
-                                        Spacer(Modifier.height(36.dp))
-
-                                        // Inline answer area — signature / handwriting / typed text
-                                        when {
-                                            field != null && field.fieldType == FieldType.SIGNATURE -> {
+                                    // Inline answer area — signature / handwriting / typed text.
+                                    when {
+                                        field != null && field.fieldType == FieldType.SIGNATURE -> {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 48.dp),
+                                                horizontalAlignment = Alignment.Start
+                                            ) {
+                                                questionHeader()
+                                                Spacer(Modifier.height(36.dp))
                                                 SignatureCapture(
                                                     onSignatureCaptured = { bitmap ->
                                                         viewModel.submitSignature(bitmap)
@@ -945,8 +947,17 @@ fun GuidedIntakeScreen(
                                                     modifier = Modifier.fillMaxWidth()
                                                 )
                                             }
+                                        }
 
-                                            showHandwriting -> {
+                                        showHandwriting -> {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 48.dp),
+                                                horizontalAlignment = Alignment.Start
+                                            ) {
+                                                questionHeader()
+                                                Spacer(Modifier.height(36.dp))
                                                 HandwritingInput(
                                                     language = state.userLanguage,
                                                     onTextRecognized = { text ->
@@ -956,9 +967,27 @@ fun GuidedIntakeScreen(
                                                     modifier = Modifier.fillMaxWidth()
                                                 )
                                             }
+                                        }
 
-                                            else -> {
-                                                // Typeform underline text input
+                                        else -> {
+                                            // Typeform underline text input. Top-anchored,
+                                            // scrollable and keyboard-padded so the field and
+                                            // its underline stay above the on-screen keyboard —
+                                            // the screen is short in landscape, so a vertically
+                                            // centered field would be covered while typing.
+                                            // (Signature/handwriting stay un-scrolled above so
+                                            // their drawing gestures aren't stolen by scroll.)
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .verticalScroll(rememberScrollState())
+                                                    .imePadding()
+                                                    .padding(horizontal = 48.dp),
+                                                horizontalAlignment = Alignment.Start
+                                            ) {
+                                                Spacer(Modifier.height(8.dp))
+                                                questionHeader()
+                                                Spacer(Modifier.height(36.dp))
                                                 TypeformTextInput(
                                                     value = messageText,
                                                     onValueChange = { messageText = it },
@@ -967,6 +996,7 @@ fun GuidedIntakeScreen(
                                                     focusRequester = focusRequester,
                                                     modifier = Modifier.fillMaxWidth()
                                                 )
+                                                Spacer(Modifier.height(24.dp))
                                             }
                                         }
                                     }
@@ -997,7 +1027,13 @@ fun GuidedIntakeScreen(
                     // otherwise render with no way to submit — fall back to text input
                     // so the patient can always advance.
                     val isTextInput = field == null || field.options.isEmpty()
+                    val isMultiSelect = field?.fieldType == FieldType.MULTI_SELECT
 
+                    // Show the bar only when it carries an action: the typed-answer
+                    // OK button, or Continue/None for multi-select (which would
+                    // otherwise strand the patient below a long, scrollable option
+                    // list). Single-select option taps auto-advance — no bar needed.
+                    if ((isTextInput && !showHandwriting) || isMultiSelect) {
                     Surface(
                         modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
                         color = MaterialTheme.colorScheme.background,
@@ -1010,7 +1046,44 @@ fun GuidedIntakeScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            if (isTextInput && !showHandwriting) {
+                            if (isMultiSelect) {
+                                // Selections are persisted to field.value on every
+                                // tap, so this always-visible bar reflects the live
+                                // count and submits the same canonical CSV the option
+                                // grid produced. This is the patient's reliable way to
+                                // advance — the grid itself has no submit button.
+                                val selectedCount = field?.value
+                                    ?.split(",")?.map { it.trim() }?.count { it.isNotBlank() } ?: 0
+                                OutlinedButton(
+                                    onClick = { viewModel.sendMessage("None") },
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.heightIn(min = 60.dp),
+                                    contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.none),
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                }
+                                Spacer(Modifier.weight(1f))
+                                Button(
+                                    onClick = { field?.value?.let { viewModel.sendMessage(it) } },
+                                    enabled = selectedCount > 0,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.heightIn(min = 60.dp),
+                                    contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
+                                ) {
+                                    Text(
+                                        if (selectedCount == 0) stringResource(R.string.confirm)
+                                        else stringResource(R.string.confirm_with_count, selectedCount),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(22.dp))
+                                }
+                            } else {
+                                // Typed-answer OK button
                                 Button(
                                     onClick = sendMessage,
                                     enabled = messageText.isNotBlank(),
@@ -1031,88 +1104,22 @@ fun GuidedIntakeScreen(
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                 )
-                            }
-
-                            Spacer(Modifier.weight(1f))
-
-                            // Handwriting / keyboard toggle
-                            IconButton(
-                                onClick = { showHandwriting = !showHandwriting },
-                                modifier = Modifier.size(56.dp)
-                            ) {
-                                Icon(
-                                    if (showHandwriting) Icons.Default.Keyboard else Icons.Default.Draw,
-                                    contentDescription = if (showHandwriting) stringResource(R.string.keyboard) else stringResource(R.string.write),
-                                    modifier = Modifier.size(32.dp),
-                                    tint = if (showHandwriting)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                                )
-                            }
-
-                            // Microphone
-                            if (speechAvailable) {
-                                IconButton(
-                                    onClick = {
-                                        if (isListening) {
-                                            cancelListening()
-                                        } else if (ContextCompat.checkSelfPermission(
-                                                context, Manifest.permission.RECORD_AUDIO
-                                            ) == PackageManager.PERMISSION_GRANTED
-                                        ) {
-                                            startListening()
-                                        } else {
-                                            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                        }
-                                    },
-                                    enabled = !state.isLoadingResponse,
-                                    modifier = Modifier.size(56.dp)
-                                ) {
-                                    Icon(
-                                        if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                                        contentDescription = if (isListening) stringResource(R.string.stop) else stringResource(R.string.speak),
-                                        modifier = Modifier.size(32.dp),
-                                        tint = if (isListening)
-                                            MaterialTheme.colorScheme.error
-                                        else
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                                    )
-                                }
-                            }
-
-                            // TTS read-aloud
-                            if (ttsReady) {
-                                IconButton(
-                                    onClick = {
-                                        if (isSpeaking) {
-                                            tts.stop()
-                                            isSpeaking = false
-                                        } else {
-                                            val text = currentQuestion.text
-                                                .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
-                                            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "q")
-                                        }
-                                    },
-                                    modifier = Modifier.size(56.dp)
-                                ) {
-                                    Icon(
-                                        if (isSpeaking) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                                        contentDescription = if (isSpeaking) stringResource(R.string.stop_reading) else stringResource(R.string.read_aloud),
-                                        modifier = Modifier.size(32.dp),
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                                    )
-                                }
+                                Spacer(Modifier.weight(1f))
                             }
                         }
+                    }
                     }
                 }
                 }
             }
         }
 
-        // ── Floating chat FAB (bottom-right, always visible) ─────────────────
-        if (!chatPanelOpen && state.form != null && !state.isLoading) {
+        // ── Floating chat FAB (bottom-right) ─────────────────────────────────
+        // Temporarily hidden for the demo. Flip this back to true to restore the
+        // conversation panel button — all of its code below is left intact.
+        val showConversationFab = false
+        @Suppress("KotlinConstantConditions")
+        if (showConversationFab && !chatPanelOpen && state.form != null && !state.isLoading) {
             val unreadCount = state.chatMessages.size
             Box(
                 modifier = Modifier
@@ -1428,6 +1435,21 @@ private fun VoiceFirstQuestion(
             else Modifier
         )
     ) {
+        // While typing, use a top-anchored, keyboard-aware layout so the text
+        // field and Send button stay visible above the on-screen keyboard
+        // (which covers the lower half of the screen). The default voice layout
+        // centers everything vertically, which pushes the field under the
+        // keyboard where the patient can't see what they're typing.
+        if (phase == VoicePhase.Editing) {
+            VoiceTypeLayout(
+                questionText = questionText,
+                value = editText,
+                onValueChange = onEditTextChange,
+                onSend = onSendEdit,
+                focusRequester = editFocusRequester,
+                accentColor = blue
+            )
+        } else {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1592,6 +1614,7 @@ private fun VoiceFirstQuestion(
 
             Spacer(Modifier.weight(1.15f))
         }
+        }
 
         // "Type your response" — out of the way but a large, easy tap target
         // for patients who prefer the keyboard over speaking.
@@ -1679,6 +1702,58 @@ private fun VoiceArch(
             color = color,
             style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
         )
+    }
+}
+
+/**
+ * Keyboard-aware layout for the typing/edit path. The question and input are
+ * anchored toward the TOP of the screen instead of vertically centered, so the
+ * field and Send button stay above the on-screen keyboard (which covers the
+ * lower half) and the patient can see what they're typing. The column is
+ * scrollable as a safety net on shorter screens, and imePadding() keeps it
+ * clear of the keyboard on edge-to-edge devices.
+ *
+ * The question is rendered smaller here than in the voice prompt so the input
+ * sits high and comfortably in view; the swap animates as the window resizes
+ * when the keyboard opens.
+ */
+@Composable
+private fun VoiceTypeLayout(
+    questionText: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit,
+    focusRequester: FocusRequester,
+    accentColor: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(40.dp))
+        Text(
+            text = questionText,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                lineHeight = 40.sp
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(32.dp))
+        VoiceEditField(
+            value = value,
+            onValueChange = onValueChange,
+            onSend = onSend,
+            focusRequester = focusRequester,
+            accentColor = accentColor
+        )
+        Spacer(Modifier.height(40.dp))
     }
 }
 
@@ -1885,29 +1960,9 @@ private fun BigMultiSelect(
                 repeat(cols - rowIndices.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+        // Submit (Continue / None) lives in the always-visible bottom bar so the
+        // patient is never stranded below this scrollable option list.
         Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = { viewModel.sendMessage("None") },
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) { Text(stringResource(R.string.none)) }
-            Button(
-                onClick = {
-                    if (currentSelections.value.isNotEmpty())
-                        viewModel.sendMessage(currentSelections.value.joinToString(", "))
-                },
-                enabled = currentSelections.value.isNotEmpty(),
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                val n = currentSelections.value.size
-                Text(if (n == 0) stringResource(R.string.confirm) else stringResource(R.string.confirm_with_count, n))
-            }
-        }
     }
 }
 

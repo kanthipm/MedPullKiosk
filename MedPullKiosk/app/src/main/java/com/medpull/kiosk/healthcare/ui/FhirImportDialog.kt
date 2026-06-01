@@ -18,6 +18,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.FormField
+import com.medpull.kiosk.ui.components.DialogResizeForKeyboard
 import com.medpull.kiosk.healthcare.models.HealthcarePatient
 
 /**
@@ -49,6 +50,9 @@ fun FhirImportDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        // Resize the dialog window for the keyboard so the search field and
+        // results stay visible above it.
+        DialogResizeForKeyboard()
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.8f)

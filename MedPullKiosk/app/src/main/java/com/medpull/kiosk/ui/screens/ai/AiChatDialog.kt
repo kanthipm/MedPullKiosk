@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.R
 import kotlinx.coroutines.launch
 import com.medpull.kiosk.data.models.FormField
+import com.medpull.kiosk.ui.components.DialogResizeForKeyboard
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -174,6 +175,8 @@ fun AiChatDialog(
             usePlatformDefaultWidth = false
         )
     ) {
+        // Resize this dialog's window for the keyboard so the bottom input stays visible.
+        DialogResizeForKeyboard()
         Surface(
             modifier = Modifier
                 .fillMaxSize()
@@ -182,7 +185,12 @@ fun AiChatDialog(
             color = MaterialTheme.colorScheme.surface
         ) {
             Column(
-                modifier = Modifier.fillMaxSize()
+                // Lift the bottom-pinned input above the on-screen keyboard so
+                // the message field stays visible while typing; the messages
+                // list (weight 1f) absorbs the reduced height.
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
             ) {
                 // Top bar
                 TopAppBar(

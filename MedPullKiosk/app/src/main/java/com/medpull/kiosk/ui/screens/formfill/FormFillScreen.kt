@@ -30,6 +30,7 @@ import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.ui.components.ActivityTracker
+import com.medpull.kiosk.ui.components.DialogResizeForKeyboard
 import com.medpull.kiosk.ui.components.InteractivePdfViewer
 import android.Manifest
 import android.content.Intent
@@ -469,6 +470,9 @@ private fun FieldInputDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
+        // Resize the dialog window for the keyboard so the field and Save/Cancel
+        // buttons re-center above it instead of being covered.
+        DialogResizeForKeyboard()
         Card(
             modifier = Modifier
                 .fillMaxWidth()
