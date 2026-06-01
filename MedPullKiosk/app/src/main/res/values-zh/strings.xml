@@ -410,6 +410,7 @@
     <string name="delete">删除</string>
     <string name="confirm">确认</string>
     <string name="back">返回</string>
+    <string name="prev_question">上一题</string>
     <string name="next">下一步</string>
     <string name="done">完成了</string>
 </resources>

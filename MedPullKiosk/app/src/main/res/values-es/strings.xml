@@ -410,6 +410,7 @@
     <string name="delete">Eliminar</string>
     <string name="confirm">Confirmar</string>
     <string name="back">Atrás</string>
+    <string name="prev_question">Pregunta anterior</string>
     <string name="next">Siguiente</string>
     <string name="done">Hecho</string>
 </resources>

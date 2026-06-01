@@ -26,6 +26,7 @@ import java.io.File
 import java.io.FileOutputStream
 import com.medpull.kiosk.ui.components.ActivityTracker
 import com.medpull.kiosk.ui.components.BackButton
+import com.medpull.kiosk.ui.components.PrewarmSpeech
 import com.medpull.kiosk.utils.SessionManager
 import java.text.SimpleDateFormat
 import java.util.*
@@ -46,6 +47,10 @@ fun FormSelectionScreen(
     viewModel: FormSelectionViewModel = hiltViewModel()
 ) {
     ActivityTracker(sessionManager = sessionManager)
+
+    // Selecting a form leads into voice intake — warm the speech engines now so the
+    // first spoken question and first mic open don't pay cold-start cost.
+    PrewarmSpeech()
 
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current

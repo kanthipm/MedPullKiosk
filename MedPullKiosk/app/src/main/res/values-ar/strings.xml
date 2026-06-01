@@ -410,6 +410,7 @@
     <string name="delete">حذف</string>
     <string name="confirm">قم بالتأكيد</string>
     <string name="back">إلى الخلف</string>
+    <string name="prev_question">السؤال السابق</string>
     <string name="next">التالي</string>
     <string name="done">تم</string>
 </resources>

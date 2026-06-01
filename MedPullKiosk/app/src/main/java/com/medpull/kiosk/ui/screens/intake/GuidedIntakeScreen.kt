@@ -39,6 +39,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -76,6 +78,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
+import com.medpull.kiosk.ui.components.StepBackButton
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.ui.screens.ai.HandwritingInput
 import com.medpull.kiosk.ui.screens.ai.SignatureCapture
@@ -448,12 +451,20 @@ fun GuidedIntakeScreen(
             } else {
                 Log.i(TTS_STT_TAG, "TTS locale set to $locale (code=$result)")
             }
-            // Prime the engine once (silently) so the first real question speaks
-            // without the cold-start delay. playSilentUtterance makes no sound.
+            // Prime THIS engine instance once so the first real question speaks
+            // without cold-start delay. A real (inaudible) synthesis — not
+            // playSilentUtterance — is what forces the voice model to load; silence
+            // skips the model on many engines, leaving the first question to pay the
+            // load cost. Volume 0 keeps it silent while exercising the full pipeline.
+            // (SpeechPrewarmer already warmed the shared service from the previous
+            // screen; this covers the screen's own freshly-built instance.)
             if (!ttsWarmedUp) {
                 ttsWarmedUp = true
                 try {
-                    tts.playSilentUtterance(150L, TextToSpeech.QUEUE_FLUSH, "warmup")
+                    val warmParams = Bundle().apply {
+                        putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 0f)
+                    }
+                    tts.speak("ok", TextToSpeech.QUEUE_FLUSH, warmParams, "warmup")
                 } catch (_: Exception) {}
             }
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -470,17 +481,20 @@ fun GuidedIntakeScreen(
                 @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) {
                     Log.w(TTS_STT_TAG, "TTS error speaking '$utteranceId'")
-                    // A TTS failure must NOT strand the user on "Speaking" — advance.
+                    // A QUESTION failure must NOT strand the user on "Speaking" —
+                    // advance. The silent "warmup" utterance is intentionally flushed
+                    // by the question's QUEUE_FLUSH; its error must NOT advance the
+                    // flow (that would skip the mic past the spoken question).
                     mainHandler.post {
                         isSpeaking = false
-                        proceedAfterQuestionRef.value()
+                        if (utteranceId == "question") proceedAfterQuestionRef.value()
                     }
                 }
                 override fun onError(utteranceId: String?, errorCode: Int) {
                     Log.w(TTS_STT_TAG, "TTS error speaking '$utteranceId' (code=$errorCode)")
                     mainHandler.post {
                         isSpeaking = false
-                        proceedAfterQuestionRef.value()
+                        if (utteranceId == "question") proceedAfterQuestionRef.value()
                     }
                 }
             })
@@ -698,13 +712,21 @@ fun GuidedIntakeScreen(
                 .padding(start = 4.dp, end = 12.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = {
-                if (viewModel.hasPreviousField()) viewModel.goToPreviousField()
-                else onNavigateBack()
-            }) {
+            // Big back button: always leaves the whole form (back to the form /
+            // program selector). Stepping back through questions is the separate,
+            // smaller "Prev question" button below.
+            IconButton(onClick = onNavigateBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                )
+            }
+            // Small in-form step-back: revisit the previous answered question without
+            // leaving the form. Hidden on the first question (nothing to go back to).
+            if (viewModel.hasPreviousField()) {
+                StepBackButton(
+                    label = stringResource(R.string.prev_question),
+                    onClick = { viewModel.goToPreviousField() }
                 )
             }
             Text(
@@ -850,14 +872,22 @@ fun GuidedIntakeScreen(
                                     field.fieldType != FieldType.SIGNATURE
 
                                 if (isOptionField && field != null) {
+                                    // Scrollable: long option lists (e.g. 18 medical
+                                    // conditions) overflow the screen. Without scroll
+                                    // the Confirm/None buttons get clipped below the
+                                    // fold and the patient can't advance. A scroll
+                                    // container keeps every option AND the action
+                                    // buttons reachable for ANY option count.
+                                    // (weight() spacers can't be used inside a
+                                    // verticalScroll — they need fixed heights here.)
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
                                             .padding(horizontal = 32.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        // Bias the question slightly above center, matching the text questions
-                                        Spacer(Modifier.weight(0.8f))
+                                        Spacer(Modifier.height(40.dp))
                                         Text(
                                             text = displayText,
                                             style = MaterialTheme.typography.displayMedium.copy(
@@ -883,7 +913,7 @@ fun GuidedIntakeScreen(
                                                 optionLabels = field.optionLabels
                                             )
                                         }
-                                        Spacer(Modifier.weight(1.2f))
+                                        Spacer(Modifier.height(40.dp))
                                     }
                                 } else {
                                     Column(
@@ -961,8 +991,12 @@ fun GuidedIntakeScreen(
                     state.currentAskingField?.fieldType != FieldType.SIGNATURE
                 ) {
                     val field = state.currentAskingField
-                    val isTextInput = field == null ||
-                        (field.options.isEmpty() && field.fieldType != FieldType.MULTI_SELECT)
+                    // Any field WITHOUT options gets the typed-answer OK button. A
+                    // multi_select normally has options (handled by BigMultiSelect, so
+                    // no OK here); but if one is ever authored with no options it would
+                    // otherwise render with no way to submit — fall back to text input
+                    // so the patient can always advance.
+                    val isTextInput = field == null || field.options.isEmpty()
 
                     Surface(
                         modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),

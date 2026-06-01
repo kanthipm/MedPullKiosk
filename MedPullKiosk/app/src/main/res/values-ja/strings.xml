@@ -410,6 +410,7 @@
     <string name="delete">[削除]</string>
     <string name="confirm">確認</string>
     <string name="back">戻る</string>
+    <string name="prev_question">前の質問</string>
     <string name="next">[次へ]</string>
     <string name="done">完了</string>
 </resources>

@@ -410,6 +410,7 @@
     <string name="delete">Удалить</string>
     <string name="confirm">Подтвердить</string>
     <string name="back">Назад</string>
+    <string name="prev_question">Пред. вопрос</string>
     <string name="next">Следующий</string>
     <string name="done">Готово</string>
 </resources>

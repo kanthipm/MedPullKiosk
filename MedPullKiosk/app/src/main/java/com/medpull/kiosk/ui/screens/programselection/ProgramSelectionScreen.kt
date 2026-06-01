@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.IntakeProgramType
 import com.medpull.kiosk.ui.components.BackButton
+import com.medpull.kiosk.ui.components.PrewarmSpeech
 
 /**
  * Entry screen: patient picks which program they are here for.
@@ -26,6 +27,9 @@ fun ProgramSelectionScreen(
     onStaffView: () -> Unit = {},
     onBack: () -> Unit = {}
 ) {
+    // Sliding Fee leads straight into voice intake — warm the speech engines now.
+    PrewarmSpeech()
+
     Box(modifier = Modifier.fillMaxSize()) {
         BackButton(
             onClick = onBack,
