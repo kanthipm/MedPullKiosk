@@ -12,6 +12,9 @@ import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDCheckBox
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDField
+import com.tom_roush.pdfbox.pdmodel.interactive.form.PDTextField
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.text.TextPosition
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,6 +44,7 @@ class PdfFormFiller @Inject constructor(
     companion object {
         private const val TAG = "PdfFormFiller"
         private const val COASTAL_GATEWAY_PDF = "forms/Coastal_Gateway_Intake_Form.pdf"
+        private const val BROWNWOOD_PDF = "forms/AccelHealth_Patient_Registration.pdf"
         private const val ANSWER_FONT_SIZE = 9f
         private const val LABEL_MATCH_THRESHOLD = 0.55
     }
@@ -267,6 +271,287 @@ class PdfFormFiller @Inject constructor(
         val h = bmp.height * scale
         val image = LosslessFactory.createFromImage(document, bmp)
         stream.drawImage(image, x, yBaseline, w, h)
+        return true
+    }
+
+    // ─── Brownwood / AccelHealth: AcroForm fill ─────────────────────────────
+    //
+    // Unlike Coastal Gateway, this PDF has a real interactive AcroForm (126
+    // widgets). Text fields have meaningful names; the 86 checkboxes have
+    // generic names ("Check Box0".."Check Box85") so each option's checkbox is
+    // mapped explicitly below. Schema field ids → AcroForm field names.
+
+    // Schema text field id → AcroForm text field name.
+    private val brownwoodText: Map<String, String> = mapOf(
+        "patient_first_name" to "FIRST NAME",
+        "patient_last_name" to "LAST NAME",
+        "patient_middle_name" to "MIDDLE NAME",
+        "social_security_number" to "SOCIAL SECURITY NUMBER",
+        "date_of_birth" to "DATE OF BIRTH",
+        "mailing_address" to "MAILING ADDRESS",
+        "apt_no" to "APT NO",
+        "city" to "CITY",
+        "state" to "STATE",
+        "zip" to "ZIP",
+        "county" to "COUNTY",
+        "cell_phone" to "CELL PHONE",
+        "home_phone" to "HOME PHONE",
+        "work_phone" to "WORK PHONE",
+        // emergency_contact is handled by a manual overlay (its AcroForm widget is
+        // mis-placed: it starts mid-cell and overlaps the printed "Phone:" label).
+        "primary_insurance_name" to "PRIMARY INSURANCE NAMEPlease give card to staff",
+        "secondary_insurance_name" to "SECONDARY INSURANCE NAMEPlease give card to staff",
+        "guardian1_name" to "PARENT  GUARDIAN 1",
+        "guardian1_city_state_zip" to "Text Field2",
+        "guardian1_dob" to "Text Field4",
+        "guardian1_cell_phone" to "CELL PHONE1",
+        "guardian1_home_phone" to "HOME PHONE1",
+        "guardian1_work_phone" to "WORK PHONE1",
+        "guardian1_employer" to "EMPLOYER",
+        "guardian1_ssn" to "Text Field5",
+        "guardian2_name" to "PARENT  GUARDIAN 2",
+        "guardian2_city_state_zip" to "Text Field3",
+        "guardian2_dob" to "DATE OF BIRTH2",
+        "guardian2_cell_phone" to "CELL PHONE2",
+        "guardian2_home_phone" to "HOME PHONE2",
+        "guardian2_work_phone" to "WORK PHONE2",
+        "guardian2_employer" to "EMPLOYER1",
+        "guardian2_ssn" to "Text Field6"
+    )
+
+    // Single-choice (radio) schema id → (canonical option → checkbox name).
+    private val brownwoodChoice: Map<String, Map<String, String>> = mapOf(
+        "preferred_language" to mapOf(
+            "English" to "Check Box41", "Spanish" to "Check Box42", "Other" to "Check Box43"),
+        "ag_work_history" to mapOf("Yes" to "Check Box0", "No" to "Check Box1"),
+        "ag_lived_away" to mapOf("Yes" to "Check Box2", "No" to "Check Box3"),
+        "ag_stopped_disability" to mapOf("Yes" to "Check Box4", "No" to "Check Box5"),
+        "birth_sex" to mapOf("Male" to "Check Box6", "Female" to "Check Box7"),
+        "current_gender" to mapOf(
+            "Male" to "Check Box8", "Female" to "Check Box9", "Undifferentiated" to "Check Box10"),
+        "gender_identity" to mapOf(
+            "Male" to "Check Box11", "Female" to "Check Box12",
+            "Transgender Man (FTM)" to "Check Box13", "Transgender Woman (MTF)" to "Check Box14",
+            "Genderqueer" to "Check Box15", "Other" to "Check Box16", "Choose not to answer" to "Check Box17"),
+        "sexual_orientation" to mapOf(
+            "Straight or Heterosexual" to "Check Box18", "Lesbian, Gay, or Homosexual" to "Check Box19",
+            "Bisexual" to "Check Box20", "Something else" to "Check Box21",
+            "Choose not to answer" to "Check Box22", "Don't know" to "Check Box23"),
+        "preferred_pronoun" to mapOf(
+            "He, him, his" to "Check Box30", "She, her, hers" to "Check Box32",
+            "They, them, theirs" to "Check Box34", "Ze, hir" to "Check Box33",
+            "Other" to "Check Box31", "Decline to answer" to "Check Box35"),
+        "ethnicity" to mapOf(
+            "Hispanic or Latino" to "Check Box36", "Not Hispanic or Latino" to "Check Box37",
+            "Choose not to answer" to "Check Box38", "Other" to "Check Box39", "Unknown" to "Check Box40"),
+        "marital_status" to mapOf(
+            "Married" to "Check Box44", "Single" to "Check Box45",
+            "Divorced/Separated" to "Check Box46", "Widowed" to "Check Box47"),
+        "us_veteran" to mapOf("Yes" to "Check Box48", "No" to "Check Box49"),
+        "homeless_status" to mapOf(
+            "Not Homeless" to "Check Box50", "Doubling Up" to "Check Box51", "Shelter" to "Check Box52",
+            "Street" to "Check Box53", "Transitional" to "Check Box54", "Other" to "Check Box55"),
+        "consent_phone_messages" to mapOf("Yes" to "Check Box66", "No" to "Check Box67"),
+        "consent_mail" to mapOf("Yes" to "Check Box68", "No" to "Check Box69"),
+        "consent_text" to mapOf("Yes" to "Check Box70", "No" to "Check Box71"),
+        "consent_email" to mapOf("Yes" to "Check Box72", "No" to "Check Box73"),
+        "guardian1_same_address" to mapOf("Yes" to "Check Box74"),
+        "guardian2_same_address" to mapOf("Yes" to "Check Box75"),
+        "guardian1_relationship" to mapOf(
+            "Mother" to "Check Box76", "Father" to "Check Box77", "Grandparent" to "Check Box78",
+            "Foster Parent" to "Check Box79", "Other" to "Check Box80"),
+        "guardian2_relationship" to mapOf(
+            "Mother" to "Check Box81", "Father" to "Check Box82", "Grandparent" to "Check Box83",
+            "Foster Parent" to "Check Box84", "Other" to "Check Box85")
+    )
+
+    // Multi-select schema id → (canonical option → checkbox name).
+    private val brownwoodMulti: Map<String, Map<String, String>> = mapOf(
+        "race" to mapOf(
+            "American Indian or Alaska Native" to "Check Box24", "Asian" to "Check Box25",
+            "Black or African American" to "Check Box28",
+            "Native Hawaiian or Other Pacific Islander" to "Check Box26",
+            "White" to "Check Box27", "Choose not to answer" to "Check Box29"),
+        "how_heard" to mapOf(
+            "Billboard" to "Check Box56", "Newspaper" to "Check Box61", "Event Sponsor" to "Check Box57",
+            "Publication" to "Check Box62", "Friend/Family" to "Check Box58", "Radio" to "Check Box63",
+            "Insurance" to "Check Box59", "Social Media" to "Check Box64", "Internet" to "Check Box60",
+            "Other" to "Check Box65")
+    )
+
+    fun fillBrownwoodForm(fields: List<FormField>, outputDir: File): File? {
+        return try {
+            fillBrownwoodAcro(fields, outputDir)
+                ?: createFormattedSummaryPdf(coastalSummaryFields(fields), outputDir, "AccelHealth — Patient Registration")
+        } catch (e: Exception) {
+            Log.e(TAG, "Brownwood fill failed — using summary", e)
+            createFormattedSummaryPdf(coastalSummaryFields(fields), outputDir, "AccelHealth — Patient Registration")
+        }
+    }
+
+    private fun normName(s: String): String = s.trim().replace(Regex("\\s+"), " ").lowercase()
+
+    private fun fillBrownwoodAcro(fields: List<FormField>, outputDir: File): File? {
+        outputDir.mkdirs()
+        val document = PDDocument.load(context.assets.open(BROWNWOOD_PDF))
+        try {
+            val acro = document.documentCatalog?.acroForm ?: return null
+            // Iterate the full field tree (the form is flat, but be safe) and key
+            // by whitespace-normalized name so minor spacing differences still match.
+            val byName = HashMap<String, PDField>()
+            for (f in acro.fieldIterator) byName[normName(f.fullyQualifiedName)] = f
+            val byId = fields.associateBy { it.id }
+            var placed = 0
+
+            fun valueOf(id: String): String? =
+                byId[id]?.value?.takeIf { !it.isNullOrBlank() && it != "delivered" }
+
+            fun setText(name: String, value: String) {
+                (byName[normName(name)] as? PDTextField)?.let { tf ->
+                    try {
+                        val v = value.replace('\n', ' ').replace('\r', ' ').trim()
+                        // The form's fields use an auto-size DA ("/Helv 0 Tf") that
+                        // pdfbox-android flattens at a large fixed size, overflowing
+                        // narrow boxes (the phone/emergency cells are only ~48–60pt
+                        // wide) so values clip and look shifted. Size the font to fit
+                        // the box width — capped at 10pt, shrinking only when needed.
+                        val boxW = tf.widgets.firstOrNull()?.rectangle?.width ?: 120f
+                        val fit = if (v.isEmpty()) 10f else (boxW - 4f) / (v.length * 0.52f)
+                        val size = fit.coerceIn(6f, 10f)
+                        val sz = String.format(java.util.Locale.US, "%.1f", size)
+                        runCatching { tf.defaultAppearance = "/Helv $sz Tf 0 0 0.5 rg" }
+                        tf.setValue(v); placed++
+                    } catch (e: Exception) { Log.w(TAG, "text $name failed", e) }
+                }
+            }
+            fun check(name: String) {
+                (byName[normName(name)] as? PDCheckBox)?.let {
+                    try { it.check(); placed++ } catch (e: Exception) { Log.w(TAG, "check $name failed", e) }
+                }
+            }
+
+            // Text fields
+            for ((id, name) in brownwoodText) valueOf(id)?.let { setText(name, it) }
+
+            // Age (computed) + signature date (today)
+            valueOf("date_of_birth")?.let { computeAge(it)?.let { age -> setText("AGE", age) } }
+            setText("DATE", java.text.SimpleDateFormat("MM/dd/yyyy", java.util.Locale.US)
+                .format(java.util.Date()))
+
+            // Single-choice checkboxes
+            for ((id, optMap) in brownwoodChoice) {
+                val v = valueOf(id) ?: continue
+                val key = normalizeOpt(v)
+                optMap.entries.firstOrNull { normalizeOpt(it.key) == key }?.let { check(it.value) }
+            }
+
+            // Multi-select checkboxes
+            for ((id, optMap) in brownwoodMulti) {
+                val v = valueOf(id) ?: continue
+                val selected = v.split(",").map { normalizeOpt(it) }.filter { it.isNotBlank() }.toSet()
+                for ((opt, box) in optMap) if (normalizeOpt(opt) in selected) check(box)
+            }
+
+            // Capture the signature widget BEFORE flattening removes it.
+            val sigField = byName[normName("PATIENT OR AUTHORIZED SIGNATURE")]
+            val sigWidget = sigField?.widgets?.firstOrNull()
+            val sigRect = sigWidget?.rectangle
+            val sigPage = sigWidget?.page ?: document.getPage(0)
+
+            // Flatten so values render in every viewer; fall back to need-appearances.
+            try { acro.flatten() } catch (e: Exception) {
+                Log.w(TAG, "AcroForm flatten failed — leaving interactive", e)
+                runCatching { acro.needAppearances = true }
+            }
+
+            // Signature image is drawn directly onto the page (survives flatten).
+            valueOf("patient_signature")?.let { sig ->
+                if (sigRect != null) {
+                    runCatching { overlayFieldSignature(document, sigPage, sigRect, sig) }
+                        .onSuccess { if (it) placed++ }
+                }
+            }
+
+            // Emergency contact: split "Name (phone)" and draw each into its own
+            // blank on the page (Name: ~x393, Phone: ~x521; baseline ~y224 top-left).
+            valueOf("emergency_contact")?.let { ec ->
+                val page0 = document.getPage(0)
+                val cut = ec.indexOfFirst { it.isDigit() || it == '(' }
+                val name = if (cut > 0) ec.substring(0, cut).trim().trimEnd(',', '-', ' ') else ec
+                val phone = if (cut > 0) ec.substring(cut).trim() else ""
+                runCatching {
+                    if (name.isNotBlank()) { drawFittedText(document, page0, 394f, 224f, 100f, name); placed++ }
+                    if (phone.isNotBlank()) drawFittedText(document, page0, 521f, 224f, 60f, phone)
+                }
+            }
+
+            if (placed == 0) { document.close(); return null }
+            val out = File(outputDir, "filled_${System.currentTimeMillis()}.pdf")
+            document.save(out)
+            Log.d(TAG, "Brownwood AcroForm fill: $placed values placed")
+            return out
+        } finally {
+            runCatching { document.close() }
+        }
+    }
+
+    /**
+     * Draws left-aligned text at a TOP-LEFT (x, baselineY), shrinking the font
+     * (max 10pt, min 5pt) so it fits [maxWidth]. Used for the emergency-contact
+     * blanks where the AcroForm widget is unusable.
+     */
+    private fun drawFittedText(
+        document: PDDocument, page: PDPage, xTopLeft: Float, baselineTopLeft: Float,
+        maxWidth: Float, text: String
+    ) {
+        val clean = text.replace('\n', ' ').replace('\r', ' ').trim()
+        if (clean.isBlank()) return
+        val box = page.mediaBox
+        val x = box.lowerLeftX + xTopLeft
+        val y = box.upperRightY - baselineTopLeft
+        val size = ((maxWidth - 2f) / (clean.length * 0.52f)).coerceIn(5f, 10f)
+        val stream = PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true, true)
+        stream.setFont(PDType1Font.HELVETICA, size)
+        stream.setNonStrokingColor(0.07f, 0.25f, 0.70f)
+        stream.beginText()
+        stream.newLineAtOffset(x, y)
+        try { stream.showText(clean) }
+        catch (e: Exception) { stream.showText(clean.replace(Regex("[^\\x20-\\x7E]"), "")) }
+        stream.endText()
+        stream.close()
+    }
+
+    private fun computeAge(dob: String): String? {
+        val parts = dob.split("/", "-").map { it.trim() }
+        if (parts.size != 3) return null
+        val mm = parts[0].toIntOrNull() ?: return null
+        val dd = parts[1].toIntOrNull() ?: return null
+        var yyyy = parts[2].toIntOrNull() ?: return null
+        if (yyyy < 100) yyyy += if (yyyy > 25) 1900 else 2000
+        val cal = java.util.Calendar.getInstance()
+        var age = cal.get(java.util.Calendar.YEAR) - yyyy
+        val m = cal.get(java.util.Calendar.MONTH) + 1
+        val d = cal.get(java.util.Calendar.DAY_OF_MONTH)
+        if (m < mm || (m == mm && d < dd)) age--
+        return if (age in 0..130) age.toString() else null
+    }
+
+    private fun overlayFieldSignature(
+        document: PDDocument, page: PDPage, rect: PDRectangle, value: String
+    ): Boolean {
+        val path = value.removePrefix("signature:")
+        val file = File(path).takeIf { it.exists() } ?: return false
+        val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: return false
+        val maxW = rect.width - 6f
+        val maxH = rect.height - 4f
+        if (maxW <= 0f || maxH <= 0f) return false
+        val scale = minOf(maxW / bmp.width, maxH / bmp.height, 1f)
+        val w = bmp.width * scale
+        val h = bmp.height * scale
+        val image = LosslessFactory.createFromImage(document, bmp)
+        val stream = PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true, true)
+        stream.drawImage(image, rect.lowerLeftX + 3f, rect.lowerLeftY + 2f, w, h)
+        stream.close()
         return true
     }
 

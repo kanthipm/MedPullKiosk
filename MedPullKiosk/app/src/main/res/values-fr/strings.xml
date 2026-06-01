@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">Accueil des patients : enregistrement, antécédents médicaux, consentements</string>
     <string name="form_medicaid_renewal_title">Renouvellement de la couverture Medicaid</string>
     <string name="form_medicaid_renewal_desc">Vérification des ménages, des revenus et de la couverture</string>
+    <string name="form_brownwood_title">Inscription des patients AccelHealth</string>
+    <string name="form_brownwood_desc">Inscription — Démographie, assurance, consentements</string>
     <string name="form_available_forms">Formulaires disponibles</string>
     <string name="form_uploaded_forms">Formulaires téléchargés</string>
     <string name="form_status_ready">Prêt</string>
@@ -364,6 +366,14 @@
     <string name="err_process_answer">Impossible de traiter votre réponse. Réessayez, s\'il vous plaît.</string>
     <string name="err_clarify">Pourriez-vous m\'expliquer cela ?</string>
     <string name="err_try_again">Je veux m\'assurer que j\'ai bien compris. Pouvez-vous le répéter ?</string>
+    <string name="validate_name">Je n\'ai pas bien saisi de nom, pourriez-vous me redonner le nom, s\'il vous plaît ?</string>
+    <string name="validate_phone">Cela ne ressemble pas à un numéro de téléphone complet. Veuillez inclure l\'indicatif régional et les 10 chiffres.</string>
+    <string name="validate_email">Cela ne ressemble pas à une adresse e-mail valide. Elle devrait ressembler à name@example.com.</string>
+    <string name="validate_zip">Un code postal doit comporter 5 chiffres. Pourriez-vous le vérifier, s\'il vous plaît ?</string>
+    <string name="validate_ssn">Un numéro de sécurité sociale doit comporter 9 chiffres (XXX-XX-XXXX). Vous pouvez aussi ignorer cette question.</string>
+    <string name="validate_state">Veuillez indiquer un État américain valide, par exemple TX ou Texas.</string>
+    <string name="validate_date">Veuillez indiquer la date sous la forme mois, jour et année, par exemple 03/14/1985.</string>
+    <string name="validate_number">Cela devrait être un nombre, pourriez-vous réessayer, s\'il vous plaît ?</string>
     <string name="msg_staff_help">Pas de problème, un membre du personnel peut vous aider à ce sujet. Continuons.</string>
     <string name="msg_consent_recorded">Merci, vos choix de consentement ont été enregistrés.</string>
     <string name="err_no_user_logged_in">Aucun utilisateur n\'est connecté</string>

@@ -1,0 +1,710 @@
+{
+  "form_id": "brownwood_intake",
+  "form_name": "AccelHealth Patient Registration",
+  "version": "1.0",
+  "ai_instructions": "Warm, plain-language clinic intake for AccelHealth (Brownwood). Ask the preferred language first, then proceed in that language. Group related questions naturally, confirm spelling of names and addresses, and reassure the patient that demographic and optional questions can be skipped. Skip the parent/guardian section entirely for adult patients.",
+  "skip_during_intake": [
+    "ag_framing",
+    "demographics_framing",
+    "consent_framing"
+  ],
+  "consent_batch_fields": [],
+  "skip_rules": [
+    {
+      "when_field": "is_minor",
+      "equals": "No",
+      "skip": [
+        "guardian1_name",
+        "guardian1_relationship",
+        "guardian1_same_address",
+        "guardian1_city_state_zip",
+        "guardian1_dob",
+        "guardian1_cell_phone",
+        "guardian1_home_phone",
+        "guardian1_work_phone",
+        "guardian1_employer",
+        "guardian1_ssn",
+        "has_second_guardian",
+        "guardian2_name",
+        "guardian2_relationship",
+        "guardian2_same_address",
+        "guardian2_city_state_zip",
+        "guardian2_dob",
+        "guardian2_cell_phone",
+        "guardian2_home_phone",
+        "guardian2_work_phone",
+        "guardian2_employer",
+        "guardian2_ssn"
+      ]
+    },
+    {
+      "when_field": "has_second_guardian",
+      "equals": "No",
+      "skip": [
+        "guardian2_name",
+        "guardian2_relationship",
+        "guardian2_same_address",
+        "guardian2_city_state_zip",
+        "guardian2_dob",
+        "guardian2_cell_phone",
+        "guardian2_home_phone",
+        "guardian2_work_phone",
+        "guardian2_employer",
+        "guardian2_ssn"
+      ]
+    },
+    {
+      "when_field": "guardian1_same_address",
+      "equals": "Yes",
+      "skip": [
+        "guardian1_city_state_zip"
+      ]
+    },
+    {
+      "when_field": "guardian2_same_address",
+      "equals": "Yes",
+      "skip": [
+        "guardian2_city_state_zip"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "id": "identity",
+      "name": "Patient Identity",
+      "fields": [
+        {
+          "id": "preferred_language",
+          "label": "Preferred Language",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "English",
+            "Spanish",
+            "Other"
+          ],
+          "ai_note": "Ask this FIRST. The form itself only records English / Spanish / Other; if 'Other', continue in English.",
+          "question": "Before we begin — what language would you like to use?"
+        },
+        {
+          "id": "patient_first_name",
+          "label": "First Name",
+          "type": "text",
+          "required": true,
+          "question": "What is your first name?"
+        },
+        {
+          "id": "patient_last_name",
+          "label": "Last Name",
+          "type": "text",
+          "required": true,
+          "question": "And your last name?"
+        },
+        {
+          "id": "patient_middle_name",
+          "label": "Middle Name",
+          "type": "text",
+          "required": false,
+          "question": "What is your middle name? Just skip this if you don't have one."
+        },
+        {
+          "id": "date_of_birth",
+          "label": "Date of Birth",
+          "type": "date",
+          "required": true,
+          "hint": "MM/DD/YYYY",
+          "ai_note": "Used to auto-fill the AGE field and to decide whether the guardian section applies.",
+          "question": "What is your date of birth?"
+        },
+        {
+          "id": "social_security_number",
+          "label": "Social Security Number",
+          "type": "text",
+          "required": false,
+          "hint": "XXX-XX-XXXX",
+          "question": "What is your Social Security Number? This is optional — you can skip it if you prefer."
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "name": "Contact & Address",
+      "fields": [
+        {
+          "id": "mailing_address",
+          "label": "Mailing Address",
+          "type": "text",
+          "required": true,
+          "question": "What is your mailing address — the street and number?"
+        },
+        {
+          "id": "apt_no",
+          "label": "Apt No",
+          "type": "text",
+          "required": false,
+          "question": "What is your apartment or unit number? Skip this if you don't have one."
+        },
+        {
+          "id": "city",
+          "label": "City",
+          "type": "text",
+          "required": true,
+          "question": "What city do you live in?"
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "type": "text",
+          "required": true,
+          "hint": "e.g. TX",
+          "question": "Which state?"
+        },
+        {
+          "id": "zip",
+          "label": "ZIP",
+          "type": "zip",
+          "required": true,
+          "question": "And your ZIP code?"
+        },
+        {
+          "id": "county",
+          "label": "County",
+          "type": "text",
+          "required": false,
+          "question": "What county is that in?"
+        },
+        {
+          "id": "cell_phone",
+          "label": "Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What's the best cell phone number to reach you?"
+        },
+        {
+          "id": "home_phone",
+          "label": "Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your home phone number? Skip this if you don't have one."
+        },
+        {
+          "id": "work_phone",
+          "label": "Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is your work phone number? Skip this if you don't have one."
+        },
+        {
+          "id": "emergency_contact",
+          "label": "Emergency Contact",
+          "type": "text",
+          "required": false,
+          "question": "Who should we contact in an emergency? Please give a name and phone number."
+        }
+      ]
+    },
+    {
+      "id": "ag_worker",
+      "name": "Agricultural Work History",
+      "fields": [
+        {
+          "id": "ag_framing",
+          "label": "Agricultural work — intro",
+          "type": "static_label",
+          "required": false,
+          "question": "The next three questions help the clinic serve farm-working families. Please answer yes or no."
+        },
+        {
+          "id": "ag_work_history",
+          "label": "Worked in agriculture (last 2 years)",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "In the last 2 years, have you or anyone in your family done farm work — like planting, picking, preparing soil, packing, driving a farm truck, or working with animals?"
+        },
+        {
+          "id": "ag_lived_away",
+          "label": "Lived away from home for agricultural work",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "In the last 2 years, have you or a family member lived away from home in order to do agricultural work?"
+        },
+        {
+          "id": "ag_stopped_disability",
+          "label": "Stopped migrating for agriculture due to disability",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Have you or a family member stopped traveling for agricultural work because of a disability?"
+        }
+      ]
+    },
+    {
+      "id": "demographics",
+      "name": "Demographics",
+      "fields": [
+        {
+          "id": "demographics_framing",
+          "label": "Demographics — intro",
+          "type": "static_label",
+          "required": false,
+          "question": "Now a few questions about identity and background. These help the clinic provide better care, and you can skip any of them."
+        },
+        {
+          "id": "birth_sex",
+          "label": "Birth Sex",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Male",
+            "Female"
+          ],
+          "question": "What sex were you assigned at birth?"
+        },
+        {
+          "id": "current_gender",
+          "label": "Current Gender",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Male",
+            "Female",
+            "Undifferentiated"
+          ],
+          "question": "What is your current gender?"
+        },
+        {
+          "id": "gender_identity",
+          "label": "Gender Identity",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Male",
+            "Female",
+            "Transgender Man (FTM)",
+            "Transgender Woman (MTF)",
+            "Genderqueer",
+            "Other",
+            "Choose not to answer"
+          ],
+          "ai_note": "Optional. The form marks this section optional for patients under 18.",
+          "question": "How do you describe your gender identity? Feel free to skip."
+        },
+        {
+          "id": "sexual_orientation",
+          "label": "Sexual Orientation",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Straight or Heterosexual",
+            "Lesbian, Gay, or Homosexual",
+            "Bisexual",
+            "Something else",
+            "Choose not to answer",
+            "Don't know"
+          ],
+          "ai_note": "Optional. The form marks this section optional for patients under 18.",
+          "question": "How do you describe your sexual orientation? Feel free to skip."
+        },
+        {
+          "id": "preferred_pronoun",
+          "label": "Preferred Pronoun",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "He, him, his",
+            "She, her, hers",
+            "They, them, theirs",
+            "Ze, hir",
+            "Other",
+            "Decline to answer"
+          ],
+          "question": "What are your preferred pronouns?"
+        },
+        {
+          "id": "race",
+          "label": "Race",
+          "type": "multi_select",
+          "required": false,
+          "options": [
+            "American Indian or Alaska Native",
+            "Asian",
+            "Black or African American",
+            "Native Hawaiian or Other Pacific Islander",
+            "White",
+            "Choose not to answer"
+          ],
+          "question": "Which best describes your race? You can choose more than one."
+        },
+        {
+          "id": "ethnicity",
+          "label": "Ethnicity",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Hispanic or Latino",
+            "Not Hispanic or Latino",
+            "Choose not to answer",
+            "Other",
+            "Unknown"
+          ],
+          "question": "How would you describe your ethnicity?"
+        },
+        {
+          "id": "marital_status",
+          "label": "Marital Status",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Married",
+            "Single",
+            "Divorced/Separated",
+            "Widowed"
+          ],
+          "question": "What is your marital status?"
+        },
+        {
+          "id": "us_veteran",
+          "label": "U.S. Veteran",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Are you a U.S. veteran?"
+        },
+        {
+          "id": "homeless_status",
+          "label": "Homeless Status",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Not Homeless",
+            "Doubling Up",
+            "Shelter",
+            "Street",
+            "Transitional",
+            "Other"
+          ],
+          "ai_note": "'Doubling Up' means staying with friends or family. Map gently and without judgment.",
+          "question": "What best describes your current housing situation?"
+        },
+        {
+          "id": "how_heard",
+          "label": "How did you hear about AccelHealth?",
+          "type": "multi_select",
+          "required": false,
+          "options": [
+            "Billboard",
+            "Newspaper",
+            "Event Sponsor",
+            "Publication",
+            "Friend/Family",
+            "Radio",
+            "Insurance",
+            "Social Media",
+            "Internet",
+            "Other"
+          ],
+          "question": "How did you hear about AccelHealth? You can pick more than one."
+        }
+      ]
+    },
+    {
+      "id": "insurance",
+      "name": "Insurance",
+      "fields": [
+        {
+          "id": "primary_insurance_name",
+          "label": "Primary Insurance Name",
+          "type": "text",
+          "required": false,
+          "question": "What is your primary insurance, if you have one? Skip if you don't."
+        },
+        {
+          "id": "secondary_insurance_name",
+          "label": "Secondary Insurance Name",
+          "type": "text",
+          "required": false,
+          "question": "What is your secondary insurance? Skip this if you don't have one."
+        }
+      ]
+    },
+    {
+      "id": "contact_prefs",
+      "name": "Contact Preferences",
+      "fields": [
+        {
+          "id": "consent_phone_messages",
+          "label": "May leave detailed phone messages",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we leave detailed phone messages for you?"
+        },
+        {
+          "id": "consent_mail",
+          "label": "May mail detailed correspondence",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we mail detailed correspondence to your address?"
+        },
+        {
+          "id": "consent_text",
+          "label": "May text important reminders",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we text you important reminders?"
+        },
+        {
+          "id": "consent_email",
+          "label": "May email information",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "May we email you information?"
+        }
+      ]
+    },
+    {
+      "id": "guardian",
+      "name": "Parent / Guardian (minors only)",
+      "fields": [
+        {
+          "id": "is_minor",
+          "label": "Patient is a minor",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "ai_note": "If 'No', skip the entire parent/guardian section. Not applicable for family planning services.",
+          "question": "Is the patient under 18 years old?"
+        },
+        {
+          "id": "guardian1_name",
+          "label": "Parent/Guardian #1 Name",
+          "type": "text",
+          "required": true,
+          "question": "What is the parent or guardian's full name?"
+        },
+        {
+          "id": "guardian1_relationship",
+          "label": "Relationship to child",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Mother",
+            "Father",
+            "Grandparent",
+            "Foster Parent",
+            "Other"
+          ],
+          "question": "What is their relationship to the patient?"
+        },
+        {
+          "id": "guardian1_same_address",
+          "label": "Guardian #1 same address as patient",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Does this guardian live at the same address as the patient?"
+        },
+        {
+          "id": "guardian1_city_state_zip",
+          "label": "Guardian #1 City/State/Zip",
+          "type": "text",
+          "required": false,
+          "question": "What is the guardian's address (city, state, ZIP)?"
+        },
+        {
+          "id": "guardian1_dob",
+          "label": "Guardian #1 Date of Birth",
+          "type": "date",
+          "required": false,
+          "hint": "MM/DD/YYYY",
+          "question": "What is the guardian's date of birth?"
+        },
+        {
+          "id": "guardian1_cell_phone",
+          "label": "Guardian #1 Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is the guardian's cell phone number?"
+        },
+        {
+          "id": "guardian1_home_phone",
+          "label": "Guardian #1 Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is the guardian's home phone number? Skip if they don't have one."
+        },
+        {
+          "id": "guardian1_work_phone",
+          "label": "Guardian #1 Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is the guardian's work phone number? Skip if they don't have one."
+        },
+        {
+          "id": "guardian1_employer",
+          "label": "Guardian #1 Employer",
+          "type": "text",
+          "required": false,
+          "question": "Who is the guardian's employer? Skip this if it doesn't apply."
+        },
+        {
+          "id": "guardian1_ssn",
+          "label": "Guardian #1 SSN",
+          "type": "text",
+          "required": false,
+          "hint": "XXX-XX-XXXX",
+          "question": "What is the guardian's Social Security Number? This is optional."
+        },
+        {
+          "id": "has_second_guardian",
+          "label": "Add second guardian",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Is there a second parent or guardian to add?"
+        },
+        {
+          "id": "guardian2_name",
+          "label": "Parent/Guardian #2 Name",
+          "type": "text",
+          "required": false,
+          "question": "What is the second guardian's full name?"
+        },
+        {
+          "id": "guardian2_relationship",
+          "label": "Relationship to child (2)",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Mother",
+            "Father",
+            "Grandparent",
+            "Foster Parent",
+            "Other"
+          ],
+          "question": "What is their relationship to the patient?"
+        },
+        {
+          "id": "guardian2_same_address",
+          "label": "Guardian #2 same address as patient",
+          "type": "radio",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "question": "Does the second guardian live at the same address as the patient?"
+        },
+        {
+          "id": "guardian2_city_state_zip",
+          "label": "Guardian #2 City/State/Zip",
+          "type": "text",
+          "required": false,
+          "question": "What is the second guardian's address (city, state, ZIP)?"
+        },
+        {
+          "id": "guardian2_dob",
+          "label": "Guardian #2 Date of Birth",
+          "type": "date",
+          "required": false,
+          "hint": "MM/DD/YYYY",
+          "question": "What is the second guardian's date of birth?"
+        },
+        {
+          "id": "guardian2_cell_phone",
+          "label": "Guardian #2 Cell Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is the second guardian's cell phone number?"
+        },
+        {
+          "id": "guardian2_home_phone",
+          "label": "Guardian #2 Home Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is the second guardian's home phone number? Skip if they don't have one."
+        },
+        {
+          "id": "guardian2_work_phone",
+          "label": "Guardian #2 Work Phone",
+          "type": "phone",
+          "required": false,
+          "question": "What is the second guardian's work phone number? Skip if they don't have one."
+        },
+        {
+          "id": "guardian2_employer",
+          "label": "Guardian #2 Employer",
+          "type": "text",
+          "required": false,
+          "question": "Who is the second guardian's employer? Skip this if it doesn't apply."
+        },
+        {
+          "id": "guardian2_ssn",
+          "label": "Guardian #2 SSN",
+          "type": "text",
+          "required": false,
+          "hint": "XXX-XX-XXXX",
+          "question": "What is the second guardian's Social Security Number? This is optional."
+        }
+      ]
+    },
+    {
+      "id": "signature",
+      "name": "Signature",
+      "fields": [
+        {
+          "id": "consent_framing",
+          "label": "Consent — intro",
+          "type": "static_label",
+          "required": false,
+          "question": "Almost done. By signing, you authorize the release of information and accept financial responsibility as described on the form."
+        },
+        {
+          "id": "patient_signature",
+          "label": "Patient or Authorized Signature",
+          "type": "signature",
+          "required": true,
+          "question": "Please sign below to complete your registration."
+        }
+      ]
+    }
+  ]
+}

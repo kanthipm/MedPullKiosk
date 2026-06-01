@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">تناول المريض - التسجيل والتاريخ الصحي والموافقات</string>
     <string name="form_medicaid_renewal_title">تجديد تغطية ميديكيد</string>
     <string name="form_medicaid_renewal_desc">التحقق من الأسرة والدخل والتغطية</string>
+    <string name="form_brownwood_title">تسجيل مرضى AccelHealth</string>
+    <string name="form_brownwood_desc">التسجيل - البيانات الديموغرافية، التأمين، الموافقات</string>
     <string name="form_available_forms">النماذج المتاحة</string>
     <string name="form_uploaded_forms">النماذج التي تم تحميلها</string>
     <string name="form_status_ready">جاهز</string>
@@ -364,6 +366,14 @@
     <string name="err_process_answer">تعذّر معالجة إجابتك. يرجى المحاولة مرة أخرى.</string>
     <string name="err_clarify">هل يمكنك توضيح ذلك لي؟</string>
     <string name="err_try_again">أريد أن أتأكد من أنني فهمت ذلك بشكل صحيح - هل يمكنك قول ذلك مرة أخرى?</string>
+    <string name="validate_name">لم أتمكّن من التقاط الاسم هناك، فهل يمكنك إخباري بالاسم مرة أخرى من فضلك؟</string>
+    <string name="validate_phone">لا يبدو هذا رقم هاتف كاملاً. يُرجى تضمين رمز المنطقة وكل الأرقام العشرة (10).</string>
+    <string name="validate_email">لا يبدو هذا عنوان بريد إلكتروني صالحاً. ينبغي أن يكون على هذا الشكل: name@example.com.</string>
+    <string name="validate_zip">ينبغي أن يتكوّن الرمز البريدي من 5 أرقام. هل يمكنك التحقق منه من فضلك؟</string>
+    <string name="validate_ssn">ينبغي أن يتكوّن رقم الضمان الاجتماعي من 9 أرقام (XXX-XX-XXXX). ويمكنك أيضاً تخطّي هذه الخطوة.</string>
+    <string name="validate_state">يُرجى إدخال ولاية أمريكية صالحة — على سبيل المثال TX أو Texas.</string>
+    <string name="validate_date">يُرجى إدخال التاريخ بصيغة الشهر واليوم والسنة — على سبيل المثال 03/14/1985.</string>
+    <string name="validate_number">ينبغي أن يكون هذا رقماً، فهل يمكنك المحاولة مرة أخرى من فضلك؟</string>
     <string name="msg_staff_help">لا توجد مشكلة - يمكن للموظف المساعدة في هذا الجزء. دعونا نستمر.</string>
     <string name="msg_consent_recorded">شكرًا لك - تم تسجيل اختيارات الموافقة الخاصة بك.</string>
     <string name="err_no_user_logged_in">لم يقم أي مستخدم بتسجيل الدخول</string>

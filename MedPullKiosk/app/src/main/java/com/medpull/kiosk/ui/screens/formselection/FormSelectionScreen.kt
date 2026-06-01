@@ -5,8 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -33,6 +33,7 @@ import java.util.*
 
 private const val COASTAL_GATEWAY_FORM_ID = "coastal_gateway_intake"
 private const val MEDICAID_RENEWAL_FORM_ID = "medicaid_renewal_intake"
+private const val BROWNWOOD_FORM_ID = "brownwood_intake"
 
 /**
  * Form selection screen — patient picks which medical intake form to complete.
@@ -97,6 +98,7 @@ fun FormSelectionScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(start = 48.dp, end = 48.dp, top = 56.dp, bottom = 88.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -169,6 +171,32 @@ fun FormSelectionScreen(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    OutlinedButton(
+                        onClick = { onFormSelected(BROWNWOOD_FORM_ID) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = stringResource(R.string.form_brownwood_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(R.string.form_brownwood_desc),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
                     if (state.forms.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(32.dp))
 
@@ -181,11 +209,10 @@ fun FormSelectionScreen(
                                 .padding(bottom = 8.dp)
                         )
 
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(state.forms, key = { it.id }) { form ->
+                        // Plain column (the parent is scrollable, so a nested
+                        // LazyColumn would conflict). Uploaded forms are few.
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            state.forms.forEach { form ->
                                 UploadedFormRow(
                                     form = form,
                                     onClick = { onFormSelected(form.id) },
@@ -193,9 +220,9 @@ fun FormSelectionScreen(
                                 )
                             }
                         }
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
                     }
+
+                    Spacer(modifier = Modifier.height(32.dp))
 
                     Text(
                         text = stringResource(R.string.program_secure_footer),

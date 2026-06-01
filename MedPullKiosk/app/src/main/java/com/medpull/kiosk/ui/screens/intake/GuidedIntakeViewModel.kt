@@ -19,6 +19,7 @@ import com.medpull.kiosk.data.repository.GuidedIntakeRepository
 import com.medpull.kiosk.R
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.utils.AppStrings
+import com.medpull.kiosk.utils.FieldValidation
 import com.medpull.kiosk.utils.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -592,7 +593,32 @@ class GuidedIntakeViewModel @Inject constructor(
 
                 when {
                     result.value != null && result.confidence >= CONFIDENCE_THRESHOLD -> {
-                        saveFieldAndAdvance(targetField, result.value, result.alsoFills)
+                        // Format-check the parsed value (phone/email/zip/date/…). Valid
+                        // values are normalized and saved; an ill-formed value is gently
+                        // re-asked (up to MAX), after which we accept it rather than trap
+                        // the patient.
+                        val validation = FieldValidation.validate(targetField, result.value)
+                        when {
+                            validation.ok ->
+                                saveFieldAndAdvance(targetField, validation.normalized, result.alsoFills)
+                            state.clarificationCount >= MAX_CLARIFICATIONS ->
+                                saveFieldAndAdvance(targetField, result.value, result.alsoFills)
+                            else -> {
+                                val hint = validation.hintRes?.let { appStrings.get(it) }
+                                    ?: appStrings.get(R.string.err_try_again)
+                                _state.update {
+                                    it.copy(
+                                        isLoadingResponse = false,
+                                        clarificationCount = it.clarificationCount + 1,
+                                        chatMessages = it.chatMessages + ChatMessage(
+                                            text = hint,
+                                            isFromUser = false,
+                                            timestamp = System.currentTimeMillis()
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     state.clarificationCount >= MAX_CLARIFICATIONS -> {

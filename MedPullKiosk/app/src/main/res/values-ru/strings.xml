@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">Прием пациентов — регистрация, история болезни, согласие</string>
     <string name="form_medicaid_renewal_title">Возобновление страхового покрытия Medicaid</string>
     <string name="form_medicaid_renewal_desc">Проверка домохозяйства, дохода и страхового покрытия</string>
+    <string name="form_brownwood_title">Регистрация пациентов AccelHealth</string>
+    <string name="form_brownwood_desc">Регистрация — демография, страховка, согласия</string>
     <string name="form_available_forms">Доступные формы</string>
     <string name="form_uploaded_forms">Загруженные формы</string>
     <string name="form_status_ready">Готово</string>
@@ -364,6 +366,14 @@
     <string name="err_process_answer">Не удалось обработать ваш ответ. Пожалуйста, попробуйте еще раз.</string>
     <string name="err_clarify">Не могли бы вы мне это пояснить?</string>
     <string name="err_try_again">Я хочу убедиться, что все правильно понял — не могли бы вы повторить это еще раз?</string>
+    <string name="validate_name">Я не расслышал имя. Не могли бы вы повторить имя ещё раз?</string>
+    <string name="validate_phone">Это не похоже на полный номер телефона. Пожалуйста, укажите код города и все 10 цифр.</string>
+    <string name="validate_email">Это не похоже на действительный адрес электронной почты. Он должен выглядеть так: name@example.com.</string>
+    <string name="validate_zip">Почтовый индекс должен состоять из 5 цифр. Не могли бы вы проверить его?</string>
+    <string name="validate_ssn">Номер социального страхования должен состоять из 9 цифр (XXX-XX-XXXX). Вы также можете пропустить этот пункт.</string>
+    <string name="validate_state">Пожалуйста, укажите действительный штат США — например, TX или Texas.</string>
+    <string name="validate_date">Пожалуйста, укажите дату в формате месяц, день и год — например, 03/14/1985.</string>
+    <string name="validate_number">Здесь должно быть число. Не могли бы вы попробовать ещё раз?</string>
     <string name="msg_staff_help">Нет проблем — с этим может помочь сотрудник. Давайте продолжим.</string>
     <string name="msg_consent_recorded">Спасибо, ваш выбор согласия зарегистрирован.</string>
     <string name="err_no_user_logged_in">Ни один пользователь не вошел в систему</string>

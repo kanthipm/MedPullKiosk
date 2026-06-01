@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">患者入院——登记、健康史、同意书</string>
     <string name="form_medicaid_renewal_title">医疗补助保险续保</string>
     <string name="form_medicaid_renewal_desc">家庭、收入和承保范围验证</string>
+    <string name="form_brownwood_title">AccelHealth 患者登记</string>
+    <string name="form_brownwood_desc">登记 — 人口统计、保险、同意书</string>
     <string name="form_available_forms">可用表格</string>
     <string name="form_uploaded_forms">已上传的表格</string>
     <string name="form_status_ready">准备好了</string>
@@ -364,6 +366,14 @@
     <string name="err_process_answer">无法处理您的答案。请再试一次。</string>
     <string name="err_clarify">你能为我澄清一下吗？</string>
     <string name="err_try_again">我想确保我说对了——你能再说一遍吗？</string>
+    <string name="validate_name">我这边没有收到名字，能请您再说一遍名字吗？</string>
+    <string name="validate_phone">这看起来不是完整的电话号码。请包含区号和全部 10 位数字。</string>
+    <string name="validate_email">这看起来不是有效的电子邮箱地址。它应该类似于 name@example.com。</string>
+    <string name="validate_zip">邮政编码应为 5 位数字。能麻烦您核对一下吗？</string>
+    <string name="validate_ssn">社会安全号码应为 9 位数字（XXX-XX-XXXX）。您也可以跳过这一项。</string>
+    <string name="validate_state">请提供有效的美国州名，例如 TX 或 Texas。</string>
+    <string name="validate_date">请按月、日、年的格式提供日期，例如 03/14/1985。</string>
+    <string name="validate_number">这里应该是一个数字，能请您再试一次吗？</string>
     <string name="msg_staff_help">没问题——工作人员可以帮忙解决这个问题。让我们继续前进。</string>
     <string name="msg_consent_recorded">谢谢 — 您的同意选择已记录在案。</string>
     <string name="err_no_user_logged_in">没有用户登录</string>

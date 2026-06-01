@@ -64,6 +64,8 @@
     <string name="form_coastal_gateway_desc">Admissão de pacientes — registro, histórico de saúde, consentimentos</string>
     <string name="form_medicaid_renewal_title">Renovação da cobertura do Medicaid</string>
     <string name="form_medicaid_renewal_desc">Verificação de domicílio, renda e cobertura</string>
+    <string name="form_brownwood_title">Registro de pacientes da AccelHealth</string>
+    <string name="form_brownwood_desc">Registro — Dados demográficos, seguro, consentimentos</string>
     <string name="form_available_forms">Formulários disponíveis</string>
     <string name="form_uploaded_forms">Formulários carregados</string>
     <string name="form_status_ready">Pronto</string>
@@ -364,6 +366,14 @@
     <string name="err_process_answer">Não foi possível processar sua resposta. Por favor, tente novamente.</string>
     <string name="err_clarify">Você poderia esclarecer isso para mim?</string>
     <string name="err_try_again">Quero ter certeza de que entendi direito — você poderia dizer isso de novo?</string>
+    <string name="validate_name">Não consegui captar um nome aí. Poderia me dizer o nome novamente, por favor?</string>
+    <string name="validate_phone">Isso não parece um número de telefone completo. Por favor, inclua o código de área e todos os 10 dígitos.</string>
+    <string name="validate_email">Isso não parece um endereço de e-mail válido. Ele deve se parecer com name@example.com.</string>
+    <string name="validate_zip">Um CEP deve ter 5 dígitos. Poderia verificar, por favor?</string>
+    <string name="validate_ssn">Um número de Seguro Social deve ter 9 dígitos (XXX-XX-XXXX). Você também pode pular esta etapa.</string>
+    <string name="validate_state">Por favor, informe um estado dos EUA válido — por exemplo, TX ou Texas.</string>
+    <string name="validate_date">Por favor, informe a data como mês, dia e ano — por exemplo, 03/14/1985.</string>
+    <string name="validate_number">Isso deveria ser um número. Poderia tentar novamente, por favor?</string>
     <string name="msg_staff_help">Não tem problema — um membro da equipe pode ajudar nessa parte. Vamos continuar.</string>
     <string name="msg_consent_recorded">Obrigado — suas seleções de consentimento foram registradas.</string>
     <string name="err_no_user_logged_in">Nenhum usuário logado</string>
