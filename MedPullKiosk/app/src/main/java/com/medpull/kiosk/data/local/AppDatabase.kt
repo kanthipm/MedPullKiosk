@@ -3,6 +3,7 @@ package com.medpull.kiosk.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.medpull.kiosk.data.local.dao.AuditLogDao
+import com.medpull.kiosk.data.local.dao.CopilotAuditDao
 import com.medpull.kiosk.data.local.dao.DocumentDao
 import com.medpull.kiosk.data.local.dao.FhirMappingDao
 import com.medpull.kiosk.data.local.dao.FormDao
@@ -13,6 +14,7 @@ import com.medpull.kiosk.data.local.dao.FormIntakeFlowDao
 import com.medpull.kiosk.data.local.dao.BranchingRuleDao
 import com.medpull.kiosk.data.local.dao.PatientCacheDao
 import com.medpull.kiosk.data.local.entities.AuditLogEntity
+import com.medpull.kiosk.data.local.entities.CopilotAuditEntity
 import com.medpull.kiosk.data.local.entities.DocumentEntity
 import com.medpull.kiosk.data.local.entities.FhirMappingEntity
 import com.medpull.kiosk.data.local.entities.FormEntity
@@ -38,9 +40,10 @@ import com.medpull.kiosk.data.local.entities.PatientCacheEntity
         FormIntakeFlowEntity::class,
         BranchingRuleEntity::class,
         PatientCacheEntity::class,
-        DocumentEntity::class
+        DocumentEntity::class,
+        CopilotAuditEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -55,4 +58,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun branchingRuleDao(): BranchingRuleDao
     abstract fun patientCacheDao(): PatientCacheDao
     abstract fun documentDao(): DocumentDao
+    abstract fun copilotAuditDao(): CopilotAuditDao
 }
