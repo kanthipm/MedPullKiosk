@@ -78,7 +78,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.medpull.kiosk.R
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FormField
+import com.medpull.kiosk.ui.components.AssistantBadge
 import com.medpull.kiosk.ui.components.StepBackButton
+import com.medpull.kiosk.utils.Constants
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
 import com.medpull.kiosk.ui.screens.ai.HandwritingInput
 import com.medpull.kiosk.ui.screens.ai.SignatureCapture
@@ -209,6 +211,18 @@ fun GuidedIntakeScreen(
     var voiceEditText by remember { mutableStateOf("") }
     val voiceEditFocus = remember { FocusRequester() }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
+
+    // Spoken lead-in + audio cue make an AI takeover perceivable to voice-first
+    // patients who don't read the badge. Resolved here (stringResource is @Composable)
+    // so the auto-speak effects below can use it.
+    val assistantLeadIn = stringResource(R.string.assistant_lead_in)
+    val playAssistantCue: () -> Unit = {
+        if (Constants.AI.COPILOT_AUDIO_CUE_ENABLED) runCatching {
+            val tone = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 70)
+            tone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 120)
+            mainHandler.postDelayed({ runCatching { tone.release() } }, 300)
+        }
+    }
 
     // ── Speech-to-text ────────────────────────────────────────────────────────
     val speechAvailable = remember { SpeechRecognizer.isRecognitionAvailable(context) }
@@ -519,8 +533,12 @@ fun GuidedIntakeScreen(
             voiceEditText = ""
             micAmplitude = 0f
             sttDidRetry = false  // each question gets a fresh retry budget
-            val q = currentQuestion.text
+            val base = currentQuestion.text
                 .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+            // When the co-pilot has stepped in, make it AUDIBLE: a short cue + a kind
+            // spoken lead-in so a voice-first patient hears that the AI took over.
+            if (currentQuestion.isAssistant) playAssistantCue()
+            val q = if (currentQuestion.isAssistant) "$assistantLeadIn$base".trim() else base
             voicePhase = VoicePhase.Speaking
 
             // TTS init is async — on the very first question ttsReady is often
@@ -576,8 +594,10 @@ fun GuidedIntakeScreen(
             state.consentBatchFields == null && state.pendingConfirmFields == null &&
             !state.isLoadingResponse
         ) {
-            val q = currentQuestion.text
+            val base = currentQuestion.text
                 .replace(Regex("\\s*\\([^)]{0,80}\\)\\s*$"), "").trim()
+            if (currentQuestion.isAssistant) playAssistantCue()
+            val q = if (currentQuestion.isAssistant) "$assistantLeadIn$base".trim() else base
             if (q.isNotBlank()) tts.speak(q, TextToSpeech.QUEUE_FLUSH, null, "q")
         }
     }
@@ -1112,6 +1132,20 @@ fun GuidedIntakeScreen(
                 }
                 }
             }
+        }
+
+        // ── "MedPull Assistant" badge — visible ONLY when the co-pilot stepped in.
+        // Top-center overlay above the centered question; the audible lead-in + cue
+        // cover voice-first patients. Normal questions show nothing (no AI branding).
+        AnimatedVisibility(
+            visible = currentQuestion?.isAssistant == true && !state.isLoadingResponse,
+            enter = fadeIn() + slideInVertically { -it },
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 58.dp)
+        ) {
+            AssistantBadge()
         }
 
         // ── Floating chat FAB (bottom-right) ─────────────────────────────────

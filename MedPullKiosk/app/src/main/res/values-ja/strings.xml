@@ -424,4 +424,8 @@
     <string name="prev_question">前の質問</string>
     <string name="next">[次へ]</string>
     <string name="done">完了</string>
+
+    <!-- AI Co-Pilot ("MedPull Assistant") -->
+    <string name="assistant_badge_label">MedPull アシスタント</string>
+    <string name="assistant_lead_in">お手伝いします。</string>
 </resources>

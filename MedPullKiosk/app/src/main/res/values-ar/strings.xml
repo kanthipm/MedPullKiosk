@@ -424,4 +424,8 @@
     <string name="prev_question">السؤال السابق</string>
     <string name="next">التالي</string>
     <string name="done">تم</string>
+
+    <!-- AI Co-Pilot ("MedPull Assistant") -->
+    <string name="assistant_badge_label">مساعد MedPull</string>
+    <string name="assistant_lead_in">دعني أساعدك في ذلك: </string>
 </resources>
