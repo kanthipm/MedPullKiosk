@@ -43,6 +43,15 @@ android {
         buildConfigField("String", "GROK_API_KEY", "\"${localProperties.getProperty("GROK_API_KEY", "")}\"")
         buildConfigField("String", "GROQ_API_KEY", "\"${localProperties.getProperty("GROQ_API_KEY", "")}\"")
 
+        // Local Ollama co-pilot endpoint (tailnet host:port, cleartext HTTP on :11434).
+        // Set OLLAMA_BASE_URL in local.properties; keep the host in sync with the
+        // matching <domain> in res/xml/network_security_config.xml.
+        buildConfigField(
+            "String",
+            "OLLAMA_BASE_URL",
+            "\"${localProperties.getProperty("OLLAMA_BASE_URL", "http://ollama-box.tailnet.ts.net:11434")}\""
+        )
+
         // Google Sheets Inventory
         buildConfigField("String", "GOOGLE_SHEETS_API_KEY", "\"AIzaSyDh1tQGyxM9zEYO56sKVtu9AYYnf_eM8Yw\"")
         buildConfigField("String", "INVENTORY_SPREADSHEET_ID", "\"1WdjCwgKv1e7Znj4ThT9jKDCFVwVfT9sn_j8CjJDE6oM\"")

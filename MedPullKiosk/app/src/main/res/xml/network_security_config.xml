@@ -55,6 +55,13 @@
         <domain includeSubdomains="false">10.0.2.2</domain>
     </domain-config>
 
+    <!-- Local Ollama co-pilot over Tailscale (cleartext HTTP on :11434).
+         Keep this host in sync with OLLAMA_BASE_URL in local.properties. If you
+         use a 100.x Tailscale IP instead of a MagicDNS name, put that IP here. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">ollama-box.tailnet.ts.net</domain>
+    </domain-config>
+
     <!-- Debug configuration (only for debug builds) -->
     <debug-overrides>
         <trust-anchors>
