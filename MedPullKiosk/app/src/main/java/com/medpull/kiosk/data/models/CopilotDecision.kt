@@ -84,37 +84,15 @@ sealed class CopilotOutcome {
     data class ModelUnavailable(val reason: String, override val latencyMs: Long) : CopilotOutcome()
 }
 
-/**
- * JSON Schema handed to Ollama's `format` so the model is grammar-constrained to
- * emit a decision in this exact shape. Parsed into a JsonElement before sending
- * (Ollama expects `format` to be a JSON object, not a stringified schema).
+/*
+ * Decision JSON contract (the model is asked for these EXACT keys in the system
+ * prompt — the target Ollama box does not enforce JSON-schema `format`, only
+ * `format:"json"`, so the prompt is the contract and the parser is defensive):
+ *
+ *   assessment        : "answered" | "invalid" | "confused" | "needs_help" | "off_topic"
+ *   confidence        : number 0.0-1.0
+ *   normalized_answer : string ("" if none)
+ *   also_fills        : [ { field_id, value } ]   (usually empty; gated OFF in app)
+ *   action            : "accept" | "interrupt"
+ *   intervention      : { type: clarify|rephrase|assist|branch, message, target_question_id } | null
  */
-const val COPILOT_DECISION_SCHEMA = """
-{
-  "type": "object",
-  "properties": {
-    "assessment": {"type": "string", "enum": ["answered", "invalid", "confused", "needs_help", "off_topic"]},
-    "confidence": {"type": "number"},
-    "normalized_answer": {"type": "string"},
-    "also_fills": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {"field_id": {"type": "string"}, "value": {"type": "string"}},
-        "required": ["field_id", "value"]
-      }
-    },
-    "action": {"type": "string", "enum": ["accept", "interrupt"]},
-    "intervention": {
-      "type": "object",
-      "properties": {
-        "type": {"type": "string", "enum": ["clarify", "rephrase", "assist", "branch"]},
-        "message": {"type": "string"},
-        "target_question_id": {"type": "string"}
-      },
-      "required": ["type", "message"]
-    }
-  },
-  "required": ["assessment", "confidence", "action", "normalized_answer"]
-}
-"""

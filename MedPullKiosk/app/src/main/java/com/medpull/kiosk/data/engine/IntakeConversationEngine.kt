@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.entities.AuditLogEntity
 import com.medpull.kiosk.data.models.Assessment
-import com.medpull.kiosk.data.models.COPILOT_DECISION_SCHEMA
 import com.medpull.kiosk.data.models.CopilotAction
 import com.medpull.kiosk.data.models.CopilotDecision
 import com.medpull.kiosk.data.models.CopilotOutcome
@@ -572,7 +571,7 @@ class IntakeConversationEngine @Inject constructor(
 
         logAudit("AI_COPILOT_ASSESS", "Field: ${field.id}")
 
-        return when (val resp = ollama.chat(systemPrompt, userPrompt, COPILOT_DECISION_SCHEMA)) {
+        return when (val resp = ollama.chat(systemPrompt, userPrompt)) {
             is OllamaResult.Success -> {
                 val decision = parseCopilotDecision(resp.content, field, allFields)
                 val latency = System.currentTimeMillis() - started
@@ -590,17 +589,25 @@ class IntakeConversationEngine @Inject constructor(
 
     private fun buildCopilotSystemPrompt(language: String): String {
         val lang = languageName(language)
+        // NOTE: the target Ollama box does NOT enforce JSON-schema `format` (only
+        // `format:"json"`), so THIS PROMPT is the contract — it must spell out the
+        // exact keys. Verified end-to-end that the model returns this shape.
         return """
             You are the MedPull Assistant, helping a patient complete a medical intake FORM on a kiosk. You ONLY help complete the form. You MUST NOT give medical advice, diagnoses, treatment, or clinical opinions of any kind. Ground every message strictly in the form's own field label and options — never invent medical information.
 
-            Assess the patient's answer for the current field and return ONE JSON object matching the schema.
-            - Use action="accept" with a normalized value when the answer clearly fits the field; set assessment="answered".
-            - Use action="interrupt" when the patient is confused, asked a question, gave something that doesn't fit the field, or went off-topic. Include an intervention:
-                * type="clarify" or "rephrase" to restate the SAME question more simply;
-                * type="assist" to explain what the field is asking for (still no medical advice);
-                * type="branch" only when a DIFFERENT existing field should be asked next — set target_question_id to that field's id, and write the message AS the next question so the patient knows what to answer.
-              intervention.message must be plain, kind, at most 2-3 sentences, and written in $lang.
-            confidence is your 0.0-1.0 certainty. Even inside an intervention, never give medical guidance — for medical questions, gently say staff can help. Output JSON only.
+            Decide how to handle the patient's answer for the current field:
+            - action="accept" with a normalized value when the answer clearly fits the field (assessment="answered").
+            - action="interrupt" when the patient is confused, asked a question, gave something that doesn't fit, or went off-topic. Provide an intervention: type "clarify"/"rephrase" to restate the SAME question simply; "assist" to explain what the field asks for (still no medical advice); "branch" ONLY when a DIFFERENT existing field should be asked next (set target_question_id and write message AS the next question).
+
+            Return ONLY a JSON object with EXACTLY these keys:
+            - "assessment": one of "answered","invalid","confused","needs_help","off_topic"
+            - "confidence": number 0.0-1.0 (your certainty)
+            - "normalized_answer": the cleaned value as a string ("" if none)
+            - "also_fills": array of {"field_id","value"} for other fields the answer explicitly fills (usually empty [])
+            - "action": "accept" or "interrupt"
+            - "intervention": when action is "interrupt", an object {"type","message","target_question_id"} with message plain, kind, at most 2-3 sentences and written in $lang; otherwise null
+
+            Even inside an intervention, never give medical guidance — for medical questions, gently say staff can help. Output JSON only, no prose.
         """.trimIndent()
     }
 
@@ -618,7 +625,10 @@ class IntakeConversationEngine @Inject constructor(
 
             val assessment = Assessment.from(obj.optString("assessment"))
             val confidence = obj.optDouble("confidence", 0.0).toFloat()
+            // Primary key is normalized_answer; tolerate a stray "value" key if the
+            // model drifts (observed when schema enforcement is off).
             val rawValue = obj.optString("normalized_answer", "")
+                .ifBlank { obj.optString("value", "") }
             val normalized = rawValue
                 .takeIf { it.isNotBlank() && it != "null" }
                 ?.let { normalizeValue(field, it) }
@@ -638,14 +648,22 @@ class IntakeConversationEngine @Inject constructor(
                 }
             }
 
-            val intervention = obj.optJSONObject("intervention")?.let { iv ->
-                val msg = iv.optString("message", "")
-                if (msg.isBlank()) null
-                else Intervention(
-                    type = InterventionType.from(iv.optString("type")),
-                    message = msg,
-                    targetQuestionId = iv.optString("target_question_id", "").ifBlank { null }
-                )
+            // intervention is normally an object; tolerate a bare string (model drift)
+            // by treating it as a clarify message.
+            val interventionObj = obj.optJSONObject("intervention")
+            val intervention = when {
+                interventionObj != null -> {
+                    val msg = interventionObj.optString("message", "")
+                    if (msg.isBlank()) null
+                    else Intervention(
+                        type = InterventionType.from(interventionObj.optString("type")),
+                        message = msg,
+                        targetQuestionId = interventionObj.optString("target_question_id", "").ifBlank { null }
+                    )
+                }
+                else -> obj.optString("intervention", "")
+                    .takeIf { it.isNotBlank() && it != "null" }
+                    ?.let { Intervention(InterventionType.CLARIFY, it, null) }
             }
 
             CopilotDecision(assessment, confidence, normalized, alsoFills, action, intervention)

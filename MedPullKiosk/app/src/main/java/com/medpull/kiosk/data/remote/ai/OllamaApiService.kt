@@ -3,6 +3,7 @@ package com.medpull.kiosk.data.remote.ai
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonElement
+import com.google.gson.JsonPrimitive
 import com.google.gson.annotations.SerializedName
 import com.medpull.kiosk.utils.Constants
 import kotlinx.coroutines.Dispatchers
@@ -39,26 +40,28 @@ class OllamaApiService(
     }
 
     /**
-     * Send a single-turn structured chat. [schemaJson] (if non-null) constrains the
-     * output via Ollama `format`. Returns the model's raw message content on success.
+     * Send a single-turn structured chat. Returns the model's raw message content.
+     *
+     * Uses Ollama's simple JSON mode (`format:"json"`). NOTE: full JSON-SCHEMA
+     * `format` is NOT honored by the target box (qwen3.5:9b on Ollama 0.23.2) —
+     * verified empirically: a strict schema returned plain prose. So the response
+     * SHAPE is driven by the explicit key list in the system prompt, and the
+     * caller parses defensively. `format:"json"` still guarantees valid JSON here
+     * and remains correct on servers that do enforce schemas.
      */
     suspend fun chat(
         systemPrompt: String,
-        userPrompt: String,
-        schemaJson: String? = null
+        userPrompt: String
     ): OllamaResult = withContext(Dispatchers.IO) {
         val messages = buildList {
             if (systemPrompt.isNotBlank()) add(OllamaMessage("system", systemPrompt))
             add(OllamaMessage("user", userPrompt))
         }
-        // `format` must be a JSON object in the body, not a stringified schema —
-        // parse it to a JsonElement so Gson serializes it inline.
-        val format = schemaJson?.let { gson.fromJson(it, JsonElement::class.java) }
         post(
             OllamaChatRequest(
                 model = Constants.AI.OLLAMA_MODEL,
                 messages = messages,
-                format = format,
+                format = JsonPrimitive("json"),
                 options = OllamaOptions(
                     temperature = Constants.AI.COPILOT_TEMPERATURE,
                     numPredict = Constants.AI.COPILOT_NUM_PREDICT
