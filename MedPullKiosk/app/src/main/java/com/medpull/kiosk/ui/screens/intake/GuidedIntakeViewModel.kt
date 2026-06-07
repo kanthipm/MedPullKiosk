@@ -6,14 +6,22 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.medpull.kiosk.data.engine.IntakeConversationEngine
+import com.medpull.kiosk.data.models.CopilotAction
+import com.medpull.kiosk.data.models.CopilotDecision
+import com.medpull.kiosk.data.models.CopilotOutcome
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FieldUpdate
 import com.medpull.kiosk.data.models.Form
 import com.medpull.kiosk.data.models.FormField
 import com.medpull.kiosk.data.models.FormIntakeFlow
 import com.medpull.kiosk.data.models.FormStatus
+import com.medpull.kiosk.data.models.InterventionType
+import com.medpull.kiosk.data.local.dao.CopilotAuditDao
+import com.medpull.kiosk.data.local.entities.CopilotAuditEntity
 import com.medpull.kiosk.data.local.entities.PatientCacheEntity
 import com.medpull.kiosk.data.repository.AuthRepository
+import com.medpull.kiosk.utils.Constants
+import com.google.gson.Gson
 import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
 import com.medpull.kiosk.R
@@ -54,6 +62,8 @@ class GuidedIntakeViewModel @Inject constructor(
     private val intakeRepository: GuidedIntakeRepository,
     private val authRepository: AuthRepository,
     private val engine: IntakeConversationEngine,
+    private val copilotAuditDao: CopilotAuditDao,
+    private val gson: Gson,
     private val localeManager: LocaleManager,
     private val appStrings: AppStrings,
     @ApplicationContext private val appContext: Context,
@@ -601,8 +611,7 @@ class GuidedIntakeViewModel @Inject constructor(
                     chatMessages = it.chatMessages + ChatMessage(
                         text = message,
                         isFromUser = true,
-                        timestamp = System.currentTimeMillis(),
-                        isClarification = looksLikeQuestion(message)
+                        timestamp = System.currentTimeMillis()
                     ),
                     isLoadingResponse = true,
                     error = null
@@ -610,138 +619,299 @@ class GuidedIntakeViewModel @Inject constructor(
             }
 
             try {
-                // If the patient is asking a question rather than providing an answer,
-                // route to the clarification handler instead of answer parsing.
-                if (looksLikeQuestion(message)) {
-                    val answer = engine.answerClarification(
-                        question = message,
-                        field = targetField,
-                        language = state.userLanguage
-                    )
-                    _state.update {
-                        it.copy(
-                            isLoadingResponse = false,
-                            chatMessages = it.chatMessages + ChatMessage(
-                                text = answer,
-                                isFromUser = false,
-                                timestamp = System.currentTimeMillis(),
-                                isClarification = true  // stays in sidebar only
-                            )
-                        )
+                // Fast path: exact option match for radio/dropdown — deterministic,
+                // instant, no AI call, no visible AI involvement.
+                if (targetField.fieldType in listOf(FieldType.RADIO, FieldType.DROPDOWN)) {
+                    val canonical = matchOption(targetField, message)
+                    if (canonical != null) {
+                        saveFieldAndAdvance(targetField, canonical, emptyList())
+                        return@launch
                     }
+                }
+
+                // Multi-select arrives pre-formatted from the chip UI — accept as-is.
+                if (targetField.fieldType == FieldType.MULTI_SELECT) {
+                    saveFieldAndAdvance(targetField, message.trim(), emptyList())
                     return@launch
                 }
 
-                val result = engine.parseAnswer(
-                    field = targetField,
-                    userAnswer = message,
-                    allFields = state.fields
-                )
-
-                // "None" / "skip" / "I don't have one" on a FREE-TEXT field (phone,
-                // email, SSN, …): accept it as a deliberate decline and move on (no
-                // format error). Restricted to option-less text/number/date fields so a
-                // localized "no"/"non"/"нет" can never hijack a Yes/No radio answer. If
-                // the field is being forced by a require_one_of group, keep asking.
+                // "None" / decline on an optional FREE-TEXT field: accept as a
+                // deliberate decline and move on (unless a require_one_of group forces it).
                 val isFreeText = targetField.options.isEmpty() && targetField.fieldType in listOf(
                     FieldType.TEXT, FieldType.NUMBER, FieldType.DATE
                 )
-                val declined = isFreeText && (FieldValidation.isDecline(message) ||
-                    (result.value != null && FieldValidation.isDecline(result.value!!)))
-                val forced = targetField.id in forcedRequiredIds
-
-                when {
-                    declined && forced -> {
-                        val group = requireOneOf.firstOrNull { targetField.id in it } ?: emptyList()
-                        val labels = group.mapNotNull { id ->
-                            state.fields.find { it.id == id }?.let { it.translatedText ?: it.fieldName }
-                        }.joinToString(", ")
-                        _state.update {
-                            it.copy(
-                                isLoadingResponse = false,
-                                chatMessages = it.chatMessages + ChatMessage(
-                                    text = appStrings.get(R.string.require_one_of, labels),
-                                    isFromUser = false,
-                                    timestamp = System.currentTimeMillis()
-                                )
-                            )
-                        }
-                    }
-
-                    declined && !targetField.required -> skipFieldAndAdvance(targetField)
-
-                    result.value != null && result.confidence >= CONFIDENCE_THRESHOLD -> {
-                        // Format-check the parsed value (phone/email/zip/date/…). Valid
-                        // values are normalized and saved; an ill-formed value is gently
-                        // re-asked (up to MAX), after which we accept it rather than trap
-                        // the patient.
-                        val validation = FieldValidation.validate(targetField, result.value)
-                        when {
-                            validation.ok ->
-                                saveFieldAndAdvance(targetField, validation.normalized, result.alsoFills)
-                            state.clarificationCount >= MAX_CLARIFICATIONS ->
-                                saveFieldAndAdvance(targetField, result.value, result.alsoFills)
-                            else -> {
-                                val hint = validation.hintRes?.let { appStrings.get(it) }
-                                    ?: appStrings.get(R.string.err_try_again)
-                                _state.update {
-                                    it.copy(
-                                        isLoadingResponse = false,
-                                        clarificationCount = it.clarificationCount + 1,
-                                        chatMessages = it.chatMessages + ChatMessage(
-                                            text = hint,
-                                            isFromUser = false,
-                                            timestamp = System.currentTimeMillis()
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    state.clarificationCount >= MAX_CLARIFICATIONS -> {
-                        escalateField(targetField)
-                    }
-
-                    result.needsClarification -> {
-                        val clarificationText = result.clarificationQuestion.ifBlank {
-                            appStrings.get(R.string.err_clarify)
-                        }
-                        _state.update {
-                            it.copy(
-                                isLoadingResponse = false,
-                                clarificationCount = it.clarificationCount + 1,
-                                chatMessages = it.chatMessages + ChatMessage(
-                                    text = clarificationText,
-                                    isFromUser = false,
-                                    timestamp = System.currentTimeMillis()
-                                )
-                            )
-                        }
-                    }
-
-                    else -> {
-                        _state.update {
-                            it.copy(
-                                isLoadingResponse = false,
-                                clarificationCount = it.clarificationCount + 1,
-                                chatMessages = it.chatMessages + ChatMessage(
-                                    text = appStrings.get(R.string.err_try_again),
-                                    isFromUser = false,
-                                    timestamp = System.currentTimeMillis()
-                                )
-                            )
-                        }
+                if (isFreeText && FieldValidation.isDecline(message)) {
+                    val forced = targetField.id in forcedRequiredIds
+                    when {
+                        forced -> { postRequireOneOf(targetField); return@launch }
+                        !targetField.required -> { skipFieldAndAdvance(targetField); return@launch }
                     }
                 }
+
+                // Co-pilot disabled → plain deterministic accept (kill-switch back to
+                // the predetermined form flow).
+                if (!Constants.AI.COPILOT_ENABLED) {
+                    deterministicAccept(targetField, message)
+                    return@launch
+                }
+
+                val outcome = engine.assessAnswer(
+                    field = targetField,
+                    userAnswer = message,
+                    allFields = state.fields,
+                    language = state.userLanguage
+                )
+                handleCopilotOutcome(targetField, message, outcome)
             } catch (e: Exception) {
-                Log.e(TAG, "Error parsing answer", e)
+                Log.e(TAG, "Error handling answer", e)
                 _state.update {
                     it.copy(
                         isLoadingResponse = false,
                         error = appStrings.get(R.string.err_process_answer)
                     )
                 }
+            }
+        }
+    }
+
+    // ─── Co-Pilot decision handling ───────────────────────────────────────────
+
+    /** Exact-match an answer to a canonical option (by canonical value or localized label). */
+    private fun matchOption(field: FormField, answer: String): String? {
+        val a = answer.trim()
+        field.options.find { it.equals(a, ignoreCase = true) }?.let { return it }
+        val idx = field.optionLabels.indexOfFirst { it.equals(a, ignoreCase = true) }
+        return if (idx in field.options.indices) field.options[idx] else null
+    }
+
+    /** Route a co-pilot outcome — accept / interrupt / deterministic / re-ask. */
+    private suspend fun handleCopilotOutcome(
+        field: FormField,
+        rawAnswer: String,
+        outcome: CopilotOutcome
+    ) {
+        when (outcome) {
+            is CopilotOutcome.Decided -> when (outcome.decision.action) {
+                CopilotAction.ACCEPT -> handleAccept(field, rawAnswer, outcome)
+                CopilotAction.INTERRUPT -> handleInterrupt(field, rawAnswer, outcome)
+            }
+            is CopilotOutcome.Unreachable -> {
+                // No AI at all — deterministic accept-and-advance is acceptable.
+                logCopilot(field, rawAnswer, outcome, emptyList())
+                deterministicAccept(field, rawAnswer)
+            }
+            is CopilotOutcome.ModelUnavailable -> {
+                // Model reachable but slow/bad — do NOT silently accept. Accept only if
+                // the raw answer is format-valid on its own; otherwise re-ask / escalate.
+                logCopilot(field, rawAnswer, outcome, emptyList())
+                val validation = FieldValidation.validate(field, rawAnswer)
+                if (validation.ok && rawAnswer.isNotBlank()) {
+                    saveFieldAndAdvance(field, validation.normalized, emptyList())
+                } else {
+                    reAskOrEscalate(field, appStrings.get(R.string.err_try_again))
+                }
+            }
+        }
+    }
+
+    private suspend fun handleAccept(field: FormField, rawAnswer: String, outcome: CopilotOutcome.Decided) {
+        val d = outcome.decision
+        val candidate = d.normalizedAnswer
+        // Never auto-accept on low confidence or a missing value — safe re-ask instead.
+        if (candidate.isNullOrBlank() || d.confidence < Constants.AI.COPILOT_CONFIDENCE_THRESHOLD) {
+            logCopilot(field, rawAnswer, outcome, emptyList())
+            reAskOrEscalate(field, appStrings.get(R.string.err_clarify))
+            return
+        }
+        val applied = resolveAlsoFills(d)
+        val validation = FieldValidation.validate(field, candidate)
+        when {
+            validation.ok -> {
+                logCopilot(field, rawAnswer, outcome, applied)
+                saveFieldAndAdvance(field, validation.normalized, applied)
+            }
+            _state.value.clarificationCount >= MAX_CLARIFICATIONS -> {
+                logCopilot(field, rawAnswer, outcome, applied)
+                saveFieldAndAdvance(field, candidate, applied)
+            }
+            else -> {
+                logCopilot(field, rawAnswer, outcome, emptyList())
+                val hint = validation.hintRes?.let { appStrings.get(it) }
+                    ?: appStrings.get(R.string.err_try_again)
+                reAskOrEscalate(field, hint)
+            }
+        }
+    }
+
+    private suspend fun handleInterrupt(field: FormField, rawAnswer: String, outcome: CopilotOutcome.Decided) {
+        val d = outcome.decision
+        val iv = d.intervention
+        // Soft guardrail: medical-advice-looking text downgrades to a safe re-ask.
+        val safeMessage = when {
+            iv == null || iv.message.isBlank() -> appStrings.get(R.string.err_clarify)
+            engine.looksLikeMedicalAdvice(iv.message) -> appStrings.get(R.string.err_clarify)
+            else -> iv.message
+        }
+        val type = iv?.type ?: InterventionType.CLARIFY
+
+        // Branch ONLY at high confidence to a real, unanswered, non-skipped field;
+        // otherwise degrade to a stay-on-field clarify (never auto-jump on low conf).
+        if (type == InterventionType.BRANCH) {
+            val target = iv?.targetQuestionId?.let { validBranchTarget(it) }
+            if (target != null && d.confidence >= Constants.AI.COPILOT_BRANCH_THRESHOLD) {
+                logCopilot(field, rawAnswer, outcome, emptyList())
+                jumpToField(target, safeMessage, type)
+                return
+            }
+        }
+
+        logCopilot(field, rawAnswer, outcome, emptyList())
+        interruptOrEscalate(field, safeMessage, type)
+    }
+
+    /** Apply also_fills ONLY when explicitly enabled AND above its own higher bar. */
+    private fun resolveAlsoFills(d: CopilotDecision): List<FieldUpdate> =
+        if (Constants.AI.COPILOT_ALSOFILL_ENABLED && d.confidence >= Constants.AI.COPILOT_ALSOFILL_THRESHOLD)
+            d.alsoFills
+        else
+            emptyList()
+
+    /** A branch target must be a real field that is still unanswered and not skipped. */
+    private fun validBranchTarget(fieldId: String): FormField? {
+        val s = _state.value
+        val skipped = s.skippedFieldIds + skipDuringIntakeIds
+        return s.fields.firstOrNull {
+            it.id == fieldId && it.id !in skipped && it.value.isNullOrBlank() &&
+            it.fieldType != FieldType.STATIC_LABEL
+        }
+    }
+
+    /** Jump the flow to [target]; the assistant message becomes the new spoken question. */
+    private fun jumpToField(target: FormField, assistantMessage: String, type: InterventionType) {
+        _state.update { it.copy(currentAskingField = target, clarificationCount = 0) }
+        postAssistantMessage(assistantMessage, type)
+        Log.d(TAG, "Co-pilot branched to ${target.id}")
+    }
+
+    /** Post a badged, spoken "MedPull Assistant" message; it becomes the current question. */
+    private fun postAssistantMessage(text: String, type: InterventionType?) {
+        _state.update {
+            it.copy(
+                isLoadingResponse = false,
+                chatMessages = it.chatMessages + ChatMessage(
+                    text = text,
+                    isFromUser = false,
+                    timestamp = System.currentTimeMillis(),
+                    isAssistant = true,
+                    interventionType = type?.name
+                )
+            )
+        }
+    }
+
+    /** Stay on the field with a co-pilot intervention, or escalate to staff after MAX. */
+    private suspend fun interruptOrEscalate(field: FormField, message: String, type: InterventionType) {
+        if (_state.value.clarificationCount >= MAX_CLARIFICATIONS) {
+            escalateField(field)
+            return
+        }
+        _state.update { it.copy(clarificationCount = it.clarificationCount + 1) }
+        postAssistantMessage(message, type)
+    }
+
+    /** Gentle, non-AI validation re-ask (no badge), or escalate after MAX. */
+    private suspend fun reAskOrEscalate(field: FormField, hint: String) {
+        if (_state.value.clarificationCount >= MAX_CLARIFICATIONS) {
+            escalateField(field)
+            return
+        }
+        _state.update {
+            it.copy(
+                isLoadingResponse = false,
+                clarificationCount = it.clarificationCount + 1,
+                chatMessages = it.chatMessages + ChatMessage(
+                    text = hint,
+                    isFromUser = false,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    /** Deterministic accept used when there is genuinely no AI (Unreachable / disabled). */
+    private suspend fun deterministicAccept(field: FormField, rawAnswer: String) {
+        val trimmed = rawAnswer.trim()
+        if (trimmed.isBlank()) {
+            reAskOrEscalate(field, appStrings.get(R.string.err_clarify))
+            return
+        }
+        val validation = FieldValidation.validate(field, trimmed)
+        saveFieldAndAdvance(field, if (validation.ok) validation.normalized else trimmed, emptyList())
+    }
+
+    /** Re-ask one of a require_one_of group (mirrors the forced-decline path). */
+    private fun postRequireOneOf(field: FormField) {
+        val group = requireOneOf.firstOrNull { field.id in it } ?: emptyList()
+        val labels = group.mapNotNull { id ->
+            _state.value.fields.find { it.id == id }?.let { it.translatedText ?: it.fieldName }
+        }.joinToString(", ")
+        _state.update {
+            it.copy(
+                isLoadingResponse = false,
+                chatMessages = it.chatMessages + ChatMessage(
+                    text = appStrings.get(R.string.require_one_of, labels),
+                    isFromUser = false,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    /**
+     * Insert an on-device co-pilot audit row.
+     *
+     * TODO(medpull-PHI): on-device logging only — TEMPORARY for testing. rawAnswer /
+     * normalizedAnswer are PHI stored in plaintext and NOT synced to S3. Revisit
+     * storage location, retention, encryption, and HIPAA/compliance before
+     * production. Production blocker — see KNOWN_ISSUES.md.
+     */
+    private fun logCopilot(
+        field: FormField,
+        rawAnswer: String,
+        outcome: CopilotOutcome,
+        appliedAlsoFills: List<FieldUpdate>
+    ) {
+        val decision = (outcome as? CopilotOutcome.Decided)?.decision
+        val outcomeStr = when (outcome) {
+            is CopilotOutcome.Decided -> "decided"
+            is CopilotOutcome.Unreachable -> "unreachable"
+            is CopilotOutcome.ModelUnavailable -> "model_unavailable"
+        }
+        viewModelScope.launch {
+            try {
+                copilotAuditDao.insert(
+                    CopilotAuditEntity(
+                        id = java.util.UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        formId = formId,
+                        fieldId = field.id,
+                        rawAnswer = rawAnswer,
+                        normalizedAnswer = decision?.normalizedAnswer,
+                        assessment = decision?.assessment?.name ?: "UNKNOWN",
+                        confidence = decision?.confidence ?: 0f,
+                        action = decision?.action?.name ?: outcomeStr.uppercase(),
+                        interventionType = decision?.intervention?.type?.name,
+                        message = decision?.intervention?.message,
+                        outcome = outcomeStr,
+                        latencyMs = outcome.latencyMs,
+                        alsoFillsProposed = decision?.alsoFills
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let { gson.toJson(it) },
+                        alsoFillsApplied = appliedAlsoFills.isNotEmpty()
+                    )
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "copilot audit log failed: ${e.message}")
             }
         }
     }
@@ -802,17 +972,6 @@ class GuidedIntakeViewModel @Inject constructor(
                 saveFieldAndAdvance(field, "✓ Signed", emptyList())
             }
         }
-    }
-
-    /** Heuristic: does this look like a question rather than an answer? */
-    private fun looksLikeQuestion(text: String): Boolean {
-        val trimmed = text.trim().lowercase()
-        if (trimmed.endsWith("?")) return true
-        val questionStarters = listOf("what", "why", "how", "when", "where", "who", "which",
-            "do i", "do you", "can i", "can you", "should i", "is this", "what does",
-            "what is", "why do", "why does", "i don't understand", "i dont understand",
-            "what do you mean", "explain", "help me understand", "not sure what")
-        return questionStarters.any { trimmed.startsWith(it) }
     }
 
     /** Mark the form complete immediately so the patient can review what they've filled so far. */

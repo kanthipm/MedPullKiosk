@@ -291,5 +291,10 @@ data class ChatMessage(
     val text: String,
     val isFromUser: Boolean,
     val timestamp: Long,
-    val isClarification: Boolean = false  // true = sidebar Q&A, never shown as main question
+    val isClarification: Boolean = false,  // true = sidebar Q&A, never shown as main question
+    // true = the AI co-pilot stepped in (rephrase/assist/branch). Rendered with the
+    // "MedPull Assistant" badge and spoken with an audible lead-in. A plain validation
+    // re-ask is NOT an assistant message (no badge) — only a real takeover is.
+    val isAssistant: Boolean = false,
+    val interventionType: String? = null
 )
