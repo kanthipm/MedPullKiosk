@@ -59,6 +59,41 @@ app/src/main/java/com/medpull/kiosk/
 - **API Endpoint**: https://d40uuum7hj.execute-api.us-east-1.amazonaws.com/prod
 - **S3 Bucket**: medpull-hipaa-files-1759818639
 
+## AI Co-Pilot (local Ollama)
+
+The intake flow is driven by a local **Ollama** model (`qwen3.5:9b`) reached over
+**Tailscale**, using the native `/api/chat` endpoint with `think:false` and JSON-schema
+structured output. It assesses each answer and either accepts silently or steps in
+("MedPull Assistant") to rephrase/assist/branch. If the box is unreachable the kiosk
+falls back to the deterministic form flow — it never strands a patient.
+
+### App setup
+1. Set the endpoint in `local.properties` (per-device, not committed):
+   ```
+   OLLAMA_BASE_URL=http://<tailnet-host-or-100.x.y.z>:11434
+   ```
+2. Keep that host in sync with the matching `<domain>` in
+   `app/src/main/res/xml/network_security_config.xml` (cleartext HTTP is allowed only
+   for that host). If you use a `100.x` Tailscale IP, put that IP in both places.
+3. Verify the model tag actually exists on the box: `ollama list` (the public Qwen
+   tags are usually `qwen2.5:7b` / `qwen3:8b`; change `Constants.AI.OLLAMA_MODEL` if so).
+
+### Server (Ollama box) setup — out of app scope
+The app sends `keep_alive:-1` on every request and fires a warm-up from the Welcome
+screen, but as a **backup** the box should also keep the model resident across reboots:
+- Run Ollama with `OLLAMA_KEEP_ALIVE=-1`.
+- Add a startup warm-up (e.g. a one-shot `/api/chat` load on boot) so the very first
+  patient after a reboot doesn't pay a cold start.
+
+### Tuning
+Thresholds and the timeout in `Constants.AI` (`COPILOT_CONFIDENCE_THRESHOLD`,
+`COPILOT_BRANCH_THRESHOLD`, `COPILOT_TIMEOUT_SECONDS`) are **uncalibrated starting
+values**. Calibrate them from the on-device `copilot_audit_logs` table (logged
+confidence vs. actual correctness, and observed p95/p99 latency).
+
+> ⚠️ **Testing-phase shortcut:** AI decisions (including patient answers / PHI) are
+> logged **on-device only** and are NOT production-ready. See [KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
+
 ## Build Instructions
 
 ### Prerequisites

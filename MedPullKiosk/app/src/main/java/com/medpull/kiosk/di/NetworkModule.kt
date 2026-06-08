@@ -32,6 +32,11 @@ annotation class CognitoRetrofit
 @Retention(AnnotationRetention.BINARY)
 annotation class GoogleSheetsRetrofit
 
+/** OkHttp client tuned for the local Ollama co-pilot (short connect, copilot read timeout). */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class CopilotOkHttp
+
 /**
  * Hilt module for network dependencies
  */
@@ -133,6 +138,31 @@ object NetworkModule {
         gson: Gson
     ): com.medpull.kiosk.data.remote.ai.GrokApiService {
         return com.medpull.kiosk.data.remote.ai.GrokApiService(okHttpClient, gson)
+    }
+
+    /**
+     * Dedicated client for the local Ollama co-pilot. Short connect timeout so an
+     * unreachable box fails fast (→ deterministic fallback), copilot read timeout so
+     * a legitimately-slow interrupt isn't clipped. No body logging — prompts carry PHI.
+     */
+    @Provides
+    @Singleton
+    @CopilotOkHttp
+    fun provideCopilotOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(2, TimeUnit.SECONDS)
+            .readTimeout(Constants.AI.COPILOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(Constants.AI.COPILOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOllamaApiService(
+        @CopilotOkHttp okHttpClient: OkHttpClient,
+        gson: Gson
+    ): com.medpull.kiosk.data.remote.ai.OllamaApiService {
+        return com.medpull.kiosk.data.remote.ai.OllamaApiService(okHttpClient, gson)
     }
 
     @Provides

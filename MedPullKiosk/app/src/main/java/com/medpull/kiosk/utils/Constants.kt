@@ -124,6 +124,28 @@ object Constants {
         const val VISION_MAX_TOKENS = 8192
         const val VISION_TIMEOUT_SECONDS = 120L
         const val VISION_ENABLED = false
+
+        // ─── Local AI Co-Pilot (Ollama over Tailscale) ──────────────────────
+        // Native /api/chat on a local Ollama box; the primary brain of the
+        // intake path (replaces Grok there — see memory/feedback_avoid_grok.md).
+        //
+        // CALIBRATION WARNING: every threshold/timeout below is an UNCALIBRATED,
+        // model-specific STARTING value. A model's self-reported `confidence` is
+        // NOT a calibrated probability and is not comparable across models, so the
+        // 0.75 carried over from the Grok era means nothing for qwen3.5. Tune these
+        // from the on-device copilot_audit_logs (confidence vs. actual correctness,
+        // and observed p95/p99 latency) — do not trust the numbers on faith.
+        const val OLLAMA_BASE_URL = BuildConfig.OLLAMA_BASE_URL  // tailnet host:port, from local.properties
+        const val OLLAMA_MODEL = "qwen3.5:9b"                    // verify against `ollama list` on the box
+        const val COPILOT_ENABLED = true
+        const val COPILOT_CONFIDENCE_THRESHOLD = 0.75f           // accept gate (uncalibrated)
+        const val COPILOT_BRANCH_THRESHOLD = 0.85f               // auto-branch gate — deliberately higher; a wrong jump is worse than a wrong clarify
+        const val COPILOT_ALSOFILL_ENABLED = false               // inferred PHI into unconfirmed fields — OFF for the testing phase
+        const val COPILOT_ALSOFILL_THRESHOLD = 0.9f              // when enabled, only apply also_fills at/above this
+        const val COPILOT_TIMEOUT_SECONDS = 8L                   // headroom over ~5.5s worst case; re-tune from logged p95/p99
+        const val COPILOT_NUM_PREDICT = 300
+        const val COPILOT_TEMPERATURE = 0.1
+        const val COPILOT_AUDIO_CUE_ENABLED = true               // brief tone before a spoken assistant intervention
     }
 
     // Audit Logging

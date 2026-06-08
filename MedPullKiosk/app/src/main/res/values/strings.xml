@@ -424,4 +424,8 @@
     <string name="prev_question">Prev question</string>
     <string name="next">Next</string>
     <string name="done">Done</string>
+
+    <!-- AI Co-Pilot ("MedPull Assistant") -->
+    <string name="assistant_badge_label">MedPull Assistant</string>
+    <string name="assistant_lead_in">Let me help with that — </string>
 </resources>

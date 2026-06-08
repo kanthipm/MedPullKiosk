@@ -4,12 +4,20 @@ import android.util.Log
 import com.google.gson.Gson
 import com.medpull.kiosk.data.local.dao.AuditLogDao
 import com.medpull.kiosk.data.local.entities.AuditLogEntity
+import com.medpull.kiosk.data.models.Assessment
+import com.medpull.kiosk.data.models.CopilotAction
+import com.medpull.kiosk.data.models.CopilotDecision
+import com.medpull.kiosk.data.models.CopilotOutcome
 import com.medpull.kiosk.data.models.FieldParseResult
 import com.medpull.kiosk.data.models.FieldType
 import com.medpull.kiosk.data.models.FieldUpdate
 import com.medpull.kiosk.data.models.FormField
+import com.medpull.kiosk.data.models.Intervention
+import com.medpull.kiosk.data.models.InterventionType
 import com.medpull.kiosk.data.remote.ai.AiResponse
 import com.medpull.kiosk.data.remote.ai.GrokApiService
+import com.medpull.kiosk.data.remote.ai.OllamaApiService
+import com.medpull.kiosk.data.remote.ai.OllamaResult
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.utils.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,6 +41,7 @@ import javax.inject.Singleton
 @Singleton
 class IntakeConversationEngine @Inject constructor(
     private val apiService: GrokApiService,
+    private val ollama: OllamaApiService,
     private val auditLogDao: AuditLogDao,
     private val authRepository: AuthRepository,
     private val gson: Gson,
@@ -41,6 +50,20 @@ class IntakeConversationEngine @Inject constructor(
 
     companion object {
         private const val TAG = "IntakeEngine"
+
+        /** Shared value-normalization guidance appended to the co-pilot user prompt. */
+        private val COPILOT_NORMALIZATION_RULES = """
+            Normalize the extracted value to a standard format:
+            - Date of birth / any date → MM/DD/YYYY (e.g. "01/15/1990")
+            - Phone number → (XXX) XXX-XXXX
+            - US State → 2-letter abbreviation (e.g. "TX", "CA")
+            - ZIP code → 5 digits only
+            - Full name / any name → Title Case
+            - Dollar amount / income → digits only, no $ or commas (e.g. "2400")
+            - Household size / number of dependents → digits only (e.g. "3")
+            - Yes/No fields → "Yes" or "No" exactly
+        """.trimIndent()
+
         val STATE_ABBREVIATIONS = mapOf(
             "ALABAMA" to "AL", "ALASKA" to "AK", "ARIZONA" to "AZ", "ARKANSAS" to "AR",
             "CALIFORNIA" to "CA", "COLORADO" to "CO", "CONNECTICUT" to "CT", "DELAWARE" to "DE",
@@ -488,6 +511,183 @@ class IntakeConversationEngine @Inject constructor(
                 clarificationQuestion = "I didn't quite catch that. Could you try again?"
             )
         }
+    }
+
+    // ─── AI Co-Pilot Decision (local Ollama) ─────────────────────────────────
+
+    /**
+     * Assess a patient's answer for [field] with the local Ollama co-pilot and return
+     * a structured [CopilotOutcome]. This is the richer evolution of [parseAnswer]:
+     * one call returns assess + normalize + accept/interrupt + intervention.
+     *
+     * Returns a TYPED outcome so the ViewModel can treat the two failure modes
+     * differently (plan §3): [CopilotOutcome.Unreachable] (no AI → deterministic
+     * fallback OK) vs [CopilotOutcome.ModelUnavailable] (model up but slow/bad →
+     * re-ask, never silently advance). The app stays the authority on answers; this
+     * is only a per-call opinion.
+     */
+    suspend fun assessAnswer(
+        field: FormField,
+        userAnswer: String,
+        allFields: List<FormField>,
+        language: String
+    ): CopilotOutcome {
+        val started = System.currentTimeMillis()
+
+        val priorAnswers = allFields
+            .filter { !it.value.isNullOrBlank() && it.id != field.id &&
+                it.fieldType != FieldType.STATIC_LABEL && it.value != "delivered" }
+            .take(12)
+            .joinToString("\n") { "  ${it.id} (${it.translatedText ?: it.fieldName}): ${it.value}" }
+
+        val bonusCandidates = allFields
+            .filter { f ->
+                f.id != field.id && f.value.isNullOrBlank() &&
+                f.fieldType !in listOf(FieldType.STATIC_LABEL, FieldType.SIGNATURE, FieldType.MULTI_SELECT)
+            }
+            .take(8)
+            .joinToString("\n") { "  ${it.id}: ${it.translatedText ?: it.fieldName}" }
+
+        val systemPrompt = buildCopilotSystemPrompt(language)
+        val userPrompt = buildString {
+            appendLine("Current field id: ${field.id} (${field.fieldType.name.lowercase()})")
+            appendLine("Question: ${field.translatedQuestion ?: field.question ?: field.translatedText ?: field.fieldName}")
+            if (field.options.isNotEmpty()) appendLine("Valid options: ${field.options.joinToString(", ")}")
+            if (!field.description.isNullOrBlank()) appendLine("Field note: ${field.description}")
+            appendLine("Required: ${field.required}")
+            appendLine()
+            appendLine("Patient said: \"$userAnswer\"")
+            if (priorAnswers.isNotBlank()) {
+                appendLine(); appendLine("Prior answers (context — do not re-ask these):"); appendLine(priorAnswers)
+            }
+            if (bonusCandidates.isNotBlank()) {
+                appendLine()
+                appendLine("Other empty fields the answer MIGHT also fill (only if the patient explicitly gave them):")
+                appendLine(bonusCandidates)
+            }
+            appendLine()
+            append(COPILOT_NORMALIZATION_RULES)
+        }
+
+        logAudit("AI_COPILOT_ASSESS", "Field: ${field.id}")
+
+        return when (val resp = ollama.chat(systemPrompt, userPrompt)) {
+            is OllamaResult.Success -> {
+                val decision = parseCopilotDecision(resp.content, field, allFields)
+                val latency = System.currentTimeMillis() - started
+                if (decision != null) CopilotOutcome.Decided(decision, latency)
+                else CopilotOutcome.ModelUnavailable("unparseable: ${resp.content.take(160)}", latency)
+            }
+            is OllamaResult.Unreachable ->
+                CopilotOutcome.Unreachable(resp.message, System.currentTimeMillis() - started)
+            is OllamaResult.Timeout ->
+                CopilotOutcome.ModelUnavailable("timeout: ${resp.message}", System.currentTimeMillis() - started)
+            is OllamaResult.HttpError ->
+                CopilotOutcome.ModelUnavailable("http ${resp.code}: ${resp.message}", System.currentTimeMillis() - started)
+        }
+    }
+
+    private fun buildCopilotSystemPrompt(language: String): String {
+        val lang = languageName(language)
+        // NOTE: the target Ollama box does NOT enforce JSON-schema `format` (only
+        // `format:"json"`), so THIS PROMPT is the contract — it must spell out the
+        // exact keys. Verified end-to-end that the model returns this shape.
+        return """
+            You are the MedPull Assistant, helping a patient complete a medical intake FORM on a kiosk. You ONLY help complete the form. You MUST NOT give medical advice, diagnoses, treatment, or clinical opinions of any kind. Ground every message strictly in the form's own field label and options — never invent medical information.
+
+            Decide how to handle the patient's answer for the current field:
+            - action="accept" with a normalized value when the answer clearly fits the field (assessment="answered").
+            - action="interrupt" when the patient is confused, asked a question, gave something that doesn't fit, or went off-topic. Provide an intervention: type "clarify"/"rephrase" to restate the SAME question simply; "assist" to explain what the field asks for (still no medical advice); "branch" ONLY when a DIFFERENT existing field should be asked next (set target_question_id and write message AS the next question).
+
+            Return ONLY a JSON object with EXACTLY these keys:
+            - "assessment": one of "answered","invalid","confused","needs_help","off_topic"
+            - "confidence": number 0.0-1.0 (your certainty)
+            - "normalized_answer": the cleaned value as a string ("" if none)
+            - "also_fills": array of {"field_id","value"} for other fields the answer explicitly fills (usually empty [])
+            - "action": "accept" or "interrupt"
+            - "intervention": when action is "interrupt", an object {"type","message","target_question_id"} with message plain, kind, at most 2-3 sentences and written in $lang; otherwise null
+
+            Even inside an intervention, never give medical guidance — for medical questions, gently say staff can help. Output JSON only, no prose.
+        """.trimIndent()
+    }
+
+    private fun parseCopilotDecision(
+        raw: String,
+        field: FormField,
+        allFields: List<FormField>
+    ): CopilotDecision? {
+        return try {
+            val cleaned = raw.trim()
+                .removePrefix("```json").removePrefix("```")
+                .removeSuffix("```").trim()
+            if (cleaned.isBlank()) return null
+            val obj = JSONObject(cleaned)
+
+            val assessment = Assessment.from(obj.optString("assessment"))
+            val confidence = obj.optDouble("confidence", 0.0).toFloat()
+            // Primary key is normalized_answer; tolerate a stray "value" key if the
+            // model drifts (observed when schema enforcement is off).
+            val rawValue = obj.optString("normalized_answer", "")
+                .ifBlank { obj.optString("value", "") }
+            val normalized = rawValue
+                .takeIf { it.isNotBlank() && it != "null" }
+                ?.let { normalizeValue(field, it) }
+            val action = CopilotAction.from(obj.optString("action"))
+
+            val alsoFills = mutableListOf<FieldUpdate>()
+            obj.optJSONArray("also_fills")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    val e = arr.optJSONObject(i) ?: continue
+                    val fId = e.optString("field_id", "")
+                    val fVal = e.optString("value", "")
+                    if (fId.isNotBlank() && fVal.isNotBlank() && fVal != "null") {
+                        val related = allFields.find { it.id == fId }
+                        val value = if (related != null) normalizeValue(related, fVal) else fVal
+                        alsoFills += FieldUpdate(fId, value, confidence)
+                    }
+                }
+            }
+
+            // intervention is normally an object; tolerate a bare string (model drift)
+            // by treating it as a clarify message.
+            val interventionObj = obj.optJSONObject("intervention")
+            val intervention = when {
+                interventionObj != null -> {
+                    val msg = interventionObj.optString("message", "")
+                    if (msg.isBlank()) null
+                    else Intervention(
+                        type = InterventionType.from(interventionObj.optString("type")),
+                        message = msg,
+                        targetQuestionId = interventionObj.optString("target_question_id", "").ifBlank { null }
+                    )
+                }
+                else -> obj.optString("intervention", "")
+                    .takeIf { it.isNotBlank() && it != "null" }
+                    ?.let { Intervention(InterventionType.CLARIFY, it, null) }
+            }
+
+            CopilotDecision(assessment, confidence, normalized, alsoFills, action, intervention)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse CopilotDecision: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Soft, secondary guardrail: catch intervention text that reads like medical
+     * advice so the ViewModel can downgrade it to a safe re-ask. The SYSTEM PROMPT
+     * is the primary defense — this keyword screen is a backstop only (see
+     * KNOWN_ISSUES.md), and is intentionally conservative to avoid false positives
+     * on benign form help.
+     */
+    fun looksLikeMedicalAdvice(text: String): Boolean {
+        val t = text.lowercase()
+        val redFlags = listOf(
+            "you should take", "i recommend taking", "you may have", "you might have",
+            "you probably have", "diagnos", "prescri", "dosage", "you should stop taking",
+            "increase your dose", "decrease your dose", "this medication will", "treat your"
+        )
+        return redFlags.any { it in t }
     }
 
     // ─── Clarification Q&A ───────────────────────────────────────────────────
