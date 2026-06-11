@@ -365,18 +365,18 @@
     <string name="err_failed_generate_pdf">Falha ao gerar PDF: %1$s</string>
     <string name="err_process_answer">Não foi possível processar sua resposta. Por favor, tente novamente.</string>
     <string name="err_clarify">Você poderia esclarecer isso para mim?</string>
-    <string name="err_try_again">Quero ter certeza de que entendi direito — você poderia dizer isso de novo?</string>
-    <string name="validate_name">Não consegui captar um nome aí. Poderia me dizer o nome novamente, por favor?</string>
+    <string name="err_try_again">Quero ter certeza de que entendi bem. Pode repetir?</string>
+    <string name="validate_name">Não captei um nome. Pode dizer o nome novamente?</string>
     <string name="validate_phone">Isso não parece um número de telefone completo. Por favor, inclua o código de área e todos os 10 dígitos.</string>
     <string name="validate_email">Isso não parece um endereço de e-mail válido. Ele deve se parecer com name@example.com.</string>
     <string name="validate_zip">Um CEP deve ter 5 dígitos. Poderia verificar, por favor?</string>
     <string name="validate_ssn">Um número de Seguro Social deve ter 9 dígitos (XXX-XX-XXXX). Você também pode pular esta etapa.</string>
-    <string name="validate_state">Por favor, informe um estado dos EUA válido — por exemplo, TX ou Texas.</string>
-    <string name="validate_date">Por favor, informe a data como mês, dia e ano — por exemplo, 03/14/1985.</string>
-    <string name="validate_number">Isso deveria ser um número. Poderia tentar novamente, por favor?</string>
-    <string name="require_one_of">Precisamos de pelo menos um destes para entrar em contato — escolha um e digite: %1$s.</string>
-    <string name="msg_staff_help">Não tem problema — um membro da equipe pode ajudar nessa parte. Vamos continuar.</string>
-    <string name="msg_consent_recorded">Obrigado — suas seleções de consentimento foram registradas.</string>
+    <string name="validate_state">Informe um estado válido dos EUA, por exemplo TX ou Texas.</string>
+    <string name="validate_date">Informe a data como mês, dia e ano, por exemplo 03/14/1985.</string>
+    <string name="validate_number">Isso deve ser um número. Pode tentar de novo?</string>
+    <string name="require_one_of">Precisamos de pelo menos um destes para falar com você. Escolha um e informe: %1$s.</string>
+    <string name="msg_staff_help">Vou avisar alguém da clínica para ajudar com esta parte. Vamos continuar.</string>
+    <string name="msg_consent_recorded">Obrigado. Seus consentimentos foram registrados.</string>
     <string name="err_no_user_logged_in">Nenhum usuário logado</string>
     <string name="err_failed_load_forms">Falha ao carregar formulários: %1$s</string>
     <string name="err_file_too_large">O tamanho do arquivo (%1$s MB) excede o tamanho máximo permitido (%2$s MB)</string>
@@ -427,5 +427,9 @@
 
     <!-- AI Co-Pilot ("MedPull Assistant") -->
     <string name="assistant_badge_label">Assistente MedPull</string>
-    <string name="assistant_lead_in">Deixe-me ajudar com isso: </string>
+    <string name="assistant_lead_in">Assistente aqui. </string>
+    <string name="searching_web">Pesquisando essa informação…</string>
+    <string name="address_confirm_q">Anotei seu endereço como %1$s. Está correto?</string>
+    <string name="address_confirm_title">Está correto?</string>
+    <string name="address_reask">Sem problema. Qual é apenas o número e o nome da sua rua?</string>
 </resources>

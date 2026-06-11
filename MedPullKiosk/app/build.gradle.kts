@@ -52,6 +52,17 @@ android {
             "\"${localProperties.getProperty("OLLAMA_BASE_URL", "http://ollama-box.tailnet.ts.net:11434")}\""
         )
 
+        // Web-lookup endpoint for the co-pilot's needs_search fallback. Defaults to
+        // public DuckDuckGo's no-JS HTML endpoint (plain HTTP GET, headless-safe).
+        // Override via SEARCH_BASE_URL in local.properties to point at a dedicated
+        // instance; a cleartext (http://) host must also be allowed in
+        // res/xml/network_security_config.xml.
+        buildConfigField(
+            "String",
+            "SEARCH_BASE_URL",
+            "\"${localProperties.getProperty("SEARCH_BASE_URL", "https://html.duckduckgo.com")}\""
+        )
+
         // Google Sheets Inventory
         buildConfigField("String", "GOOGLE_SHEETS_API_KEY", "\"AIzaSyDh1tQGyxM9zEYO56sKVtu9AYYnf_eM8Yw\"")
         buildConfigField("String", "INVENTORY_SPREADSHEET_ID", "\"1WdjCwgKv1e7Znj4ThT9jKDCFVwVfT9sn_j8CjJDE6oM\"")

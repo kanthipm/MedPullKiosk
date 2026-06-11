@@ -51,6 +51,18 @@ class IntakeConversationEngine @Inject constructor(
     companion object {
         private const val TAG = "IntakeEngine"
 
+        /**
+         * Shared voice for every patient-facing message the co-pilot writes,
+         * whatever path produced it (decision intervention, search answer,
+         * clarification). Kept as one block so the persona can't drift apart.
+         */
+        private val COPILOT_STYLE_RULES = """
+            Style for every message you write to the patient:
+            - Lead with the answer or the question itself. No greetings, no "I'd be happy to help", no "Great question", no preamble of any kind.
+            - 1 to 3 short sentences in plain everyday words, the way a friendly front desk person talks. No jargon, no corporate filler, never a wall of text.
+            - Never use an em dash. Use periods and commas instead.
+        """.trimIndent()
+
         /** Shared value-normalization guidance appended to the co-pilot user prompt. */
         private val COPILOT_NORMALIZATION_RULES = """
             Normalize the extracted value to a standard format:
@@ -591,24 +603,36 @@ class IntakeConversationEngine @Inject constructor(
         val lang = languageName(language)
         // NOTE: the target Ollama box does NOT enforce JSON-schema `format` (only
         // `format:"json"`), so THIS PROMPT is the contract — it must spell out the
-        // exact keys. Verified end-to-end that the model returns this shape.
-        return """
-            You are the MedPull Assistant, helping a patient complete a medical intake FORM on a kiosk. You ONLY help complete the form. You MUST NOT give medical advice, diagnoses, treatment, or clinical opinions of any kind. Ground every message strictly in the form's own field label and options — never invent medical information.
-
-            Decide how to handle the patient's answer for the current field:
-            - action="accept" with a normalized value when the answer clearly fits the field (assessment="answered").
-            - action="interrupt" when the patient is confused, asked a question, gave something that doesn't fit, or went off-topic. Provide an intervention: type "clarify"/"rephrase" to restate the SAME question simply; "assist" to explain what the field asks for (still no medical advice); "branch" ONLY when a DIFFERENT existing field should be asked next (set target_question_id and write message AS the next question).
-
-            Return ONLY a JSON object with EXACTLY these keys:
-            - "assessment": one of "answered","invalid","confused","needs_help","off_topic"
-            - "confidence": number 0.0-1.0 (your certainty)
-            - "normalized_answer": the cleaned value as a string ("" if none)
-            - "also_fills": array of {"field_id","value"} for other fields the answer explicitly fills (usually empty [])
-            - "action": "accept" or "interrupt"
-            - "intervention": when action is "interrupt", an object {"type","message","target_question_id"} with message plain, kind, at most 2-3 sentences and written in $lang; otherwise null
-
-            Even inside an intervention, never give medical guidance — for medical questions, gently say staff can help. Output JSON only, no prose.
-        """.trimIndent()
+        // exact keys. Built with buildString (NOT one trimIndent block) because the
+        // interpolated multi-line style constant would defeat trimIndent.
+        return buildString {
+            appendLine("You are the MedPull Assistant, helping a patient fill out a medical intake form on a clinic kiosk, one field at a time. Decide how to handle the patient's answer for the current field.")
+            appendLine()
+            appendLine(COPILOT_STYLE_RULES)
+            appendLine("- Write every patient-facing message in $lang.")
+            appendLine()
+            appendLine("You already know everyday paperwork facts. Answer them directly and confidently: where the SSN sits on a Social Security card, where the license number and the DD field are on a driver's license, member ID versus group number on an insurance card, what a subscriber or policyholder is, how to read a policy number, common insurance card layouts. Do not punt on these.")
+            appendLine("Never tell the patient to ask a staff member, the front desk, a representative, or any other human. That phrasing is banned. If a factual question is genuinely outside what you know, use needs_search below instead of deflecting.")
+            appendLine()
+            appendLine("Decide:")
+            appendLine("- action=\"accept\" with a normalized value when the answer clearly fits the field (assessment=\"answered\").")
+            appendLine("- action=\"interrupt\" when the patient is confused, asked a question, gave something that doesn't fit, or went off-topic. Provide an intervention: type \"clarify\"/\"rephrase\" to restate the SAME question simply; \"assist\" to answer the patient's question or explain what the field asks for; \"branch\" ONLY when a DIFFERENT existing field should be asked next (set target_question_id and write message AS the next question).")
+            appendLine("- When the patient asked a factual question and you are not confident of the answer, set \"needs_search\": true and put a short generic web query in \"search_query\". The query must never contain the patient's name, date of birth, address, phone number, SSN, or any other personal detail. Still write your best short answer in the intervention message in case the lookup fails.")
+            appendLine()
+            appendLine("Safety rule that overrides everything else: you MUST NOT give medical advice, diagnoses, treatment, or clinical opinions of any kind. Never invent clinical information. If the patient asks for medical advice, say you can't advise on that and offer to flag someone at the clinic to follow up. That offer is the only situation where you may mention clinic staff.")
+            appendLine()
+            appendLine("Return ONLY a JSON object with EXACTLY these keys:")
+            appendLine("- \"assessment\": one of \"answered\",\"invalid\",\"confused\",\"needs_help\",\"off_topic\"")
+            appendLine("- \"confidence\": number 0.0-1.0 (your certainty)")
+            appendLine("- \"normalized_answer\": the cleaned value as a string (\"\" if none)")
+            appendLine("- \"also_fills\": array of {\"field_id\",\"value\"} for other fields the answer explicitly fills (usually empty [])")
+            appendLine("- \"action\": \"accept\" or \"interrupt\"")
+            appendLine("- \"intervention\": when action is \"interrupt\", an object {\"type\",\"message\",\"target_question_id\"}; otherwise null")
+            appendLine("- \"needs_search\": true or false (false unless a web lookup is truly needed)")
+            appendLine("- \"search_query\": short query string (\"\" when needs_search is false)")
+            appendLine()
+            append("Output JSON only, no prose.")
+        }
     }
 
     private fun parseCopilotDecision(
@@ -666,10 +690,67 @@ class IntakeConversationEngine @Inject constructor(
                     ?.let { Intervention(InterventionType.CLARIFY, it, null) }
             }
 
-            CopilotDecision(assessment, confidence, normalized, alsoFills, action, intervention)
+            val searchQuery = obj.optString("search_query", "")
+                .takeIf { it.isNotBlank() && it != "null" }
+            val needsSearch = obj.optBoolean("needs_search", false) && searchQuery != null
+
+            CopilotDecision(
+                assessment, confidence, normalized, alsoFills, action, intervention,
+                needsSearch, searchQuery
+            )
         } catch (e: Exception) {
             Log.w(TAG, "Failed to parse CopilotDecision: ${e.message}")
             null
+        }
+    }
+
+    /**
+     * Answer a patient's question from web search results (the needs_search path).
+     * One short Ollama call grounded in the snippets; returns null on any failure
+     * so the caller can fall back to the model's own best answer.
+     */
+    suspend fun answerWithSearchResults(
+        question: String,
+        results: List<com.medpull.kiosk.data.remote.search.SearchResult>,
+        field: FormField,
+        language: String
+    ): String? {
+        val lang = languageName(language)
+        val systemPrompt = buildString {
+            appendLine("You answer a patient's question at a medical intake kiosk using the web search results provided.")
+            appendLine()
+            appendLine(COPILOT_STYLE_RULES)
+            appendLine("- Write the answer in $lang.")
+            appendLine()
+            appendLine("Use only the search results. If they don't actually answer the question, give your best short guidance and say you couldn't confirm it.")
+            appendLine("Never give medical advice, diagnoses, or treatment opinions. Never tell the patient to ask a staff member or any other person.")
+            appendLine()
+            append("Return ONLY JSON: {\"answer\": \"your 1-3 sentence answer\"}")
+        }
+        val userPrompt = buildString {
+            appendLine("Patient's question: \"$question\"")
+            appendLine("They are filling out this form field: ${field.translatedText ?: field.fieldName}")
+            appendLine()
+            appendLine("Search results:")
+            results.take(4).forEachIndexed { i, r ->
+                appendLine("${i + 1}. ${r.title}")
+                if (r.snippet.isNotBlank()) appendLine("   ${r.snippet}")
+            }
+        }
+
+        logAudit("AI_COPILOT_SEARCH_ANSWER", "Field: ${field.id}")
+
+        return when (val resp = ollama.chat(systemPrompt, userPrompt)) {
+            is OllamaResult.Success -> try {
+                val cleaned = resp.content.trim()
+                    .removePrefix("```json").removePrefix("```")
+                    .removeSuffix("```").trim()
+                JSONObject(cleaned).optString("answer", "").trim().ifBlank { null }
+            } catch (e: Exception) {
+                Log.w(TAG, "Search answer unparseable: ${e.message}")
+                null
+            }
+            else -> null
         }
     }
 
@@ -695,6 +776,8 @@ class IntakeConversationEngine @Inject constructor(
     /**
      * Answer a patient's clarifying question about the current field.
      * Called when the patient asks something rather than providing an answer.
+     * Runs on the LOCAL Ollama co-pilot (PHI stays on-device, no xAI credits);
+     * any failure degrades to the deterministic offline answer.
      */
     suspend fun answerClarification(
         question: String,
@@ -702,41 +785,39 @@ class IntakeConversationEngine @Inject constructor(
         language: String
     ): String {
         val languageName = languageName(language)
-        val prompt = buildString {
-            appendLine("A patient at a medical kiosk is asking a clarifying question about an intake form field.")
-            appendLine("Answer their question clearly and reassuringly in $languageName.")
-            appendLine("Keep the answer brief (2-3 sentences max). Use plain language, no jargon.")
+        val systemPrompt = buildString {
+            appendLine("You answer a patient's question about one field of a medical intake form on a clinic kiosk.")
             appendLine()
-            appendLine("Current form field: ${field.fieldName}")
-            if (!field.description.isNullOrBlank()) appendLine("Field context: ${field.description}")
+            appendLine(COPILOT_STYLE_RULES)
+            appendLine("- Write the answer in $languageName.")
             appendLine()
-            appendLine("Patient's question: \"$question\"")
+            appendLine("Answer directly and confidently from your own knowledge of everyday paperwork (insurance cards, IDs, addresses, common forms). Never tell the patient to ask a staff member, the front desk, or any other person.")
+            appendLine("Never give medical advice, diagnoses, or treatment opinions. If asked for medical advice, say you can't advise on that and offer to flag someone at the clinic to follow up.")
             appendLine()
             append("Return JSON only: {\"answer\": \"your brief answer here\"}")
+        }
+        val userPrompt = buildString {
+            appendLine("Current form field: ${field.translatedText ?: field.fieldName}")
+            if (!field.description.isNullOrBlank()) appendLine("Field context: ${field.description}")
+            appendLine()
+            append("Patient's question: \"$question\"")
         }
 
         logAudit("AI_CLARIFICATION", "Field: ${field.id}, Q: $question")
 
-        return when (val resp = apiService.sendMessage(
-            userMessage = prompt,
-            conversationHistory = emptyList(),
-            systemPrompt = "You are a helpful medical assistant. Answer patient questions briefly and kindly. Return valid JSON only.",
-            model = Constants.AI.CONVERSATION_MODEL,
-            maxTokens = 200,
-            preferGroq = true
-        )) {
-            is AiResponse.Success -> {
+        return when (val resp = ollama.chat(systemPrompt, userPrompt)) {
+            is OllamaResult.Success -> {
                 try {
-                    val cleaned = resp.message.trim()
+                    val cleaned = resp.content.trim()
                         .removePrefix("```json").removePrefix("```")
                         .removeSuffix("```").trim()
-                    JSONObject(cleaned).optString("answer", "").ifBlank { resp.message.trim() }
+                    JSONObject(cleaned).optString("answer", "").trim()
+                        .ifBlank { buildOfflineClarification(field) }
                 } catch (e: Exception) {
-                    resp.message.trim().takeIf { it.isNotBlank() }
-                        ?: "Happy to help! This field just needs your ${field.fieldName.lowercase()}."
+                    buildOfflineClarification(field)
                 }
             }
-            is AiResponse.Error -> buildOfflineClarification(field)
+            else -> buildOfflineClarification(field)
         }
     }
 

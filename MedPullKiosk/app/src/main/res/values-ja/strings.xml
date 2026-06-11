@@ -365,18 +365,18 @@
     <string name="err_failed_generate_pdf">PDF を生成できませんでした:%1$s</string>
     <string name="err_process_answer">回答を処理できませんでした。もう一度試してください。</string>
     <string name="err_clarify">それを明確にしていただけますか？</string>
-    <string name="err_try_again">私が正しいことを確認したいのですが、もう一度言ってもらえますか？</string>
-    <string name="validate_name">お名前をうまく聞き取れませんでした。もう一度お名前を教えていただけますか？</string>
+    <string name="err_try_again">正しく聞き取れたか確認させてください。もう一度お願いします。</string>
+    <string name="validate_name">お名前が聞き取れませんでした。もう一度お名前を教えてください。</string>
     <string name="validate_phone">完全な電話番号ではないようです。市外局番を含めて 10 桁すべてをご入力ください。</string>
     <string name="validate_email">有効なメールアドレスではないようです。name@example.com のような形式になります。</string>
     <string name="validate_zip">郵便番号は 5 桁である必要があります。ご確認いただけますか？</string>
     <string name="validate_ssn">社会保障番号は 9 桁である必要があります（XXX-XX-XXXX）。この項目は省略していただいても構いません。</string>
-    <string name="validate_state">有効な米国の州をご入力ください。例：TX または Texas。</string>
-    <string name="validate_date">日付は月、日、年の形式でご入力ください。例：03/14/1985。</string>
-    <string name="validate_number">ここは数字である必要があります。もう一度お試しいただけますか？</string>
+    <string name="validate_state">有効な米国の州を入力してください。例：TX または Texas。</string>
+    <string name="validate_date">日付は月、日、年の順で入力してください。例：03/14/1985。</string>
+    <string name="validate_number">ここは数字を入力してください。もう一度お試しください。</string>
     <string name="require_one_of">ご連絡のため、少なくとも1つが必要です。1つ選んで入力してください：%1$s。</string>
-    <string name="msg_staff_help">問題ありません。スタッフがその部分を手伝ってくれます。続けましょう。</string>
-    <string name="msg_consent_recorded">ありがとうございます。お客様の同意内容が記録されました。</string>
+    <string name="msg_staff_help">この部分はクリニックのスタッフに引き継ぎます。続けましょう。</string>
+    <string name="msg_consent_recorded">ありがとうございます。同意内容を記録しました。</string>
     <string name="err_no_user_logged_in">ログインしているユーザーはいません</string>
     <string name="err_failed_load_forms">フォームを読み込めませんでした:%1$s</string>
     <string name="err_file_too_large">ファイルサイズ (%1$s MB) が最大許容サイズ (%2$s MB) を超えています</string>
@@ -427,5 +427,9 @@
 
     <!-- AI Co-Pilot ("MedPull Assistant") -->
     <string name="assistant_badge_label">MedPull アシスタント</string>
-    <string name="assistant_lead_in">お手伝いします。</string>
+    <string name="assistant_lead_in">アシスタントです。</string>
+    <string name="searching_web">調べています…</string>
+    <string name="address_confirm_q">ご住所は %1$s ですね。よろしいですか？</string>
+    <string name="address_confirm_title">よろしいですか？</string>
+    <string name="address_reask">わかりました。番地と通りの名前だけ教えてください。</string>
 </resources>

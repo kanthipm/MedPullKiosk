@@ -365,18 +365,18 @@
     <string name="err_failed_generate_pdf">生成 PDF 失败：%1$s</string>
     <string name="err_process_answer">无法处理您的答案。请再试一次。</string>
     <string name="err_clarify">你能为我澄清一下吗？</string>
-    <string name="err_try_again">我想确保我说对了——你能再说一遍吗？</string>
-    <string name="validate_name">我这边没有收到名字，能请您再说一遍名字吗？</string>
+    <string name="err_try_again">我想确认一下是否听清了。请再说一遍好吗？</string>
+    <string name="validate_name">我没有听到名字。请再说一次名字。</string>
     <string name="validate_phone">这看起来不是完整的电话号码。请包含区号和全部 10 位数字。</string>
     <string name="validate_email">这看起来不是有效的电子邮箱地址。它应该类似于 name@example.com。</string>
     <string name="validate_zip">邮政编码应为 5 位数字。能麻烦您核对一下吗？</string>
     <string name="validate_ssn">社会安全号码应为 9 位数字（XXX-XX-XXXX）。您也可以跳过这一项。</string>
     <string name="validate_state">请提供有效的美国州名，例如 TX 或 Texas。</string>
     <string name="validate_date">请按月、日、年的格式提供日期，例如 03/14/1985。</string>
-    <string name="validate_number">这里应该是一个数字，能请您再试一次吗？</string>
-    <string name="require_one_of">我们需要其中至少一项以便与您联系——请选择一项并填写：%1$s。</string>
-    <string name="msg_staff_help">没问题——工作人员可以帮忙解决这个问题。让我们继续前进。</string>
-    <string name="msg_consent_recorded">谢谢 — 您的同意选择已记录在案。</string>
+    <string name="validate_number">这里应该是数字。请再试一次。</string>
+    <string name="require_one_of">我们至少需要其中一种联系方式。请选择一项并填写：%1$s。</string>
+    <string name="msg_staff_help">我会请诊所工作人员协助这部分。我们继续。</string>
+    <string name="msg_consent_recorded">谢谢。您的同意选项已记录。</string>
     <string name="err_no_user_logged_in">没有用户登录</string>
     <string name="err_failed_load_forms">无法加载表单：%1$s</string>
     <string name="err_file_too_large">文件大小 (%1$s MB) 超过允许的最大大小 (%2$s MB)</string>
@@ -427,5 +427,9 @@
 
     <!-- AI Co-Pilot ("MedPull Assistant") -->
     <string name="assistant_badge_label">MedPull 助手</string>
-    <string name="assistant_lead_in">让我来帮您：</string>
+    <string name="assistant_lead_in">助手提示。</string>
+    <string name="searching_web">正在查询…</string>
+    <string name="address_confirm_q">您的地址是 %1$s。对吗？</string>
+    <string name="address_confirm_title">对吗？</string>
+    <string name="address_reask">没问题。请只告诉我门牌号和街道名。</string>
 </resources>

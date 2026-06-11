@@ -19,6 +19,8 @@ import com.medpull.kiosk.data.models.InterventionType
 import com.medpull.kiosk.data.local.dao.CopilotAuditDao
 import com.medpull.kiosk.data.local.entities.CopilotAuditEntity
 import com.medpull.kiosk.data.local.entities.PatientCacheEntity
+import com.medpull.kiosk.data.remote.search.SearchOutcome
+import com.medpull.kiosk.data.remote.search.WebSearchClient
 import com.medpull.kiosk.data.repository.AuthRepository
 import com.medpull.kiosk.utils.Constants
 import com.google.gson.Gson
@@ -26,7 +28,9 @@ import com.medpull.kiosk.data.repository.FormRepository
 import com.medpull.kiosk.data.repository.GuidedIntakeRepository
 import com.medpull.kiosk.R
 import com.medpull.kiosk.ui.screens.ai.ChatMessage
+import com.medpull.kiosk.utils.AddressParser
 import com.medpull.kiosk.utils.AppStrings
+import com.medpull.kiosk.utils.DerivedFields
 import com.medpull.kiosk.utils.FieldValidation
 import com.medpull.kiosk.utils.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,6 +66,7 @@ class GuidedIntakeViewModel @Inject constructor(
     private val intakeRepository: GuidedIntakeRepository,
     private val authRepository: AuthRepository,
     private val engine: IntakeConversationEngine,
+    private val searchClient: WebSearchClient,
     private val copilotAuditDao: CopilotAuditDao,
     private val gson: Gson,
     private val localeManager: LocaleManager,
@@ -402,8 +407,13 @@ class GuidedIntakeViewModel @Inject constructor(
         val state = _state.value
         val allSkipped = state.skippedFieldIds + skipDuringIntakeIds
 
+        // Never ask for something derivable from what the patient already gave:
+        // age-style fields are deferred while their sibling DOB is pending —
+        // answering the DOB auto-fills them (see saveFieldAndAdvance). If the DOB
+        // ends up skipped or unusable, the deferred field becomes askable again.
         val next = state.fields.firstOrNull { f ->
-            f.id !in allSkipped && f.value.isNullOrBlank()
+            f.id !in allSkipped && f.value.isNullOrBlank() &&
+                !DerivedFields.isDeferrableAgeField(f, state.fields, allSkipped)
         }
 
         // If the next unanswered field is a consent field, surface the entire consent
@@ -501,7 +511,9 @@ class GuidedIntakeViewModel @Inject constructor(
 
     /** Set [field] as the current target and generate its question via the engine. */
     private fun startAskingField(field: FormField) {
-        _state.update { it.copy(currentAskingField = field, clarificationCount = 0) }
+        _state.update {
+            it.copy(currentAskingField = field, clarificationCount = 0, addressConfirm = null)
+        }
         askCurrentField()
     }
 
@@ -648,6 +660,38 @@ class GuidedIntakeViewModel @Inject constructor(
                     }
                 }
 
+                // Deterministic address smart-fill: when the patient gives more than
+                // the street in one answer (city/state/ZIP, typed or spoken), parse
+                // it locally, fill the sibling fields, and ask ONE "Is this correct?"
+                // confirmation instead of re-collecting each part. No AI involved.
+                if (AddressParser.isStreetField(targetField)) {
+                    val parsed = AddressParser.parse(message)
+                    if (parsed != null) {
+                        val related = AddressParser.findRelated(targetField, state.fields)
+                        val fills = AddressParser.fillsFor(parsed, related)
+                        if (fills.isNotEmpty()) {
+                            val display = AddressParser.displayText(parsed)
+                            _state.update {
+                                it.copy(
+                                    isLoadingResponse = false,
+                                    addressConfirm = AddressConfirmState(
+                                        field = targetField,
+                                        street = parsed.street,
+                                        fills = fills,
+                                        display = display
+                                    ),
+                                    chatMessages = it.chatMessages + ChatMessage(
+                                        text = appStrings.get(R.string.address_confirm_q, display),
+                                        isFromUser = false,
+                                        timestamp = System.currentTimeMillis()
+                                    )
+                                )
+                            }
+                            return@launch
+                        }
+                    }
+                }
+
                 // Co-pilot disabled → plain deterministic accept (kill-switch back to
                 // the predetermined form flow).
                 if (!Constants.AI.COPILOT_ENABLED) {
@@ -766,7 +810,63 @@ class GuidedIntakeViewModel @Inject constructor(
         }
 
         logCopilot(field, rawAnswer, outcome, emptyList())
-        interruptOrEscalate(field, safeMessage, type)
+
+        // Web-lookup fallback: the model flagged a factual question it couldn't
+        // answer from training. Run the lookup (plain HTTP, "Looking that up…"
+        // indicator) and answer from the results; on any failure fall back to
+        // the model's own best message instead of erroring.
+        var message = safeMessage
+        var messageType = type
+        if (Constants.AI.SEARCH_ENABLED && d.needsSearch && !d.searchQuery.isNullOrBlank() &&
+            queryIsPhiFree(d.searchQuery)
+        ) {
+            _state.update { it.copy(isSearching = true) }
+            try {
+                when (val sr = searchClient.search(d.searchQuery)) {
+                    is SearchOutcome.Success -> {
+                        val answered = engine.answerWithSearchResults(
+                            question = rawAnswer,
+                            results = sr.results,
+                            field = field,
+                            language = _state.value.userLanguage
+                        )
+                        // Same safety gate as any other intervention text.
+                        if (!answered.isNullOrBlank() && !engine.looksLikeMedicalAdvice(answered)) {
+                            message = answered
+                            messageType = InterventionType.ASSIST
+                        }
+                    }
+                    is SearchOutcome.Failure ->
+                        Log.i(TAG, "Search unavailable (${sr.reason}) — using model's own answer")
+                }
+            } finally {
+                _state.update { it.copy(isSearching = false) }
+            }
+        }
+
+        interruptOrEscalate(field, message, messageType)
+    }
+
+    /**
+     * Backstop privacy screen for model-composed search queries (the prompt is
+     * the primary rule): drop the lookup if the query echoes any free-text value
+     * the patient has entered, or any 7+ digit run from one (phone/SSN/DOB).
+     * PHI must never leave the device toward a search engine.
+     */
+    private fun queryIsPhiFree(query: String): Boolean {
+        val q = query.lowercase()
+        val qDigits = query.filter { it.isDigit() }
+        val leaked = _state.value.fields.any { f ->
+            if (f.fieldType !in listOf(FieldType.TEXT, FieldType.NUMBER, FieldType.DATE)) return@any false
+            val v = f.value?.trim().orEmpty()
+            if (v.isBlank() || v == "delivered") return@any false
+            val textHit = v.length >= 3 && q.contains(v.lowercase())
+            val vDigits = v.filter { it.isDigit() }
+            val digitHit = vDigits.length >= 7 && qDigits.contains(vDigits)
+            textHit || digitHit
+        }
+        if (leaked) Log.w(TAG, "Search query suppressed: echoes patient-entered data")
+        return !leaked
     }
 
     /** Apply also_fills ONLY when explicitly enabled AND above its own higher bar. */
@@ -974,10 +1074,38 @@ class GuidedIntakeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Patient confirmed the parsed address — save the street and every derived
+     * sibling field in one shot and move on past all of them.
+     */
+    fun confirmPendingAddress() {
+        val pc = _state.value.addressConfirm ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(addressConfirm = null, isLoadingResponse = true) }
+            saveFieldAndAdvance(pc.field, pc.street, pc.fills)
+        }
+    }
+
+    /** Patient said the parsed address is wrong — drop it and re-ask street only. */
+    fun rejectPendingAddress() {
+        if (_state.value.addressConfirm == null) return
+        _state.update {
+            it.copy(
+                addressConfirm = null,
+                isLoadingResponse = false,
+                chatMessages = it.chatMessages + ChatMessage(
+                    text = appStrings.get(R.string.address_reask),
+                    isFromUser = false,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
     /** Mark the form complete immediately so the patient can review what they've filled so far. */
     fun skipToReview() {
         persistPatientCache()
-        _state.update { it.copy(isComplete = true) }
+        _state.update { it.copy(isComplete = true, addressConfirm = null) }
     }
 
     /**
@@ -1062,24 +1190,31 @@ class GuidedIntakeViewModel @Inject constructor(
         value: String,
         alsoFills: List<FieldUpdate>
     ) {
+        // Deterministic derivations (DOB → age / minor status): pure-math fills
+        // that ride along with the save like bonus fills, so persistence, skip
+        // rules, and progress counts all apply uniformly. Derived values win over
+        // AI-proposed fills for the same field.
+        val derived = DerivedFields.updatesFor(field, value, _state.value.fields)
+        val fills = alsoFills.filter { f -> derived.none { it.fieldId == f.fieldId } } + derived
+
         // Persist primary field
         formRepository.updateFieldValue(field.id, value)
         intakeRepository.markFieldsInferred(formId, listOf(field.id))
 
         // Persist bonus fields
-        alsoFills.forEach { bonus -> formRepository.updateFieldValue(bonus.fieldId, bonus.value) }
+        fills.forEach { bonus -> formRepository.updateFieldValue(bonus.fieldId, bonus.value) }
 
         // Update in-memory fields
         val updatedFields = _state.value.fields.map { f ->
             when {
                 f.id == field.id -> f.copy(value = value)
-                else -> alsoFills.find { it.fieldId == f.id }?.let { f.copy(value = it.value) } ?: f
+                else -> fills.find { it.fieldId == f.id }?.let { f.copy(value = it.value) } ?: f
             }
         }
 
         // Compute new skips triggered by this field's value
         val newSkips = computeSkips(field.id, value)
-        val allBonus = alsoFills.flatMap { bonus -> computeSkips(bonus.fieldId, bonus.value).toList() }
+        val allBonus = fills.flatMap { bonus -> computeSkips(bonus.fieldId, bonus.value).toList() }
         val allNewSkips = newSkips + allBonus
 
         val updatedSkipped = _state.value.skippedFieldIds + allNewSkips
@@ -1115,7 +1250,7 @@ class GuidedIntakeViewModel @Inject constructor(
             intakeRepository.markFieldsSkipped(formId, allNewSkips.toList())
         }
 
-        Log.d(TAG, "Saved ${field.id}=$value. Bonus fills: ${alsoFills.size}. New skips: ${allNewSkips.size}")
+        Log.d(TAG, "Saved ${field.id}=$value. Bonus fills: ${fills.size} (${derived.size} derived). New skips: ${allNewSkips.size}")
 
         // Continue to next field
         advanceToNextField()
@@ -1255,6 +1390,8 @@ data class GuidedIntakeState(
     val chatMessages: List<ChatMessage> = emptyList(),
     val isLoading: Boolean = true,
     val isLoadingResponse: Boolean = false,
+    /** True while the co-pilot's web lookup runs — drives the "Looking that up…" indicator. */
+    val isSearching: Boolean = false,
     val error: String? = null,
     val isComplete: Boolean = false,
     val userLanguage: String = "en",
@@ -1264,5 +1401,15 @@ data class GuidedIntakeState(
     /** Non-null when the consent batch UI should be shown instead of chat Q&A. */
     val consentBatchFields: List<FormField>? = null,
     /** Non-null when pre-filled fields from a previous visit need patient confirmation. */
-    val pendingConfirmFields: List<FormField>? = null
+    val pendingConfirmFields: List<FormField>? = null,
+    /** Non-null when a parsed full address is awaiting the patient's single Yes/No confirmation. */
+    val addressConfirm: AddressConfirmState? = null
+)
+
+/** A parsed address waiting for one "Is this correct?" tap. */
+data class AddressConfirmState(
+    val field: FormField,
+    val street: String,
+    val fills: List<FieldUpdate>,
+    val display: String
 )

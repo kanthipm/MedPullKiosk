@@ -165,6 +165,23 @@ object NetworkModule {
         return com.medpull.kiosk.data.remote.ai.OllamaApiService(okHttpClient, gson)
     }
 
+    /**
+     * Web-lookup client for the co-pilot's needs_search fallback. Own OkHttp:
+     * kiosk-tight timeouts (the patient is watching a "looking that up" spinner)
+     * and NO logging interceptor, so queries never land in logcat.
+     */
+    @Provides
+    @Singleton
+    fun provideWebSearchClient(): com.medpull.kiosk.data.remote.search.WebSearchClient {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(Constants.AI.SEARCH_CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(Constants.AI.SEARCH_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+        return com.medpull.kiosk.data.remote.search.DuckDuckGoSearchClient(
+            client, Constants.AI.SEARCH_BASE_URL
+        )
+    }
+
     @Provides
     @Singleton
     fun provideVisionService(

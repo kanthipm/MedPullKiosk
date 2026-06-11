@@ -365,18 +365,18 @@
     <string name="err_failed_generate_pdf">فشل إنشاء ملف PDF: %1$s</string>
     <string name="err_process_answer">تعذّر معالجة إجابتك. يرجى المحاولة مرة أخرى.</string>
     <string name="err_clarify">هل يمكنك توضيح ذلك لي؟</string>
-    <string name="err_try_again">أريد أن أتأكد من أنني فهمت ذلك بشكل صحيح - هل يمكنك قول ذلك مرة أخرى?</string>
-    <string name="validate_name">لم أتمكّن من التقاط الاسم هناك، فهل يمكنك إخباري بالاسم مرة أخرى من فضلك؟</string>
+    <string name="err_try_again">أريد التأكد من أنني فهمت جيدًا. هل يمكنك التكرار؟</string>
+    <string name="validate_name">لم ألتقط اسمًا. هل يمكنك قول الاسم مرة أخرى؟</string>
     <string name="validate_phone">لا يبدو هذا رقم هاتف كاملاً. يُرجى تضمين رمز المنطقة وكل الأرقام العشرة (10).</string>
     <string name="validate_email">لا يبدو هذا عنوان بريد إلكتروني صالحاً. ينبغي أن يكون على هذا الشكل: name@example.com.</string>
     <string name="validate_zip">ينبغي أن يتكوّن الرمز البريدي من 5 أرقام. هل يمكنك التحقق منه من فضلك؟</string>
     <string name="validate_ssn">ينبغي أن يتكوّن رقم الضمان الاجتماعي من 9 أرقام (XXX-XX-XXXX). ويمكنك أيضاً تخطّي هذه الخطوة.</string>
-    <string name="validate_state">يُرجى إدخال ولاية أمريكية صالحة — على سبيل المثال TX أو Texas.</string>
-    <string name="validate_date">يُرجى إدخال التاريخ بصيغة الشهر واليوم والسنة — على سبيل المثال 03/14/1985.</string>
-    <string name="validate_number">ينبغي أن يكون هذا رقماً، فهل يمكنك المحاولة مرة أخرى من فضلك؟</string>
-    <string name="require_one_of">نحتاج إلى واحد على الأقل من هذه للتواصل معك — يرجى اختيار واحد وإدخاله: %1$s.</string>
-    <string name="msg_staff_help">لا توجد مشكلة - يمكن للموظف المساعدة في هذا الجزء. دعونا نستمر.</string>
-    <string name="msg_consent_recorded">شكرًا لك - تم تسجيل اختيارات الموافقة الخاصة بك.</string>
+    <string name="validate_state">يرجى إدخال ولاية أمريكية صحيحة، مثل TX أو Texas.</string>
+    <string name="validate_date">يرجى إدخال التاريخ بصيغة شهر، يوم، سنة، مثل 03/14/1985.</string>
+    <string name="validate_number">يجب أن يكون هذا رقمًا. حاول مرة أخرى.</string>
+    <string name="require_one_of">نحتاج إلى واحدة على الأقل من هذه للتواصل معك. اختر واحدة وأدخلها: %1$s.</string>
+    <string name="msg_staff_help">سأُبلغ أحد موظفي العيادة لمساعدتك في هذا الجزء. لنواصل.</string>
+    <string name="msg_consent_recorded">شكرًا. تم تسجيل موافقاتك.</string>
     <string name="err_no_user_logged_in">لم يقم أي مستخدم بتسجيل الدخول</string>
     <string name="err_failed_load_forms">فشل تحميل النماذج: %1$s</string>
     <string name="err_file_too_large">يتجاوز حجم الملف (%1$s MB) الحد الأقصى للحجم المسموح به (%2$s MB)</string>
@@ -427,5 +427,9 @@
 
     <!-- AI Co-Pilot ("MedPull Assistant") -->
     <string name="assistant_badge_label">مساعد MedPull</string>
-    <string name="assistant_lead_in">دعني أساعدك في ذلك: </string>
+    <string name="assistant_lead_in">المساعد يتحدث. </string>
+    <string name="searching_web">جارٍ البحث…</string>
+    <string name="address_confirm_q">سجلت عنوانك كالتالي: %1$s. هل هذا صحيح؟</string>
+    <string name="address_confirm_title">هل هذا صحيح؟</string>
+    <string name="address_reask">لا مشكلة. ما هو رقم المنزل واسم الشارع فقط؟</string>
 </resources>

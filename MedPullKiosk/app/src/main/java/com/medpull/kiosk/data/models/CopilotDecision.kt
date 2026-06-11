@@ -62,7 +62,12 @@ data class CopilotDecision(
     /** Other fields the answer also fills — GATED + OFF by default at the app layer. */
     val alsoFills: List<FieldUpdate> = emptyList(),
     val action: CopilotAction,
-    val intervention: Intervention? = null
+    val intervention: Intervention? = null,
+    /** Model couldn't answer the patient's question from its own knowledge — the app
+     *  should run a web lookup for [searchQuery] and answer from the results. */
+    val needsSearch: Boolean = false,
+    /** Short, PHI-free web query the app should run when [needsSearch] is true. */
+    val searchQuery: String? = null
 )
 
 /**
@@ -95,4 +100,7 @@ sealed class CopilotOutcome {
  *   also_fills        : [ { field_id, value } ]   (usually empty; gated OFF in app)
  *   action            : "accept" | "interrupt"
  *   intervention      : { type: clarify|rephrase|assist|branch, message, target_question_id } | null
+ *   needs_search      : boolean (true only when the model can't answer a factual
+ *                       question from its own knowledge and wants a web lookup)
+ *   search_query      : string ("" unless needs_search; must contain no patient details)
  */

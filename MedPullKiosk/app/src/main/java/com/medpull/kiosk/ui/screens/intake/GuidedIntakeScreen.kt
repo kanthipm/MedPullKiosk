@@ -35,6 +35,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -66,8 +67,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -88,6 +91,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.max
 import kotlin.math.sin
 
 /**
@@ -202,7 +206,8 @@ fun GuidedIntakeScreen(
             activeField.fieldType != FieldType.MULTI_SELECT)
     val voiceFirstActive = isFreeTextField &&
         currentQuestion != null && !state.isLoadingResponse &&
-        state.consentBatchFields == null && state.pendingConfirmFields == null
+        state.consentBatchFields == null && state.pendingConfirmFields == null &&
+        state.addressConfirm == null
 
     var voicePhase by remember { mutableStateOf(VoicePhase.Idle) }
     var liveTranscript by remember { mutableStateOf("") }
@@ -254,7 +259,9 @@ fun GuidedIntakeScreen(
                 liveTranscript = text
                 finalTranscript = text
                 voicePhase = VoicePhase.Review
-            } else {
+            } else if (voicePhase == VoicePhase.Listening) {
+                // Guard: a late empty result must not stomp the Editing phase
+                // (it would close the keyboard under the patient's fingers).
                 voicePhase = VoicePhase.Prompt
             }
         } else if (text.isNotBlank()) {
@@ -273,11 +280,18 @@ fun GuidedIntakeScreen(
         val transient = error == SpeechRecognizer.ERROR_SERVER_DISCONNECTED ||
             error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
             error == SpeechRecognizer.ERROR_SERVER
-        if (transient && !sttDidRetry && voiceActiveRef.value && finalTranscript.isBlank()) {
+        if (transient && !sttDidRetry && voiceActiveRef.value && finalTranscript.isBlank() &&
+            voicePhase == VoicePhase.Listening
+        ) {
             sttDidRetry = true
             Log.i(TTS_STT_TAG, "Transient recognizer error — retrying once")
             sttRetryToken++
-        } else if (voiceActiveRef.value && finalTranscript.isBlank()) {
+        } else if (voiceActiveRef.value && finalTranscript.isBlank() &&
+            voicePhase == VoicePhase.Listening
+        ) {
+            // Guard: never let a late recognizer error yank the patient out of
+            // the Editing (typing) phase — only a live Listening session falls
+            // back to the tap-to-speak prompt.
             voicePhase = VoicePhase.Prompt
         }
     }
@@ -801,6 +815,20 @@ fun GuidedIntakeScreen(
                     return@Box
                 }
 
+                // Parsed-address confirmation: one Yes/No instead of re-asking
+                // city/state/ZIP one by one. The spoken question (with the full
+                // address) is already in the chat stream for TTS.
+                val addressConfirm = state.addressConfirm
+                if (addressConfirm != null) {
+                    AddressConfirmPanel(
+                        address = addressConfirm.display,
+                        onYes = { viewModel.confirmPendingAddress() },
+                        onNo = { viewModel.rejectPendingAddress() },
+                        modifier = Modifier.fillMaxSize().padding(top = 52.dp)
+                    )
+                    return@Box
+                }
+
                 // Error banner
                 state.error?.let { error ->
                     Surface(
@@ -865,11 +893,23 @@ fun GuidedIntakeScreen(
                 ) {
                     when {
                         state.isLoadingResponse -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(28.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                )
+                                // "Looking that up…" while the co-pilot's web lookup runs,
+                                // so the pause reads as thinking instead of a stall.
+                                if (state.isSearching) {
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(
+                                        text = stringResource(R.string.searching_web),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+                                    )
+                                }
+                            }
                         }
 
                         currentQuestion != null -> {
@@ -908,14 +948,13 @@ fun GuidedIntakeScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Spacer(Modifier.height(40.dp))
-                                        Text(
+                                        BoundedQuestionText(
                                             text = displayText,
-                                            style = MaterialTheme.typography.displayMedium.copy(
-                                                fontWeight = FontWeight.SemiBold,
-                                                lineHeight = 56.sp
+                                            baseStyle = MaterialTheme.typography.displayMedium.copy(
+                                                fontWeight = FontWeight.SemiBold
                                             ),
-                                            color = MaterialTheme.colorScheme.onSurface,
                                             textAlign = TextAlign.Center,
+                                            maxHeightFraction = 0.34f,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                         Spacer(Modifier.height(36.dp))
@@ -937,15 +976,17 @@ fun GuidedIntakeScreen(
                                     }
                                 } else {
                                     // Question text, shared by every inline answer type.
+                                    // Bounded + scrollable so a long AI message can't push
+                                    // the input or the anchored OK bar off-screen.
                                     val questionHeader = @Composable {
-                                        Text(
+                                        BoundedQuestionText(
                                             text = displayText,
-                                            style = MaterialTheme.typography.headlineMedium.copy(
+                                            baseStyle = MaterialTheme.typography.headlineMedium.copy(
                                                 fontWeight = FontWeight.Normal,
-                                                fontSize = 34.sp,
-                                                lineHeight = 44.sp
+                                                fontSize = 34.sp
                                             ),
-                                            color = MaterialTheme.colorScheme.onSurface
+                                            maxHeightFraction = 0.32f,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     }
 
@@ -1424,6 +1465,54 @@ private fun TypeformTextInput(
     )
 }
 
+// ─── Bounded question text (layout safeguard) ─────────────────────────────────
+
+/**
+ * Question / AI-response text inside a bounded, scrollable box so long content
+ * can NEVER grow the page and push the primary action (Continue / OK / Accept)
+ * off-screen. Long text first steps the font down to a readable floor; anything
+ * still too tall scrolls INSIDE the box while the layout around it stays put.
+ *
+ * The shrink tiers are deterministic (by length), avoiding measure-feedback
+ * loops; the model-side conciseness rules make long text rare, this is the
+ * hard guarantee.
+ */
+@Composable
+private fun BoundedQuestionText(
+    text: String,
+    baseStyle: TextStyle,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    textAlign: TextAlign? = null,
+    maxHeightFraction: Float = 0.38f
+) {
+    val maxHeight = (LocalConfiguration.current.screenHeightDp * maxHeightFraction).dp
+    val scale = when {
+        text.length <= 120 -> 1f
+        text.length <= 240 -> 0.8f
+        text.length <= 420 -> 0.65f
+        else -> 0.55f
+    }
+    val floorSp = 22f
+    val fontSize = max(baseStyle.fontSize.value * scale, floorSp).sp
+    val lineHeight = (fontSize.value * 1.3f).sp
+    // Fresh scroll state per text so a new question always starts at the top.
+    val scroll = remember(text) { ScrollState(0) }
+    Box(
+        modifier = modifier
+            .heightIn(max = maxHeight)
+            .verticalScroll(scroll)
+    ) {
+        Text(
+            text = text,
+            style = baseStyle.copy(fontSize = fontSize, lineHeight = lineHeight),
+            color = color,
+            textAlign = textAlign,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
 // ─── Voice-first question (sliding fee) ───────────────────────────────────────
 
 /**
@@ -1493,14 +1582,15 @@ private fun VoiceFirstQuestion(
             // Bias the question block slightly above vertical center
             Spacer(Modifier.weight(0.85f))
 
-            Text(
+            // Bounded + scrollable so a long AI message can never push the
+            // Accept/Re-record/Edit row or the Type button off-screen.
+            BoundedQuestionText(
                 text = questionText,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 56.sp
+                baseStyle = MaterialTheme.typography.displayMedium.copy(
+                    fontWeight = FontWeight.SemiBold
                 ),
-                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
+                maxHeightFraction = 0.34f,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -1565,14 +1655,16 @@ private fun VoiceFirstQuestion(
                 else -> {
                     val transcript = if (phase == VoicePhase.Review) finalTranscript else liveTranscript
                     if (transcript.isNotBlank()) {
-                        Text(
+                        // Bounded too: a long spoken answer must not push the
+                        // confirmation buttons below the fold.
+                        BoundedQuestionText(
                             text = transcript,
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Medium,
-                                lineHeight = 40.sp
+                            baseStyle = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Medium
                             ),
                             color = blue,
                             textAlign = TextAlign.Center,
+                            maxHeightFraction = 0.2f,
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
@@ -1769,14 +1861,13 @@ private fun VoiceTypeLayout(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(40.dp))
-        Text(
+        BoundedQuestionText(
             text = questionText,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.SemiBold,
-                lineHeight = 40.sp
+            baseStyle = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.SemiBold
             ),
-            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
+            maxHeightFraction = 0.28f,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(32.dp))
@@ -1997,6 +2088,79 @@ private fun BigMultiSelect(
         // Submit (Continue / None) lives in the always-visible bottom bar so the
         // patient is never stranded below this scrollable option list.
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+// ─── Address confirm panel ────────────────────────────────────────────────────
+
+/**
+ * Single Yes/No confirmation for a deterministically parsed address. Replaces
+ * the separate city / state / ZIP questions when the patient gave the whole
+ * address in one answer.
+ */
+@Composable
+private fun AddressConfirmPanel(
+    address: String,
+    onYes: () -> Unit,
+    onNo: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.weight(0.9f))
+        Text(
+            text = stringResource(R.string.address_confirm_title),
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(28.dp))
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            BoundedQuestionText(
+                text = address,
+                baseStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                maxHeightFraction = 0.3f,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp)
+            )
+        }
+        Spacer(Modifier.height(36.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedButton(
+                onClick = onNo,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 80.dp)
+            ) {
+                Icon(Icons.Default.Close, null, modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.no), style = MaterialTheme.typography.headlineSmall)
+            }
+            Button(
+                onClick = onYes,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 80.dp)
+            ) {
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    stringResource(R.string.yes),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+        Spacer(Modifier.weight(1.1f))
     }
 }
 

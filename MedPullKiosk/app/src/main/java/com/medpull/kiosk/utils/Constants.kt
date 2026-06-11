@@ -146,6 +146,15 @@ object Constants {
         const val COPILOT_NUM_PREDICT = 300
         const val COPILOT_TEMPERATURE = 0.1
         const val COPILOT_AUDIO_CUE_ENABLED = true               // brief tone before a spoken assistant intervention
+
+        // ─── Web-search fallback (co-pilot needs_search) ────────────────────
+        // Provider-agnostic: the client interface is swappable; the default is
+        // DuckDuckGo's HTML endpoint via one plain HTTP GET (headless-safe, no
+        // browser). Endpoint comes from local.properties → BuildConfig.
+        const val SEARCH_ENABLED = true
+        const val SEARCH_BASE_URL = BuildConfig.SEARCH_BASE_URL
+        const val SEARCH_CONNECT_TIMEOUT_SECONDS = 4L
+        const val SEARCH_READ_TIMEOUT_SECONDS = 8L
     }
 
     // Audit Logging

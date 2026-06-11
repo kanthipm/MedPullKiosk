@@ -31,13 +31,13 @@ object FieldValidation {
      */
     data class Result(val ok: Boolean, val normalized: String, val hintRes: Int? = null)
 
-    private val US_STATES = setOf(
+    internal val US_STATES = setOf(
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN",
         "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV",
         "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN",
         "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC", "PR", "VI", "GU", "AS", "MP"
     )
-    private val STATE_NAME_TO_CODE = mapOf(
+    internal val STATE_NAME_TO_CODE = mapOf(
         "alabama" to "AL", "alaska" to "AK", "arizona" to "AZ", "arkansas" to "AR",
         "california" to "CA", "colorado" to "CO", "connecticut" to "CT", "delaware" to "DE",
         "florida" to "FL", "georgia" to "GA", "hawaii" to "HI", "idaho" to "ID",
