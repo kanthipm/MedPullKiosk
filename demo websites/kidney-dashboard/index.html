@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MedPull — Kidney Care Dashboard</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand">Med<span>Pull</span> Kidney</div>
+      <div class="nav-tabs">
+        <div class="tab active" data-tab="labs">Lab-Driven Schedule</div>
+        <div class="tab" data-tab="chairs">Chair Utilization</div>
+        <div class="tab" data-tab="billing">Billing &amp; CRM</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="date-badge" id="dateBadge">SNF Morning Labs</span>
+    </div>
+  </div>
+
+  <!-- TAB 1: Lab-driven scheduling -->
+  <div class="screen active" id="tab-labs">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Patients reviewed</div>
+        <div class="stat-val">18</div>
+        <div class="stat-sub">Today's SNF labs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Shift to 2×/week</div>
+        <div class="stat-val" style="color:#22c55e">6</div>
+        <div class="stat-delta delta-up">↑ 3 from last week</div>
+        <div class="stat-sub" id="applyProgress"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Remain 3×/week</div>
+        <div class="stat-val">10</div>
+        <div class="stat-sub">Standard schedule</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending review</div>
+        <div class="stat-val" style="color:#f59e0b" id="statPending">2</div>
+        <div class="stat-sub">Nephrologist sign-off</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-title">Patient lab results — scheduling recommendation</div>
+        <div class="card-header-sub">Based on incremental dialysis criteria (Daugirdas 2024)</div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Kt/V (latest)</th>
+              <th>BUN</th>
+              <th>Residual kidney fn</th>
+              <th>Current schedule</th>
+              <th>Recommendation</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="patientRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="action-btn action-btn-primary" data-tab-go="chairs">View freed chairs →</button>
+      <button class="action-btn" id="exportSchedule">Export schedule changes</button>
+    </div>
+  </div>
+
+  <!-- TAB 2: Chair utilization -->
+  <div class="screen" id="tab-chairs">
+    <div class="cta-strip">
+      <div>
+        <div class="cta-text" id="ctaText">6 patients shifting to 2×/week this cycle</div>
+        <div class="cta-sub" id="ctaSub">Estimated 12 chair-sessions freed per week → available for new referrals or extended hours</div>
+      </div>
+      <button class="cta-btn" data-tab-go="billing">View billing impact →</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total chairs</div>
+        <div class="stat-val">20</div>
+        <div class="stat-sub">Facility capacity</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Currently occupied</div>
+        <div class="stat-val">18</div>
+        <div class="stat-sub">Before this cycle</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Freed this week</div>
+        <div class="stat-val" style="color:#22c55e" id="statFreed">+6</div>
+        <div class="stat-sub">Sessions available</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Utilization after</div>
+        <div class="stat-val" style="color:#0ea5e9" id="statUtil">84%</div>
+        <div class="stat-delta delta-dn" id="statUtilDelta">↓ from 90%</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-title">Weekly schedule — this cycle</div>
+        <div class="card-header-sub">Green = 2×/week · Blue = 3×/week · Yellow = freed slot</div>
+      </div>
+      <div class="grid-pad">
+        <div class="week-grid" id="weekGrid"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="action-btn action-btn-primary" data-tab-go="billing">View billing impact →</button>
+      <button class="action-btn" id="sendSnf">Send schedule to SNF</button>
+    </div>
+  </div>
+
+  <!-- TAB 3: Billing + CRM -->
+  <div class="screen" id="tab-billing">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Monthly revenue</div>
+        <div class="stat-val">$84,200</div>
+        <div class="stat-delta delta-up">↑ On track</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">New chair capacity</div>
+        <div class="stat-val" style="color:#0ea5e9" id="statCapacity">+6</div>
+        <div class="stat-sub">Sessions/week freed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Est. new revenue</div>
+        <div class="stat-val" style="color:#22c55e" id="statNewRev">+$3,240</div>
+        <div class="stat-sub">If slots filled (3×/wk)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Referral pipeline</div>
+        <div class="stat-val" style="color:#f59e0b" id="statPipeline">4</div>
+        <div class="stat-sub">Nephrologists to contact</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-title">CRM — nephrologist outreach queue</div>
+        <div class="card-header-sub">Freed capacity → new referral opportunity</div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Nephrologist</th><th>Practice</th><th>Est. patients</th><th>Last contact</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="crmRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-header-title">Billing codes — this cycle</div></div>
+      <div class="billing-pad">
+        <div class="billing-row">
+          <div><div class="billing-label">Hemodialysis, composite rate (3×/wk patients)</div><div class="billing-code">CPT 90960</div></div>
+          <div class="billing-amt">$540 / session</div>
+        </div>
+        <div class="billing-row">
+          <div><div class="billing-label">Hemodialysis, composite rate (2×/wk patients)</div><div class="billing-code">CPT 90961</div></div>
+          <div class="billing-amt">$480 / session</div>
+        </div>
+        <div class="billing-row">
+          <div><div class="billing-label">Nephrologist visit — SNF (attending)</div><div class="billing-code">CPT 99307–99310</div></div>
+          <div class="billing-amt">$120–$210 / visit</div>
+        </div>
+        <div class="billing-row">
+          <div><div class="billing-label">Vascular access management</div><div class="billing-code">CPT 36147</div></div>
+          <div class="billing-amt">$190 / procedure</div>
+        </div>
+        <div class="billing-row last">
+          <div><div class="billing-label total">Net impact — freed chairs filled (est.)</div><div class="billing-sub" id="netFormula">6 sessions × $480 avg × 4 weeks</div></div>
+          <div class="billing-amt net" id="netImpact">+$11,520 / mo</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="action-btn action-btn-primary" id="exportBilling">Export billing report</button>
+      <button class="action-btn" data-tab-go="labs">← Back to labs</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-x" id="modalX">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

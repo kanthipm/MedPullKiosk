@@ -1,0 +1,10 @@
+{
+  "name": "medpull-kidney-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MedPull — Kidney Care Dashboard demo (zero dependencies)",
+  "scripts": {
+    "dev": "node serve.js",
+    "start": "node serve.js"
+  }
+}
