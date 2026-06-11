@@ -946,7 +946,16 @@ class GuidedIntakeViewModel @Inject constructor(
             return
         }
         val validation = FieldValidation.validate(field, trimmed)
-        saveFieldAndAdvance(field, if (validation.ok) validation.normalized else trimmed, emptyList())
+        if (!validation.ok) {
+            // Even with no AI, a format-invalid answer (bad date/phone/ZIP/state…)
+            // must not land in the form. Re-ask with the deterministic hint;
+            // repeated misses escalate to the staff flag as usual.
+            val hint = validation.hintRes?.let { appStrings.get(it) }
+                ?: appStrings.get(R.string.err_try_again)
+            reAskOrEscalate(field, hint)
+            return
+        }
+        saveFieldAndAdvance(field, validation.normalized, emptyList())
     }
 
     /** Re-ask one of a require_one_of group (mirrors the forced-decline path). */

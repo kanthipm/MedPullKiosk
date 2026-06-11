@@ -586,6 +586,7 @@ class IntakeConversationEngine @Inject constructor(
         return when (val resp = ollama.chat(systemPrompt, userPrompt)) {
             is OllamaResult.Success -> {
                 val decision = parseCopilotDecision(resp.content, field, allFields)
+                    ?: salvageProseDecision(resp.content)
                 val latency = System.currentTimeMillis() - started
                 if (decision != null) CopilotOutcome.Decided(decision, latency)
                 else CopilotOutcome.ModelUnavailable("unparseable: ${resp.content.take(160)}", latency)
@@ -601,25 +602,16 @@ class IntakeConversationEngine @Inject constructor(
 
     private fun buildCopilotSystemPrompt(language: String): String {
         val lang = languageName(language)
-        // NOTE: the target Ollama box does NOT enforce JSON-schema `format` (only
-        // `format:"json"`), so THIS PROMPT is the contract — it must spell out the
-        // exact keys. Built with buildString (NOT one trimIndent block) because the
-        // interpolated multi-line style constant would defeat trimIndent.
+        // NOTE: the target Ollama box does NOT reliably enforce `format` — even
+        // `format:"json"` has returned plain prose — so THIS PROMPT is the
+        // contract. Structure matters for the 9B model: the JSON contract comes
+        // FIRST and the persona/style rules are explicitly scoped to the
+        // intervention "message" field; leading with patient-facing style rules
+        // made the model answer the patient in prose instead of emitting JSON
+        // (verified against qwen3.5:9b on the box; this ordering returns clean
+        // JSON for accept / clarify / assist / needs_search cases).
         return buildString {
-            appendLine("You are the MedPull Assistant, helping a patient fill out a medical intake form on a clinic kiosk, one field at a time. Decide how to handle the patient's answer for the current field.")
-            appendLine()
-            appendLine(COPILOT_STYLE_RULES)
-            appendLine("- Write every patient-facing message in $lang.")
-            appendLine()
-            appendLine("You already know everyday paperwork facts. Answer them directly and confidently: where the SSN sits on a Social Security card, where the license number and the DD field are on a driver's license, member ID versus group number on an insurance card, what a subscriber or policyholder is, how to read a policy number, common insurance card layouts. Do not punt on these.")
-            appendLine("Never tell the patient to ask a staff member, the front desk, a representative, or any other human. That phrasing is banned. If a factual question is genuinely outside what you know, use needs_search below instead of deflecting.")
-            appendLine()
-            appendLine("Decide:")
-            appendLine("- action=\"accept\" with a normalized value when the answer clearly fits the field (assessment=\"answered\").")
-            appendLine("- action=\"interrupt\" when the patient is confused, asked a question, gave something that doesn't fit, or went off-topic. Provide an intervention: type \"clarify\"/\"rephrase\" to restate the SAME question simply; \"assist\" to answer the patient's question or explain what the field asks for; \"branch\" ONLY when a DIFFERENT existing field should be asked next (set target_question_id and write message AS the next question).")
-            appendLine("- When the patient asked a factual question and you are not confident of the answer, set \"needs_search\": true and put a short generic web query in \"search_query\". The query must never contain the patient's name, date of birth, address, phone number, SSN, or any other personal detail. Still write your best short answer in the intervention message in case the lookup fails.")
-            appendLine()
-            appendLine("Safety rule that overrides everything else: you MUST NOT give medical advice, diagnoses, treatment, or clinical opinions of any kind. Never invent clinical information. If the patient asks for medical advice, say you can't advise on that and offer to flag someone at the clinic to follow up. That offer is the only situation where you may mention clinic staff.")
+            appendLine("You are the MedPull Assistant decision engine for a medical intake form on a clinic kiosk. You are a classifier. You read the patient's answer for the current field and return ONLY a JSON decision object. Never reply to the patient directly. Every patient-facing sentence goes inside the JSON \"intervention\" message field.")
             appendLine()
             appendLine("Return ONLY a JSON object with EXACTLY these keys:")
             appendLine("- \"assessment\": one of \"answered\",\"invalid\",\"confused\",\"needs_help\",\"off_topic\"")
@@ -631,7 +623,21 @@ class IntakeConversationEngine @Inject constructor(
             appendLine("- \"needs_search\": true or false (false unless a web lookup is truly needed)")
             appendLine("- \"search_query\": short query string (\"\" when needs_search is false)")
             appendLine()
-            append("Output JSON only, no prose.")
+            appendLine("Decision rules:")
+            appendLine("- action=\"accept\" with a normalized value when the answer clearly fits the field (assessment=\"answered\").")
+            appendLine("- action=\"interrupt\" when the patient is confused, asked a question, gave something that doesn't fit the field, or went off-topic. Provide an intervention: type \"clarify\"/\"rephrase\" to restate the SAME question simply; \"assist\" to answer the patient's question or explain what the field asks for; \"branch\" ONLY when a DIFFERENT existing field should be asked next (set target_question_id and write message AS the next question).")
+            appendLine("- You already know everyday paperwork facts: where the SSN sits on a Social Security card, where the license number and the DD field are on a driver's license, member ID versus group number on an insurance card, what a subscriber or policyholder is. Answer these directly and confidently in the intervention message. Do not punt.")
+            appendLine("- Never tell the patient to ask a staff member, the front desk, a representative, or any other human. That phrasing is banned. When a factual question is genuinely outside what you know, set \"needs_search\": true and put a short generic web query in \"search_query\" (never include the patient's name, date of birth, address, phone, SSN, or any personal detail). Still write your best short answer in the intervention message.")
+            appendLine()
+            appendLine("Style for the intervention \"message\" text:")
+            appendLine("- Lead with the answer or the question itself. No greetings, no \"I'd be happy to help\", no preamble.")
+            appendLine("- 1 to 3 short sentences in plain everyday words, like a friendly front desk person. No jargon.")
+            appendLine("- Never use an em dash. Use periods and commas instead.")
+            appendLine("- Write it in $lang.")
+            appendLine()
+            appendLine("Safety rule that overrides everything else: never give medical advice, diagnoses, treatment, or clinical opinions. If the patient asks for medical advice, the intervention message says you can't advise on that and offers to flag someone at the clinic to follow up. That is the only allowed mention of clinic staff.")
+            appendLine()
+            append("Output ONLY the JSON object. No prose outside JSON.")
         }
     }
 
@@ -702,6 +708,32 @@ class IntakeConversationEngine @Inject constructor(
             Log.w(TAG, "Failed to parse CopilotDecision: ${e.message}")
             null
         }
+    }
+
+    /**
+     * The box doesn't reliably enforce `format:"json"` — the model occasionally
+     * answers the patient in plain prose instead of emitting the decision object.
+     * That prose is usually a perfectly good patient-facing reply, so wrap it as
+     * a LOW-CONFIDENCE clarify intervention (a safe re-ask in the model's own
+     * words) rather than discarding it and falling into the accept-on-valid path.
+     * The message still passes through the medical-advice screen downstream.
+     */
+    private fun salvageProseDecision(raw: String): CopilotDecision? {
+        val text = raw.trim()
+            .removePrefix("```json").removePrefix("```")
+            .removeSuffix("```").trim()
+        if (text.isBlank() || text.length > 400) return null
+        // Malformed JSON is not prose — let it fall through to ModelUnavailable.
+        if (text.startsWith("{") || text.startsWith("[")) return null
+        Log.i(TAG, "Co-pilot returned prose instead of JSON — salvaging as clarify intervention")
+        return CopilotDecision(
+            assessment = Assessment.NEEDS_HELP,
+            confidence = 0.5f,
+            normalizedAnswer = null,
+            alsoFills = emptyList(),
+            action = CopilotAction.INTERRUPT,
+            intervention = Intervention(InterventionType.CLARIFY, text, null)
+        )
     }
 
     /**
