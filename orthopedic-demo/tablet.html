@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MedPull Recovery Copilot — Clinician Tablet</title>
+<link rel="stylesheet" href="assets/styles.css">
+<!-- shared toolkit — load order per SPEC §4 -->
+<script src="assets/charts.js"></script><script src="assets/data.js"></script><script src="assets/bus.js"></script><script src="assets/ui.js"></script>
+<style>
+/* -------------------------------------------------------------------------
+   tablet.html — page-scoped chrome only. All content re-uses the shared
+   components in styles.css (.triage-row / .rpill / .confchip / .mon-banner /
+   .quick-sum / .report-card / .profile-card / .quick-actions / .qa-btn /
+   .backbtn / .card / .bubble …) and the UI.* / Charts.* renderers.
+------------------------------------------------------------------------- */
+.device.tablet .screenframe{background:linear-gradient(180deg,#f3f5fc,#eef1f8);}
+
+/* top clinic/clinician header bar */
+.tab-head{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:6px 24px 12px;
+ background:linear-gradient(180deg,#ffffff,rgba(255,255,255,.55));border-bottom:1px solid rgba(15,24,48,.05);z-index:20;}
+.tab-brand{display:flex;align-items:center;gap:11px;min-width:0;}
+.tab-logo{width:40px;height:40px;border-radius:13px;flex:0 0 40px;display:flex;align-items:center;justify-content:center;color:#fff;
+ background:linear-gradient(135deg,var(--oxy),#56ccf2);box-shadow:0 6px 16px rgba(47,128,237,.32);}
+.tab-brand h1{margin:0;font-size:17px;letter-spacing:-.02em;line-height:1.1;}
+.tab-brand p{margin:1px 0 0;font-size:11.5px;font-weight:700;color:var(--muted);}
+.tab-head .spacer{flex:1 1 auto;}
+.otg{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;
+ padding:6px 11px;border-radius:999px;background:#e8f1ff;color:#2f6fed;}
+.otg::before{content:"";width:7px;height:7px;border-radius:50%;background:#2f6fed;box-shadow:0 0 0 3px rgba(47,111,237,.18);}
+.tab-clin{display:flex;align-items:center;gap:9px;padding:6px 12px 6px 6px;border-radius:14px;background:#fff;border:1px solid var(--line);box-shadow:0 6px 16px rgba(20,30,60,.05);}
+.tab-clin .av{width:30px;height:30px;border-radius:50%;flex:0 0 30px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:12px;background:linear-gradient(135deg,#7c9cff,#6c5ce7);}
+.tab-clin b{font-size:12.5px;letter-spacing:-.01em;}
+.tab-clin span{display:block;font-size:10.5px;font-weight:700;color:var(--muted);}
+
+/* scroll region + view switching */
+.tab-scroll{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative;}
+.tab-scroll::-webkit-scrollbar{width:9px}
+.tab-scroll::-webkit-scrollbar-thumb{background:rgba(120,132,158,.32);border-radius:9px;border:2px solid transparent;background-clip:padding-box}
+.view{display:none;}
+.view.active{display:block;animation:vfade .28s ease;}         /* opacity-only: keeps sticky working */
+@keyframes vfade{from{opacity:0}to{opacity:1}}
+
+/* triage list */
+.list-wrap{padding:16px 20px 30px;}
+.roster-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:2px 2px 13px;flex-wrap:wrap;}
+.roster-head h2{margin:0;font-size:20px;letter-spacing:-.02em;}
+.roster-head .rh-sub{margin:2px 0 0;font-size:12px;font-weight:700;color:var(--muted);}
+.roster-legend{display:flex;gap:7px;flex-wrap:wrap;transform:scale(.92);transform-origin:right bottom;}
+.tap-hint{font-size:11px;font-weight:700;color:#9aa3b8;text-align:center;margin-top:14px;}
+
+/* detail view — pinned summary + actions, then scrollable record */
+.det-pin{position:sticky;top:0;z-index:14;padding:12px 20px 10px;
+ background:linear-gradient(180deg,#f4f6fc 80%,rgba(244,246,252,.72));
+ backdrop-filter:saturate(1.2) blur(7px);-webkit-backdrop-filter:saturate(1.2) blur(7px);
+ box-shadow:0 10px 20px -14px rgba(20,30,60,.3);}
+.det-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px;}
+.det-pin .quick-sum{position:static;top:auto;margin-bottom:11px;box-shadow:0 10px 24px rgba(20,30,60,.08);}
+.det-pin .mon-banner{margin-bottom:11px;}
+.det-pin .quick-actions{margin-bottom:2px;}
+.det-body{padding:12px 20px 34px;}
+.det-body .section-cap{font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:#9aa3b8;margin:18px 4px 10px;}
+.det-body .section-cap:first-child{margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="pagehint">Clinician tablet · on the go — tap a patient to open their record</div>
+
+<div class="device tablet" role="application" aria-label="MedPull clinician tablet">
+ <div class="screenframe">
+
+  <!-- status bar (house style) -->
+  <div class="statusbar">
+   <span>9:41</span>
+   <div class="r">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="1" fill="#0f1830"/><rect x="5" y="4" width="3" height="8" rx="1" fill="#0f1830"/><rect x="10" y="2" width="3" height="10" rx="1" fill="#0f1830"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#0f1830"/></svg>
+    <svg width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 11.5 0.6 3.6a11 11 0 0 1 15.8 0z" fill="none" stroke="#0f1830" stroke-width="1.6"/><circle cx="8.5" cy="10" r="1.3" fill="#0f1830"/></svg>
+    <svg width="26" height="13" viewBox="0 0 26 13"><rect x="1" y="1" width="21" height="11" rx="3.2" fill="none" stroke="#0f1830" stroke-opacity=".5"/><rect x="3" y="3" width="15" height="7" rx="1.6" fill="#0f1830"/><rect x="23" y="4" width="2" height="5" rx="1" fill="#0f1830" fill-opacity=".5"/></svg>
+   </div>
+  </div>
+
+  <!-- clinic / clinician header -->
+  <header class="tab-head">
+   <div class="tab-brand">
+    <div class="tab-logo" aria-hidden="true">
+     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12h3l2-5 3 10 2.5-7 1.5 2H21" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+     <h1>Recovery Copilot</h1>
+     <p>Orthopedic RTM · triage board</p>
+    </div>
+   </div>
+   <div class="spacer"></div>
+   <span class="otg">On the go</span>
+   <div class="tab-clin">
+    <span class="av">AL</span>
+    <div><b>Dr. Alvarez</b><span>Orthopedic surgery</span></div>
+   </div>
+  </header>
+
+  <!-- scroll region: list + detail views -->
+  <div class="tab-scroll" id="tabScroll">
+
+   <!-- ============================ LIST VIEW ============================ -->
+   <section id="listView" class="view active" aria-label="Patient triage list">
+    <div class="list-wrap">
+     <div class="roster-head">
+      <div>
+       <h2>Triage</h2>
+       <p class="rh-sub" id="rosterCount"></p>
+      </div>
+      <div class="roster-legend" id="legend"></div>
+     </div>
+     <div id="listBody"></div>
+     <p class="tap-hint">Sorted highest-risk first · tap any patient for their pinned summary and full record.</p>
+    </div>
+   </section>
+
+   <!-- ============================ DETAIL VIEW ============================ -->
+   <section id="detailView" class="view" aria-label="Patient detail">
+    <div class="det-pin" id="detPin"></div>
+    <div class="det-body" id="detBody"></div>
+   </section>
+
+  </div><!-- /.tab-scroll -->
+ </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var esc = (window.Charts && Charts.esc) ? Charts.esc : function (s) { return String(s == null ? '' : s); };
+
+  /* ---- element refs ------------------------------------------------------ */
+  var scroll     = document.getElementById('tabScroll');
+  var listView   = document.getElementById('listView');
+  var detailView = document.getElementById('detailView');
+  var listBody   = document.getElementById('listBody');
+  var detPin     = document.getElementById('detPin');
+  var detBody    = document.getElementById('detBody');
+
+  /* ---- mutable triage order (RISK_ESCALATE can re-sort) ------------------ */
+  var order = MP.PATIENTS.map(function (p) { return p.id; });
+  var currentId = null;
+
+  function getP(id) { return MP.getPatient(id); }
+
+  /* ---- action-bar icons (crisp inline SVG, no emoji) --------------------- */
+  var ICON = {
+    message:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5.5h16v10H9.5L5 19v-3.5H4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    assign:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="17" rx="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M9 3.4h6v3H9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.4 13l2.5 2.5 4.7-5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    nurse:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 4 21 19.2H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1.05" fill="currentColor"/></svg>',
+    followup: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M4 9.2h16M8 3.6v3M16 3.6v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.8 14l2 2 4.4-4.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  };
+
+  function qaBtn(action, icon, label, danger) {
+    return '<button class="qa-btn' + (danger ? ' danger' : '') + '" type="button" data-action="' + action + '">' +
+      icon + '<span>' + label + '</span></button>';
+  }
+  function quickActions() {
+    return '<div class="quick-actions glass">' +
+      qaBtn('message',  ICON.message,  'Message patient', false) +
+      qaBtn('assign',   ICON.assign,   'Assign tasks',    false) +
+      qaBtn('nurse',    ICON.nurse,    'Escalate · nurse triage', true) +
+      qaBtn('followup', ICON.followup, 'Bring follow-up forward', false) +
+      '</div>';
+  }
+
+  /* ---- profiles ordered flags-first for the "on the go" glance ---------- */
+  var STAT_RANK = { flag: 0, watch: 1, nodata: 1.4, ok: 2 };
+  function orderedProfiles(p) {
+    var metrics = p.metrics || [];
+    return MP.PROFILES
+      .filter(function (pr) { return metrics.some(function (m) { return m.profileId === pr.id; }); })
+      .map(function (pr) {
+        var rank = 2.5;
+        metrics.forEach(function (m) {
+          if (m.profileId === pr.id) { var r = STAT_RANK[m.status]; if (r != null && r < rank) rank = r; }
+        });
+        return { pr: pr, rank: rank };
+      })
+      .sort(function (a, b) { return a.rank - b.rank; })
+      .map(function (o) { return o.pr; });
+  }
+
+  /* ---- renderers --------------------------------------------------------- */
+  function renderList() {
+    listBody.innerHTML = order.map(function (id) { return UI.triageRow(getP(id)); }).join('');
+    document.getElementById('rosterCount').textContent =
+      order.length + ' patients · sorted High → Needs attention → Missing data → Stable';
+  }
+
+  function renderLegend() {
+    document.getElementById('legend').innerHTML =
+      ['high', 'medium', 'missing', 'low'].map(function (k) { return UI.riskPill(k); }).join('');
+  }
+
+  function renderDetail(p) {
+    detPin.innerHTML =
+      '<div class="det-top">' +
+        '<button class="backbtn" type="button" data-back>&lsaquo; Triage list</button>' +
+        UI.riskPill(p.risk) +
+      '</div>' +
+      UI.monitoringBanner() +
+      UI.quickSummary(p) +
+      quickActions();
+
+    var record =
+      '<div class="section-cap">Monitored signals · grouped by profile</div>' +
+      orderedProfiles(p).map(function (pr) { return UI.profileCard(pr, p); }).join('') +
+      '<div class="section-cap">Adherence &amp; documentation</div>' +
+      UI.adherenceBlock(p) +
+      UI.rtmBlock(p) +
+      '<div class="section-cap">Check-in history</div>' +
+      UI.conversationBlock(p);
+
+    detBody.innerHTML = record;
+  }
+
+  /* ---- view switching ---------------------------------------------------- */
+  function openDetail(id) {
+    var p = getP(id);
+    if (!p) return;
+    currentId = id;
+    renderDetail(p);
+    listView.classList.remove('active');
+    detailView.classList.add('active');
+    scroll.scrollTop = 0;
+  }
+  function showList() {
+    currentId = null;
+    detailView.classList.remove('active');
+    listView.classList.add('active');
+    scroll.scrollTop = 0;
+  }
+
+  /* ---- quick-action handlers -------------------------------------------- */
+  function toast(html, opts) {
+    if (UI && UI.showToast) return UI.showToast(html, opts || {});
+    return null;
+  }
+  function handleAction(action) {
+    var p = getP(currentId);
+    if (!p) return;
+    var who = esc(p.name);
+    if (action === 'assign') {
+      /* cross-surface push → patient phone picks these up (SPEC §7.2) */
+      if (window.Bus && Bus.emit) { try { Bus.emit('TASK_ASSIGN', { patientId: p.id }); } catch (e) {} }
+      toast('<strong>Tasks assigned</strong><br>' + who + "'s recovery tasks were sent to their phone.", { timeout: 4200 });
+    } else if (action === 'message') {
+      toast('<strong>Message sent</strong><br>A secure note was sent to ' + who + '.', { timeout: 3600 });
+    } else if (action === 'nurse') {
+      toast('<strong>Escalated to nurse triage</strong><br>' + who + ' flagged for nurse outreach today.', { danger: true, timeout: 4600 });
+    } else if (action === 'followup') {
+      toast('<strong>Follow-up brought forward</strong><br>' + who + "'s appointment was moved to today.", { timeout: 4200 });
+    }
+  }
+
+  /* ---- event wiring ------------------------------------------------------ */
+  listView.addEventListener('click', function (e) {
+    var row = e.target.closest && e.target.closest('.triage-row');
+    if (row && row.dataset.pid) openDetail(row.dataset.pid);
+  });
+  detailView.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    if (e.target.closest('[data-back]')) { showList(); return; }
+    var btn = e.target.closest('.qa-btn');
+    if (btn && btn.dataset.action) handleAction(btn.dataset.action);
+  });
+
+  /* ---- RISK_ESCALATE → re-sort to top + brief flash (SPEC §7.2) --------- */
+  function flashRow(pid) {
+    var row = listBody.querySelector('.triage-row[data-pid="' + pid + '"]');
+    if (!row) return;
+    row.classList.remove('flash');
+    void row.offsetWidth;              /* restart the CSS animation */
+    row.classList.add('flash');
+    setTimeout(function () { row.classList.remove('flash'); }, 3200);
+    try { row.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  }
+  if (window.Bus && Bus.on) {
+    Bus.on('RISK_ESCALATE', function (payload) {
+      var pid = (payload && typeof payload === 'object') ? payload.patientId : payload;
+      if (!pid) pid = 'marcus';
+      var p = getP(pid);
+      if (!p) return;
+      p.risk = 'high';                                   /* crossed into High */
+      var i = order.indexOf(pid);
+      if (i > 0) { order.splice(i, 1); order.unshift(pid); }
+      showList();
+      renderList();
+      requestAnimationFrame(function () { flashRow(pid); });
+    });
+  }
+
+  /* ---- guided-demo driver (shell drives via Bus 'DEMO', file://-safe) ----- */
+  var _demoHl = null;
+  function demoHL(target) {
+    try {
+      if (_demoHl) { _demoHl.classList.remove('demo-hl'); _demoHl = null; }
+      if (!target) return;
+      var el = (typeof target === 'string') ? document.querySelector(target) : target;
+      if (!el) return;
+      el.classList.add('demo-hl'); _demoHl = el;
+      if (el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    } catch (e) {}
+  }
+  if (window.Bus && Bus.on) Bus.on('DEMO', function (pl) {
+    if (!pl || pl.surface !== 'tablet') return;
+    try {
+      switch (pl.cmd) {
+        case 'triage':     showList(); break;
+        case 'openMarcus': openDetail('marcus'); break;
+        case 'open':       openDetail(pl.arg || 'marcus'); break;
+        case 'assign':     handleAction('assign'); break;
+        case 'hlList':     demoHL(listBody.querySelector('.triage-row')); break;
+        case 'hlBanner':   demoHL(detPin.querySelector('.mon-banner')); break;
+        case 'hlSummary':  demoHL(detPin.querySelector('.quick-sum')); break;
+        case 'hlActions':  demoHL(detPin.querySelector('.quick-actions')); break;
+        case 'hlProfiles': demoHL(detBody.querySelector('.profile-card')); break;
+        case 'clearHL':    demoHL(null); break;
+      }
+    } catch (e) {}
+  });
+
+  /* ---- init -------------------------------------------------------------- */
+  renderLegend();
+  renderList();
+})();
+</script>
+</body>
+</html>

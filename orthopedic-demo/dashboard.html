@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MedPull Recovery Copilot — Clinician Dashboard</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* ---------------------------------------------------------------------
+       dashboard.html — page-scoped chrome ONLY.
+       Every metric / report object / block / pill / figure reuses the shared
+       components from styles.css + ui.js. The rules below just lay out the
+       full-screen shell (topbar, rail head, section labels, deep-fig grid).
+    --------------------------------------------------------------------- */
+    .dash{padding:18px 22px 46px;}
+
+    /* left-rail header */
+    .rail-head{border-radius:18px;padding:14px 16px;margin-bottom:14px;
+      background:var(--glass-strong);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);
+      border:1px solid var(--glass-border);box-shadow:var(--glass-shadow);}
+    .rail-head .rh-title{font-size:15px;font-weight:900;letter-spacing:-.01em;}
+    .rail-head .rh-sub{font-size:11.5px;font-weight:700;color:var(--muted);margin-top:2px;}
+    .qb-empty{font-size:11.5px;color:var(--muted);font-weight:600;padding:4px 4px 2px;}
+
+    /* sticky main topbar: brand · patient chip · tier toggle · actions */
+    .dash-top{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:11px 14px;
+      padding:11px 14px;margin-bottom:13px;border-radius:18px;
+      background:var(--glass-strong);backdrop-filter:saturate(1.5) blur(18px);-webkit-backdrop-filter:saturate(1.5) blur(18px);
+      border:1px solid var(--glass-border);box-shadow:var(--glass-shadow);}
+    .dash-brand{display:flex;align-items:center;gap:10px;}
+    .brand-dot{width:34px;height:34px;flex:0 0 34px;border-radius:11px;
+      background:linear-gradient(135deg,var(--oxy),#56ccf2);box-shadow:0 6px 16px rgba(47,128,237,.35);}
+    .brand-t{font-size:13.5px;font-weight:900;letter-spacing:-.01em;line-height:1.1;}
+    .brand-s{font-size:10.5px;font-weight:700;color:var(--muted);}
+    .patient-chip{display:flex;align-items:center;gap:10px;margin-right:auto;padding-left:12px;
+      border-left:1px solid var(--line);min-width:0;}
+    .patient-chip .avatar{width:38px;height:38px;flex:0 0 38px;font-size:13px;}
+    .pc-meta{min-width:0;}
+    .pc-name{font-size:14px;font-weight:900;letter-spacing:-.01em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pc-sub{font-size:11px;font-weight:700;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .dash-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+    .dash-top .segment{flex:0 0 auto;min-width:238px;}
+    .dash-actions .btn{padding:9px 13px;font-size:12.5px;}
+
+    /* the summary just stays at the top of the record (no sticky float) */
+    .dash-main .quick-sum{position:static;top:auto;}
+
+    /* section dividers between record zones */
+    .dash-sectionlabel{font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
+      color:#8a93a8;margin:22px 4px 12px;display:flex;align-items:center;gap:11px;}
+    .dash-sectionlabel::after{content:"";flex:1;height:1px;background:var(--line);}
+
+    /* two-up card rows + deep clinical figure grid */
+    .dash-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+    .deep-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;}
+    .deep-fig{min-width:0;}
+    .deep-fig .block-label{margin-top:0;}
+    .deep-fig .report-figs{margin-bottom:0;}
+    .deep-full{grid-column:1 / -1;}
+
+    /* selected triage row */
+    .triage-row.selected{border-color:rgba(47,128,237,.55);
+      box-shadow:0 0 0 2px rgba(47,128,237,.32),0 10px 26px rgba(47,128,237,.16);}
+    .triage-row.high.selected{border-color:rgba(229,72,77,.6);
+      box-shadow:0 0 0 2px rgba(229,72,77,.42),0 10px 26px rgba(229,72,77,.22);}
+
+    /* composite-index KPI strip (RA-console inspired) */
+    .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 14px;}
+    .kpi-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
+    .kpi-k{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#9aa3b8;}
+    .kpi-v{font-size:23px;font-weight:900;letter-spacing:-.02em;margin-top:4px;line-height:1;}
+    .kpi-sub{font-size:10.5px;font-weight:700;color:var(--muted);margin-top:5px;line-height:1.3;}
+
+    /* deep-analytics lens switcher */
+    .lens-tabs{display:flex;flex-wrap:wrap;gap:6px;}
+    .lens-tab{font-family:inherit;font-size:11px;font-weight:800;padding:6px 11px;border-radius:8px;cursor:pointer;
+      background:#fff;border:1px solid var(--line);color:var(--muted);transition:.15s;}
+    .lens-tab:hover{color:var(--ink);}
+    .lens-tab.on{background:linear-gradient(135deg,var(--oxy),#56ccf2);color:#fff;border-color:transparent;box-shadow:0 6px 14px rgba(47,128,237,.26);}
+
+    /* movement & biomechanics grid + driver bars */
+    .bio-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+    .bio-grid .deep-full{grid-column:1 / -1;}
+    .drv-bars{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+    .drv-row{display:flex;align-items:center;gap:10px;}
+    .drv-row .m{font-family:var(--mono,ui-monospace,monospace);font-size:11px;font-weight:800;width:44px;color:var(--muted);}
+    .drv-track{flex:1;height:8px;background:#eef2fb;border-radius:5px;overflow:hidden;}
+    .drv-fill{height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:5px;}
+    .drv-pct{font-size:10.5px;font-weight:800;color:var(--muted);width:34px;text-align:right;}
+
+    /* sensor-scope / feasibility list */
+    .scope-list{display:flex;flex-direction:column;gap:7px;}
+    .scope-row{display:flex;gap:10px;align-items:baseline;font-size:12px;}
+    .scope-x{color:#e5484d;font-weight:900;}
+    .scope-n{font-weight:800;color:#39435c;min-width:210px;}
+    .scope-r{color:var(--muted);}
+
+    @media(max-width:1099px){ .dash-top .segment{min-width:204px;} .kpi-strip{grid-template-columns:1fr 1fr;} }
+    @media(max-width:900px){ .dash-cols,.deep-grid,.bio-grid{grid-template-columns:1fr;} .scope-n{min-width:0;} }
+  </style>
+</head>
+<body class="fluid tier-1">
+  <div class="dash">
+    <aside class="dash-rail" id="rail" aria-label="Clinic exception queue"></aside>
+    <main class="dash-main" id="main" aria-label="Patient record"></main>
+  </div>
+
+  <!-- shared foundations (load order per SPEC §4): charts · data · bus · ui -->
+  <script src="assets/charts.js"></script>
+  <script src="assets/data.js"></script>
+  <script src="assets/bus.js"></script>
+  <script src="assets/ui.js"></script>
+
+  <script>
+  /* =========================================================================
+     dashboard.html page script — clinician admin dashboard (SPEC §7.3)
+     Composes the SHARED renderers (UI.*) and figure toolkit (Charts.*) over the
+     seeded roster (MP.*). No frameworks, no network, no storage. file://-safe.
+     ======================================================================= */
+  (function () {
+    'use strict';
+
+    var esc  = Charts.esc;
+    var rail = document.getElementById('rail');
+    var main = document.getElementById('main');
+    var state = { current: null, tier: '1' };
+
+    var TIER_LABELS = { '1': 'Everyday', '2': 'Advanced', '3': 'Clinical' };
+
+    /* --------------------------------------------------- LEFT RAIL: queue -- */
+    /* Exception queue, bucketed Needs review / Drifting / Missing data / Stable
+       (MP.BUCKETS), each with a per-bucket count and its patients as triage
+       rows. Patients map to a bucket through MP.RISK[risk].bucket.            */
+    function renderRail() {
+      var buckets = MP.BUCKETS.map(function (b) {
+        var pts = MP.PATIENTS.filter(function (p) {
+          var rec = MP.RISK[p.risk] || {};
+          return rec.bucket === b.id;
+        });
+        var rows = pts.map(function (p) { return UI.triageRow(p); }).join('');
+        return '<section class="queue-bucket" data-bucket="' + esc(b.id) + '">' +
+          '<div class="qb-head"><h4>' + esc(b.name) + '</h4>' +
+          '<span class="queue-count ' + esc(b.id) + '">' + pts.length + '</span></div>' +
+          (rows || '<div class="qb-empty">No patients in this bucket.</div>') +
+          '</section>';
+      }).join('');
+
+      rail.innerHTML =
+        '<div class="rail-head">' +
+          '<div class="rh-title">Clinic Exception Queue</div>' +
+          '<div class="rh-sub">' + MP.PATIENTS.length + ' patients · triaged by risk · select to open the full record</div>' +
+        '</div>' +
+        '<div class="queue-rail">' + buckets + '</div>';
+    }
+
+    /* ---------------------------------------------------- MAIN: topbar ----- */
+    function tierSegment() {
+      var btns = ['1', '2', '3'].map(function (t) {
+        return '<button' + (t === state.tier ? ' class="on"' : '') +
+          ' data-tier="' + t + '">' + TIER_LABELS[t] + '</button>';
+      }).join('');
+      return '<div class="segment" id="tierseg" role="tablist" aria-label="Evidence depth">' + btns + '</div>';
+    }
+
+    function topbar(p) {
+      return '<div class="dash-top">' +
+        '<div class="dash-brand"><span class="brand-dot" aria-hidden="true"></span>' +
+          '<div><div class="brand-t">MedPull Recovery Copilot</div>' +
+          '<div class="brand-s">Clinician dashboard · Orthopedic RTM</div></div></div>' +
+        '<div class="patient-chip">' +
+          '<div class="avatar">' + esc(p.initials) + '</div>' +
+          '<div class="pc-meta">' +
+            '<div class="pc-name">' + esc(p.name) + '</div>' +
+            '<div class="pc-sub">' + esc(p.procShort || p.procedure) + ' · Day ' + esc(p.postopDay) +
+              ' · ' + esc(p.surgeon) + '</div>' +
+          '</div>' +
+          UI.riskPill(p.risk) +
+        '</div>' +
+        '<div class="dash-actions">' +
+          tierSegment() +
+          '<button class="btn primary" data-act="assign">Assign tasks</button>' +
+          '<button class="btn" data-act="message">Message</button>' +
+          '<button class="btn danger" data-act="escalate">Escalate</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function sectionLabel(txt) {
+      return '<div class="dash-sectionlabel">' + esc(txt) + '</div>';
+    }
+
+    /* -------------------------- ADVANCED tier (.gate.t2): model provenance - */
+    function advancedMethods() {
+      return '<section class="card gate t2">' +
+        '<div class="sec-title"><h3>Model provenance &amp; derivation</h3>' +
+          '<span class="badge-tier prem">Advanced</span></div>' +
+        '<div class="kv"><span class="k">Personal baseline window</span><span class="v">rolling 7–14 nights</span></div>' +
+        '<div class="kv"><span class="k">Change-point method</span><span class="v">multi-signal composite · CUSUM-style</span></div>' +
+        '<div class="kv"><span class="k">Trajectory model</span><span class="v">procedure- &amp; age-matched expected curve · ≈95% CI</span></div>' +
+        '<div class="kv"><span class="k">Deterioration index</span><span class="v">multivariate deviation from this patient’s baseline</span></div>' +
+        '<div class="kv"><span class="k">Confidence gating (M16)</span><span class="v">wear-time coverage + sync freshness</span></div>' +
+        '<div class="rc-methods"><strong>Derivation.</strong> Every wearable-derived value here is a directional trend, delta or ' +
+          'qualitative band against the patient’s own baseline — a derived estimate with a confidence tag, not a precise clinical ' +
+          'measurement. Monitoring signals for clinician review — not a diagnosis.</div>' +
+      '</section>';
+    }
+
+    /* -------------------------- CLINICAL tier (.gate.t3): deep evidence ---- */
+    function coverageCaveat(p) {
+      if (p.dataConf === 'low')
+        return 'Coverage is low for this patient right now, so these views are especially tentative.';
+      if (p.dataConf === 'med')
+        return 'Coverage is adequate with occasional gaps this period.';
+      return 'Coverage is strong this period, supporting these views.';
+    }
+
+    function deepFig(label, svg, full) {
+      return '<div class="deep-fig' + (full ? ' deep-full' : '') + '">' +
+        '<div class="block-label">' + esc(label) + '</div>' +
+        '<div class="report-figs">' + svg + '</div></div>';
+    }
+
+    function deepClinical(p) {
+      var s = p.seed || 9;
+      var figs =
+        deepFig('HRV · Poincaré (autonomic tone)',
+          Charts.figPoincare({ seed: s + 31, title: 'HRV · Poincaré', note: 'Beat-to-beat variability · parasympathetic tone' })) +
+        deepFig('HRV power spectrum (LF / HF balance)',
+          Charts.figPSD({ seed: s + 32, title: 'HRV power spectrum', note: 'Welch periodogram · autonomic balance' })) +
+        deepFig('Time-frequency scalogram (overnight pulse)',
+          Charts.figScalogram({ seed: s + 33, title: 'Time-frequency scalogram', note: 'Continuous wavelet transform of the pulse signal' }), true);
+
+      return '<section class="card gate t3">' +
+        '<div class="sec-title"><h3>Clinical-tier evidence</h3>' +
+          '<span class="badge-tier clin">Clinical</span></div>' +
+        '<p class="sub" style="margin:0 0 10px">Deep autonomic &amp; circadian evidence — surfaced at the Clinical tier only.</p>' +
+        '<div class="deep-grid">' + figs + '</div>' +
+        '<div class="rc-methods"><strong>Method provenance.</strong> Poincaré (SD1/SD2), a Welch power spectrum (LF/HF) and a ' +
+          'continuous-wavelet scalogram are computed from overnight pulse-interval and accelerometer streams. They are exploratory, ' +
+          'wearable-derived supporting views — not standalone measurements.</div>' +
+        '<div class="gate-row" style="margin-top:10px">Limitations — wearable optical pulse is noisier than clinical ECG; SD1/SD2 and ' +
+          'LF/HF are sensitive to wear-time gaps and motion. ' + esc(coverageCaveat(p)) +
+          ' Monitoring signals for clinician review — not a diagnosis.</div>' +
+      '</section>';
+    }
+
+    /* ===================================================================== *
+     *  RA clinician-console-inspired presentation (light house style):
+     *  composite deviation KPI strip · deep-analytics lens switcher ·
+     *  movement & biomechanics ortho panel · sensor-scope feasibility filter.
+     * ===================================================================== */
+    function seedOf(p) { return (p && p.seed) || ((p && p.postopDay || 3) * 131 + ((p && p.id ? p.id.length : 3) * 17)); }
+
+    function compositeIndex(p) {
+      var base = ({ high: 3.6, medium: 2.1, missing: 1.4, low: 1.1 })[p.risk] || 1.6;
+      var r = Charts.rng(seedOf(p) + 3);
+      return Math.max(0.6, +(base + (r() - 0.35) * 0.7).toFixed(1));
+    }
+
+    function kpiStrip(p) {
+      var ci = compositeIndex(p);
+      var ciColor = ci >= 3 ? '#e5484d' : ci >= 2 ? '#e07b00' : '#0a9d57';
+      var tr = p.trajectory || {};
+      var trLabel = ({ behind: 'Behind curve', ontrack: 'On track', ahead: 'Ahead of curve' })[tr.state] || '—';
+      var trColor = tr.state === 'behind' ? '#e07b00' : tr.state === 'ahead' ? '#2f6fed' : '#0a9d57';
+      var conf = ({ high: 'High', med: 'Medium', low: 'Low' })[p.dataConf] || '—';
+      var adh = p.adherence ? Math.round(p.adherence.rate * 100) + '%' : '—';
+      function card(k, v, sub, color) {
+        return '<div class="kpi-card"><div class="kpi-k">' + esc(k) + '</div>' +
+          '<div class="kpi-v" style="color:' + (color || '#0f1830') + '">' + esc(v) + '</div>' +
+          '<div class="kpi-sub">' + esc(sub) + '</div></div>';
+      }
+      return '<div class="kpi-strip">' +
+        card('Composite deviation index', ci + 'σ', 'multi-signal vs. personal baseline · derived', ciColor) +
+        card('Recovery trajectory', trLabel, (tr.pct != null ? ((tr.pct > 0 ? '+' : '') + tr.pct + '% vs expected') : 'fit vs. procedure curve'), trColor) +
+        card('Data confidence · M16', conf, 'wear-time + sync freshness · gates all', conf === 'Low' ? '#7c879e' : '#0f1830') +
+        card('Verified adherence · M14', adh, (p.adherence ? p.adherence.verified + ' of ' + p.adherence.assigned + ' device-verified' : 'objective, not self-report'), '#0f1830') +
+        '</div>';
+    }
+
+    /* one wearable stream, many analytical lenses (T-A / T-C / T-D templates) */
+    var LENSES = [
+      ['control',   'Control chart',     function (p) { return Charts.figControl({ seed: seedOf(p) + 1, title: 'Personal baseline & anomaly windows' }); }],
+      ['trend',     'Trend + residual',  function (p) { return Charts.figRegression({ seed: seedOf(p) + 2, title: 'Response model & residuals' }); }],
+      ['load',      'Load band',         function (p) { return Charts.figLoadBand({ seed: seedOf(p) + 3 }); }],
+      ['psd',       'PSD / bands',       function (p) { return Charts.figPSD({ seed: seedOf(p) + 4, title: 'HRV power spectrum' }); }],
+      ['spec',      'Spectrogram',       function (p) { return Charts.figScalogram({ seed: seedOf(p) + 5, title: 'Time–frequency scalogram' }); }],
+      ['corr',      'Correlation & lag', function (p) { return Charts.figDriver({ seed: seedOf(p) + 6 }); }],
+      ['composite', 'Composite T²',      function (p) { return Charts.figComposite({ seed: seedOf(p) + 7 }); }],
+      ['circadian', 'Circadian',         function (p) { return Charts.figCircadian({ seed: seedOf(p) + 8 }); }]
+    ];
+    function analyticsLens(p) {
+      var tabs = LENSES.map(function (l, i) { return '<button class="lens-tab' + (i === 0 ? ' on' : '') + '" data-lens="' + l[0] + '">' + esc(l[1]) + '</button>'; }).join('');
+      return '<section class="card"><div class="sec-title"><h3>Signal analytics · choose a lens</h3>' +
+        '<span class="pill info">derived · review-first</span></div>' +
+        '<div class="lens-tabs" id="lensTabs">' + tabs + '</div>' +
+        '<div id="lensFig" style="margin-top:12px">' + LENSES[0][2](p) + '</div>' +
+        '<div class="rc-methods" style="margin-top:8px"><strong>One signal, many lenses.</strong> Each view re-analyzes the same ' +
+        'wearable-derived stream (T-A baseline/anomaly · T-C spectral · T-D fusion). Monitoring signals for clinician review — not a diagnosis.</div>' +
+        '</section>';
+    }
+    function wireLens(p) {
+      var tabs = document.getElementById('lensTabs'), fig = document.getElementById('lensFig');
+      if (!tabs || !fig) return;
+      tabs.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('button[data-lens]') : null;
+        if (!b) return;
+        tabs.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        var key = b.getAttribute('data-lens'), L = LENSES.filter(function (x) { return x[0] === key; })[0];
+        if (L) fig.innerHTML = L[2](p);
+      });
+    }
+
+    function driverBars(p) {
+      var r = Charts.rng(seedOf(p) + 11);
+      var drv = ['RR', 'HR', 'Temp', 'HRV', 'SpO₂'].map(function (m) { return { m: m, v: Math.round(30 + r() * 70) }; })
+        .sort(function (a, b) { return b.v - a.v; });
+      return '<div class="drv-bars">' + drv.map(function (d) {
+        return '<div class="drv-row"><span class="m">' + esc(d.m) + '</span>' +
+          '<span class="drv-track"><span class="drv-fill" style="width:' + d.v + '%"></span></span>' +
+          '<span class="drv-pct">' + d.v + '%</span></div>';
+      }).join('') + '</div>';
+    }
+    function bioCard(title, sub, fig) {
+      return '<div class="card"><div class="sec-title"><h3>' + esc(title) + '</h3></div>' +
+        '<div class="sub" style="margin:-6px 0 8px">' + esc(sub) + '</div>' + fig + '</div>';
+    }
+    function biomechanics(p) {
+      var sd = seedOf(p), plateau = (p.risk === 'high' || p.risk === 'medium');
+      return '<div class="bio-grid">' +
+        bioCard('Gait symmetry recovery curve', 'stride asymmetry vs. days since surgery · T-B + T-A · M3', Charts.figSymmetry({ seed: sd + 21, plateau: plateau })) +
+        bioCard('Load progression & overexertion guard', 'acute:chronic workload · personalized floor/ceiling · T-A · M1', Charts.figLoadBand({ seed: sd + 22 })) +
+        bioCard('Cadence ↔ HR decoupling', 'walking-bout cadence vs. heart-rate cost · T-D · M4', Charts.figScatter({ seed: sd + 23 })) +
+        bioCard('Walking-bout endurance & fragmentation', 'bout-length distribution · T-A + T-B · M5', Charts.figHist({ seed: sd + 24 })) +
+        bioCard('Sit-to-stand transfer detection', 'daily chair-rise count · T-B · M6', Charts.barChart([9, 11, 10, 13, 12, 15, 14], ['M', 'T', 'W', 'T', 'F', 'S', 'S'], 5, '#e07b00', '#ffd166')) +
+        '<div class="card deep-full"><div class="sec-title"><h3>Multivariate complication surveillance</h3>' +
+          '<span class="pill warn">recommend review</span></div>' +
+          '<div class="sub" style="margin:-6px 0 8px">composite deviation (Hotelling T² / Mahalanobis) — VTE / infection watch · T-D · M12 / M13</div>' +
+          '<div class="dash-cols"><div>' + Charts.figComposite({ seed: sd + 25, plateau: true }) + '</div>' +
+            '<div><div class="block-label">driver contribution</div>' + driverBars(p) +
+            '<div class="rc-methods" style="margin-top:10px">Signals deviating from this patient’s own baseline — recommend review. ' +
+            'Never presented as detection or diagnosis.</div></div></div></div>' +
+        '</div>';
+    }
+
+    var EXCLUDED = [
+      ['Pulse / vascular optical (PPG waveform)', 'raw PPG waveform not exposed by consumer wearable platforms'],
+      ['Autonomic arousal / EDA', 'no EDA / GSR API on dominant consumer devices'],
+      ['Cardiac electrical (continuous ECG)', 'ECG is user-initiated only, not continuous — event flag kept, waveform dropped'],
+      ['Body composition / anthropometrics', 'requires a connected smart scale']
+    ];
+    function sensorScope() {
+      return '<section class="card gate t2"><div class="sec-title"><h3>Sensor scope &amp; feasibility filter</h3>' +
+        '<span class="badge-tier prem">Advanced</span></div>' +
+        '<p class="sub" style="margin:0 0 8px">Profiles intentionally excluded — not obtainable from consumer wearable platforms, so the product never implies them.</p>' +
+        '<div class="scope-list">' + EXCLUDED.map(function (e) {
+          return '<div class="scope-row"><span class="scope-x">✕</span><span class="scope-n">' + esc(e[0]) + '</span><span class="scope-r">' + esc(e[1]) + '</span></div>';
+        }).join('') + '</div></section>';
+    }
+
+    /* ---------------------------------------------------- MAIN: assemble --- */
+    function renderMain(p) {
+      var profiles = MP.PROFILES.map(function (pf) { return UI.profileCard(pf, p); }).join('');
+
+      main.innerHTML =
+        topbar(p) +
+        UI.monitoringBanner() +
+        UI.quickSummary(p) +
+        '<div data-demo="index">' + kpiStrip(p) + '</div>' +
+        '<div data-demo="trajectory">' + UI.trajectoryBlock(p) + '</div>' +
+        '<div data-demo="surveillance">' + UI.driverBlock(p) + '</div>' +
+        sectionLabel('Signal analytics · deep lenses') +
+        '<div data-demo="analytics">' + analyticsLens(p) + '</div>' +
+        sectionLabel('Full record — grouped by clinical profile') +
+        '<div data-demo="profiles">' + profiles + '</div>' +
+        sectionLabel('Movement &amp; biomechanics · orthopedic recovery models') +
+        '<div data-demo="biomechanics">' + biomechanics(p) + '</div>' +
+        advancedMethods() +
+        sensorScope() +
+        sectionLabel('Adherence &amp; RTM documentation') +
+        '<div class="dash-cols" data-demo="adherence">' + UI.adherenceBlock(p) + UI.rtmBlock(p) + '</div>' +
+        '<div data-demo="conversation">' + UI.conversationBlock(p) + '</div>' +
+        '<div data-demo="clinical">' + deepClinical(p) + '</div>';
+
+      /* wire the tier toggle (reveals .gate.t2 / .gate.t3; preserves body.fluid) */
+      UI.tierController(document.getElementById('tierseg'));
+      wireLens(p);
+      wireMain(p);
+    }
+
+    /* action bar + tier-state capture (re-wired every render) */
+    function wireMain(p) {
+      main.querySelectorAll('[data-act]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var act = btn.getAttribute('data-act');
+          if (act === 'assign') {
+            Bus.emit('TASK_ASSIGN', p.id);
+            UI.showToast('<strong>Tasks assigned</strong><br>' + esc(p.name) + '’s care plan was pushed to their phone.');
+          } else if (act === 'message') {
+            Bus.emit('NAV', { surface: 'patient', patientId: p.id });
+            UI.showToast('<strong>Message opened</strong><br>Started a check-in thread with ' + esc(p.name) + '.');
+          } else if (act === 'escalate') {
+            escalate(p.id, false);
+          }
+        });
+      });
+      var seg = document.getElementById('tierseg');
+      if (seg) seg.addEventListener('click', function (e) {
+        var b = e.target && e.target.closest ? e.target.closest('button[data-tier]') : null;
+        if (b) state.tier = b.getAttribute('data-tier');
+      });
+    }
+
+    /* --------------------------------------------------------- selection --- */
+    function markSelected(id) {
+      rail.querySelectorAll('.triage-row').forEach(function (r) {
+        r.classList.toggle('selected', r.getAttribute('data-pid') === id);
+      });
+    }
+
+    function select(id, opts) {
+      var p = MP.getPatient(id);
+      if (!p) return;
+      state.current = p.id;
+      renderMain(p);
+      markSelected(p.id);
+      if (!opts || !opts.keepScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function flashRow(id) {
+      var row = rail.querySelector('.triage-row[data-pid="' + id + '"]');
+      if (!row) return;
+      row.classList.remove('flash');
+      void row.offsetWidth;             /* restart the CSS animation */
+      row.classList.add('flash');
+      if (row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      window.setTimeout(function () { row.classList.remove('flash'); }, 3200);
+    }
+
+    /* escalation: select + flash the row + fire the SMS-to-clinician toast.
+       viaBus=true means it arrived on the bus (don't re-broadcast).           */
+    function escalate(id, viaBus) {
+      var p = MP.getPatient(id);
+      if (!p) return;
+      select(id, { keepScroll: false });
+      flashRow(id);
+      UI.showToast('<strong>⚠️ High-risk change — ' + esc(p.name) + '</strong><br>' +
+        'Moved to Needs review · nurse triage recommended today.', { danger: true });
+    }
+
+    /* ------------------------------------------------------- interactions -- */
+    rail.addEventListener('click', function (e) {
+      var row = e.target && e.target.closest ? e.target.closest('.triage-row') : null;
+      if (row && row.getAttribute('data-pid')) select(row.getAttribute('data-pid'));
+    });
+
+    /* Cross-surface bus (SPEC §7.3): NAV → open a patient; RISK_ESCALATE →
+       select + flash + SMS toast. Works standalone and when framed by index.html. */
+    Bus.on('NAV', function (pl) {
+      if (!pl) return;
+      if (pl.surface && pl.surface !== 'dashboard') return;
+      if (pl.patientId) select(pl.patientId);
+    });
+    Bus.on('RISK_ESCALATE', function (pl) {
+      var id = (pl && typeof pl === 'object') ? pl.patientId : pl;
+      if (id) escalate(id, true);
+    });
+
+    /* ---- guided-demo driver (shell drives via Bus 'DEMO', file://-safe) --- */
+    var _demoHl = null;
+    function demoHL(target, noScroll) {
+      try {
+        if (_demoHl) { _demoHl.classList.remove('demo-hl'); _demoHl = null; }
+        if (!target) return;
+        var el = (typeof target === 'string') ? document.querySelector(target) : target;
+        if (!el) return;
+        el.classList.add('demo-hl'); _demoHl = el;
+        if (!noScroll && el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } catch (e) {}
+    }
+    function setTier(t) {
+      var seg = document.getElementById('tierseg');
+      if (!seg) return;
+      var btn = seg.querySelector('button[data-tier="' + t + '"]');
+      if (btn) btn.click();               /* triggers UI.tierController → body.tier-N */
+      state.tier = String(t);
+    }
+    Bus.on('DEMO', function (pl) {
+      if (!pl || pl.surface !== 'dashboard') return;
+      try {
+        switch (pl.cmd) {
+          case 'selectMarcus': select('marcus'); break;
+          case 'selectPriya':  select('priya'); break;
+          case 'select':       select(pl.arg); break;
+          case 'tier':         setTier(pl.arg); break;
+          case 'hlQueue':      demoHL('.rail-head'); break;
+          case 'hlBucket':     demoHL(rail.querySelector('.queue-bucket[data-bucket="' + (pl.arg || 'review') + '"]')); break;
+          case 'hlBanner':     demoHL('.mon-banner'); break;
+          case 'hlSummary':    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} demoHL('.quick-sum', true); break;
+          case 'hlAdvanced':   demoHL('.gate.t2'); break;
+          case 'hl':           demoHL('[data-demo="' + pl.arg + '"]'); break;
+          case 'clearHL':      demoHL(null); break;
+        }
+      } catch (e) {}
+    });
+
+    /* -------------------------------------------------------------- boot --- */
+    renderRail();
+    var hero = MP.PATIENTS.filter(function (p) { return p.hero; })[0] || MP.PATIENTS[0];
+    select((hero && hero.id) || 'marcus', { keepScroll: true });
+  })();
+  </script>
+</body>
+</html>

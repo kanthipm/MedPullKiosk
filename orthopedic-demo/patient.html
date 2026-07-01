@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MedPull Recovery Copilot — Patient</title>
+<link rel="stylesheet" href="assets/styles.css">
+<!-- shared toolkit (load order per SPEC §4): charts · data · bus · voice · ui -->
+<script src="assets/charts.js"></script><script src="assets/data.js"></script><script src="assets/bus.js"></script><script src="assets/voice.js"></script><script src="assets/ui.js"></script>
+<style>
+/* -------------------------------------------------------------------------
+   patient.html — KIOSK-STYLE voice check-in (matches the MedPull Kiosk):
+   one question at a time, vertically centered; the copilot speaks (female),
+   an animated waveform reacts to the mic, and Marcus's answer streams in as a
+   blue transcript (spoken male). No chat bubbles, no option chips, no numbers.
+   The guided-demo shell drives it over the Bus ('DEMO'); standalone, tapping
+   the mic advances the scripted check-in one turn at a time.
+------------------------------------------------------------------------- */
+.device .screenframe{background:linear-gradient(180deg,#ffffff,#f6f8fe);}
+
+/* thin progress line under the status bar */
+.kprog{height:3px; background:#eef1f7; flex:0 0 3px;}
+.kprog-bar{height:100%; width:0; border-radius:0 3px 3px 0; background:linear-gradient(90deg,var(--oxy),#6c5ce7); transition:width .5s cubic-bezier(.4,1,.4,1);}
+
+.kiosk{flex:1 1 auto; display:flex; flex-direction:column; min-height:0; overflow:hidden;}
+.kbrand{flex:0 0 auto; text-align:center; padding:16px 18px 4px; font-size:12.5px; font-weight:800; color:#9aa3b8; letter-spacing:.01em;}
+
+/* view switching (check-in ⟷ tasks) */
+.kview{display:none; flex:1 1 auto; min-height:0;}
+.kview.active{display:flex; flex-direction:column; animation:kfade .3s ease;}
+@keyframes kfade{from{opacity:0}to{opacity:1}}
+
+/* ---- check-in view ---- */
+.kcheck{padding:6px 22px 20px;}
+.kcenter{flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px; min-height:0;}
+.kspeaker{font-size:12px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; color:var(--oxy);
+ display:inline-flex; align-items:center; gap:7px; transition:color .3s;}
+.kspeaker i{width:7px; height:7px; border-radius:50%; background:var(--oxy);}
+.kspeaker.marcus{color:#0a9d57;} .kspeaker.marcus i{background:#0a9d57;}
+.kline{font-size:23px; font-weight:750; line-height:1.34; color:var(--ink); letter-spacing:-.01em; max-width:320px; min-height:96px;
+ display:flex; align-items:center; justify-content:center; transition:color .25s;}
+.kline.marcus{color:#0f9d58;}
+
+/* waveform — a row of bars that bounce while speaking/listening */
+.kwave{display:flex; align-items:center; justify-content:center; gap:4px; height:58px; margin:6px 0 4px;}
+.kwave i{width:5px; height:44px; border-radius:3px; background:linear-gradient(180deg,#8aa6ff,#6c5ce7); transform:scaleY(.16); opacity:.55; transition:opacity .3s;}
+.kwave.marcus i{background:linear-gradient(180deg,#57d3a0,#0a9d57);}
+.kwave.active i{animation:kbar 1s ease-in-out infinite; opacity:1;}
+@keyframes kbar{0%,100%{transform:scaleY(.18)} 50%{transform:scaleY(1)}}
+
+/* mic button + hint (the advance affordance) */
+.kmic-wrap{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:14px;}
+.kmic{width:74px; height:74px; border-radius:50%; border:0; cursor:pointer; color:#fff; position:relative;
+ background:linear-gradient(135deg,#7c9cff,#6c5ce7); box-shadow:0 14px 30px rgba(108,92,231,.4); display:flex; align-items:center; justify-content:center;
+ transition:transform .15s;}
+.kmic:active{transform:scale(.95);}
+.kmic.listening{animation:kmicPulse 1.5s ease-out infinite;}
+@keyframes kmicPulse{0%{box-shadow:0 14px 30px rgba(108,92,231,.4),0 0 0 0 rgba(108,92,231,.4)}100%{box-shadow:0 14px 30px rgba(108,92,231,.4),0 0 0 22px rgba(108,92,231,0)}}
+.kmic-label{font-size:13px; font-weight:700; color:#8a93a8;}
+.kdisclaimer{flex:0 0 auto; text-align:center; font-size:11.5px; font-weight:600; color:#aab2c5; padding:8px 24px 6px;}
+
+/* ---- tasks view ---- */
+.ktasks{padding:18px 18px 22px; overflow-y:auto;}
+.ktasks::-webkit-scrollbar{width:0;}
+.ktasks-head{font-size:21px; font-weight:800; color:var(--ink); letter-spacing:-.01em;}
+.ktasks-sub{font-size:13px; font-weight:600; color:var(--muted); margin:3px 0 14px;}
+.ktask-list{display:flex; flex-direction:column; gap:11px;}
+.ktask-list .task-wrap{animation:ktask .4s ease both;}
+@keyframes ktask{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+.ktasks-foot{text-align:center; font-size:12.5px; font-weight:700; color:#9aa3b8; margin-top:16px;}
+.ktasks-foot.all{color:#0a9d57;}
+.knudge{display:flex; align-items:center; gap:9px; background:linear-gradient(135deg,#eef4ff,#f3eeff);
+ border:1px solid #e2e9f7; border-radius:14px; padding:11px 13px; font-size:12.5px; font-weight:700; color:#4b5570; margin-bottom:14px;}
+.knudge .tn-ic{width:26px; height:26px; border-radius:8px; flex:0 0 26px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--oxy),#6c5ce7);}
+</style>
+</head>
+<body>
+<div class="pagehint">MedPull Recovery Copilot · Patient phone</div>
+
+<div class="device" role="application" aria-label="MedPull Recovery Copilot — patient">
+ <div class="screenframe">
+  <div class="island"></div>
+  <div class="statusbar">
+   <span>9:41</span>
+   <span class="r">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="1" fill="#0f1830"/><rect x="5" y="4" width="3" height="8" rx="1" fill="#0f1830"/><rect x="10" y="2" width="3" height="10" rx="1" fill="#0f1830"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#0f1830"/></svg>
+    <svg width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 11.5 0.6 3.6a11 11 0 0 1 15.8 0z" fill="none" stroke="#0f1830" stroke-width="1.6"/><circle cx="8.5" cy="10" r="1.3" fill="#0f1830"/></svg>
+    <svg width="26" height="13" viewBox="0 0 26 13"><rect x="1" y="1" width="21" height="11" rx="3.2" fill="none" stroke="#0f1830" stroke-opacity=".5"/><rect x="3" y="3" width="15" height="7" rx="1.6" fill="#0f1830"/><rect x="23" y="4" width="2" height="5" rx="1" fill="#0f1830" fill-opacity=".5"/></svg>
+   </span>
+  </div>
+  <div class="kprog"><div class="kprog-bar" id="kprog"></div></div>
+
+  <main class="kiosk">
+   <div class="kbrand">Recovery Copilot · daily check-in</div>
+
+   <!-- CHECK-IN -->
+   <section class="kview kcheck active" id="viewCheck">
+    <div class="kcenter">
+     <div class="kspeaker" id="kspeaker"><i></i><span>Recovery Copilot</span></div>
+     <div class="kline" id="kline">Good morning, Marcus.</div>
+     <div class="kwave" id="kwave"></div>
+     <div class="kmic-wrap">
+      <button class="kmic" id="kmic" aria-label="Tap to talk">
+       <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="11" rx="3" fill="#fff"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+      <div class="kmic-label" id="kmicLabel">Tap the mic to start your check-in</div>
+     </div>
+    </div>
+    <div class="kdisclaimer">I'm here to help you recover — for anything urgent, contact your care team.</div>
+   </section>
+
+   <!-- TASKS -->
+   <section class="kview ktasks" id="viewTasks">
+    <div class="ktasks-head">Today's gentle plan</div>
+    <div class="ktasks-sub">A few small things from your care team. No rush — one at a time.</div>
+    <div id="ktaskNudge"></div>
+    <div class="ktask-list" id="ktaskList"></div>
+    <div class="ktasks-foot" id="ktasksFoot"></div>
+   </section>
+  </main>
+ </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var Bus = window.Bus || { emit: function () {}, on: function () {} };
+  var Voice = window.Voice || { speak: function () {}, cancel: function () {} };
+  var $ = function (id) { return document.getElementById(id); };
+
+  var kline = $('kline'), kspeaker = $('kspeaker'), kwave = $('kwave'), kmic = $('kmic'),
+      kmicLabel = $('kmicLabel'), kprog = $('kprog'),
+      viewCheck = $('viewCheck'), viewTasks = $('viewTasks'),
+      ktaskList = $('ktaskList'), ktasksFoot = $('ktasksFoot'), ktaskNudge = $('ktaskNudge');
+
+  var firstName = 'Marcus';
+  var marcus = (window.MP && MP.getPatient) ? MP.getPatient('marcus') : null;
+
+  /* build the waveform bars once (varied heights for a natural look) */
+  (function buildWave() {
+    var html = '';
+    for (var i = 0; i < 26; i++) {
+      var delay = (Math.sin(i * 1.7) * 0.5 + 0.5) * 0.9;   /* deterministic, no Math.random */
+      var h = 22 + ((i * 37) % 26);
+      html += '<i style="height:' + h + 'px; animation-delay:' + delay.toFixed(2) + 's"></i>';
+    }
+    kwave.innerHTML = html;
+  })();
+
+  /* ---- the scripted check-in (kiosk-style: one turn at a time) ------------ */
+  var beats = [
+    { who: 'assistant', text: 'Good morning, ' + firstName + '. Let’s do your check-in. How are you feeling today?', listen: true },
+    { who: 'marcus',    text: 'Honestly, not great. My knee’s been hurting more each day — and it’s worse at night.' },
+    { who: 'assistant', text: 'I’m sorry you’re hurting. Has anything else felt different lately?', listen: true },
+    { who: 'marcus',    text: 'I’ve been feeling feverish, and my knee feels warm and swollen.', fx: escalate },
+    { who: 'assistant', text: 'Thank you for telling me. That’s a pattern your care team should see today — I’ve shared it with them now.' },
+    { who: 'assistant', text: 'Would you like me to arrange an earlier visit?', listen: true },
+    { who: 'marcus',    text: 'Yes, please.' },
+    { who: 'assistant', text: 'Done — I’ve moved your visit up and added a few gentle tasks for today.', fx: function () { assignTasks(); } }
+  ];
+
+  var cur = -1, escalated = false, tasksAssigned = false, beatEnd = null, seq = [];
+
+  function estDur(text) { return Math.min(4600, 780 + String(text).length * 52); }
+
+  function setWave(on, who) {
+    kwave.classList.toggle('active', !!on);
+    kwave.classList.toggle('marcus', who === 'marcus');
+    kmic.classList.toggle('listening', !!on);
+  }
+
+  function playBeat(i) {
+    var b = beats[i]; if (!b) return;
+    cur = i;
+    var isM = b.who === 'marcus';
+    kspeaker.classList.toggle('marcus', isM);
+    kspeaker.querySelector('span').textContent = isM ? firstName : 'Recovery Copilot';
+    kline.classList.toggle('marcus', isM);
+    kline.textContent = b.text;
+    setWave(true, b.who);
+    kmicLabel.textContent = isM ? 'Listening…' : 'Recovery Copilot is speaking…';
+    Voice.speak(b.text, b.who);           /* assistant = female, marcus = male, both faster */
+    if (b.fx) { try { b.fx(); } catch (e) {} }
+    progress();
+    clearTimeout(beatEnd);
+    beatEnd = setTimeout(function () {
+      setWave(false, b.who);
+      kmicLabel.textContent = (cur >= beats.length - 1) ? 'Tap to see today’s tasks'
+        : (beats[cur] && beats[cur].listen) ? 'Tap the mic to answer' : 'Tap to continue';
+    }, estDur(b.text));
+  }
+
+  function clearSeq() { seq.forEach(clearTimeout); seq = []; }
+
+  /* play beats cur+1 … target back-to-back (used by the guided demo) */
+  function playThrough(target) {
+    Voice.cancel(); clearSeq();
+    var t = 0;
+    for (var i = cur + 1; i <= target && i < beats.length; i++) {
+      (function (idx, delay) { seq.push(setTimeout(function () { playBeat(idx); }, delay)); })(i, t);
+      t += estDur(beats[i].text) + 460;
+    }
+  }
+  function advanceOne() {                 /* standalone: tap the mic to advance */
+    if (cur >= beats.length - 1) { assignTasks(); showTasks(); return; }
+    Voice.cancel(); clearSeq();
+    playBeat(cur + 1);
+  }
+
+  function progress() {
+    var pct = tasksAssigned ? 100 : Math.round(((cur + 1) / (beats.length + 1)) * 100);
+    kprog.style.width = pct + '%';
+  }
+
+  /* red-flag → fire the (clinician-only) alerts. Never shown to the patient. */
+  function escalate() {
+    if (escalated) return;
+    escalated = true;
+    try {
+      Bus.emit('CHECKIN', { patientId: 'marcus', symptom: 'fever' });
+      Bus.emit('RISK_ESCALATE', 'marcus');
+      Bus.emit('SMS_FIRE', { patient: 'Marcus Reyes', text: '⚠️ High-risk change — Marcus Reyes · new fever with a warm, swollen knee' });
+    } catch (e) {}
+  }
+
+  /* ---- tasks (qualitative only, no numbers) ------------------------------- */
+  function softenNumbers(s) {
+    var w = { '0': 'no', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine', '10': 'ten' };
+    return String(s == null ? '' : s).replace(/\b(10|[0-9])\b/g, function (m) { return w[m] || m; });
+  }
+  var dispTasks = ((marcus && marcus.tasks) || []).map(function (t) {
+    return { title: softenNumbers(t.title), why: softenNumbers(t.why), done: false, ring: 0 };
+  });
+  function renderTasks() {
+    ktaskList.innerHTML = dispTasks.map(function (t, i) {
+      return '<div class="task-wrap" data-idx="' + i + '" style="animation-delay:' + (i * 0.07).toFixed(2) + 's"' + (t.done ? ' data-done="1"' : '') + '>' +
+        (window.UI && UI.taskCard ? UI.taskCard(t) : '') + '</div>';
+    }).join('');
+    updateFoot();
+  }
+  function updateFoot() {
+    var all = dispTasks.length && dispTasks.every(function (t) { return t.done; });
+    var any = dispTasks.some(function (t) { return t.done; });
+    ktasksFoot.classList.toggle('all', all);
+    ktasksFoot.textContent = all ? 'All done for today — lovely work. Now rest up.'
+      : any ? 'Great start — take the rest whenever you’re ready.'
+      : 'Tap a task once you’ve done it. No rush — go at your own pace.';
+  }
+  function assignTasks() {
+    tasksAssigned = true;
+    ktaskNudge.innerHTML = '<div class="knudge"><span class="tn-ic">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 21l-5 2.9 1.2-5.6L4 14.6 9.6 8 12 3z" fill="#fff"/></svg>' +
+      '</span><span>Your care team added a few gentle tasks for today.</span></div>';
+    renderTasks();
+    progress();
+  }
+  ktaskList.addEventListener('click', function (e) {
+    var w = e.target.closest ? e.target.closest('.task-wrap') : null;
+    if (!w) return;
+    var idx = +w.getAttribute('data-idx');
+    if (isNaN(idx) || !dispTasks[idx]) return;
+    dispTasks[idx].done = !dispTasks[idx].done;
+    dispTasks[idx].ring = dispTasks[idx].done ? 1 : 0;
+    w.innerHTML = (window.UI && UI.taskCard) ? UI.taskCard(dispTasks[idx]) : '';
+    if (dispTasks[idx].done) w.setAttribute('data-done', '1'); else w.removeAttribute('data-done');
+    updateFoot();
+  });
+
+  /* ---- view switching ---------------------------------------------------- */
+  function showCheck() { viewTasks.classList.remove('active'); viewCheck.classList.add('active'); }
+  function showTasks() { if (!tasksAssigned) assignTasks(); viewCheck.classList.remove('active'); viewTasks.classList.add('active'); progress(); }
+
+  function resetKiosk() {
+    Voice.cancel(); clearSeq(); clearTimeout(beatEnd);
+    cur = -1; escalated = false;
+    kspeaker.classList.remove('marcus'); kspeaker.querySelector('span').textContent = 'Recovery Copilot';
+    kline.classList.remove('marcus');
+    kline.textContent = 'Good morning, ' + firstName + '.';
+    setWave(false, 'assistant');
+    kmicLabel.textContent = 'Tap the mic to start your check-in';
+    showCheck(); progress();
+  }
+
+  /* ---- wiring ------------------------------------------------------------ */
+  kmic.addEventListener('click', function () {
+    if (viewTasks.classList.contains('active')) { showCheck(); return; }
+    advanceOne();
+  });
+
+  if (Bus && Bus.on) {
+    Bus.on('TASK_ASSIGN', function () { assignTasks(); });
+    Bus.on('NAV', function (p) { if (p && p.surface === 'patient') { if (p.view === 'tasks') showTasks(); else showCheck(); } });
+    /* guided-demo driver (shell choreographs over the Bus, file://-safe) */
+    Bus.on('DEMO', function (pl) {
+      if (!pl || pl.surface !== 'patient') return;
+      try {
+        switch (pl.cmd) {
+          case 'reset':  resetKiosk(); break;
+          case 'start':  showCheck(); playThrough(0); break;   /* assistant asks how he feels */
+          case 'answer': showCheck(); playThrough(2); break;   /* Marcus: pain → assistant: anything else? */
+          case 'fever':  showCheck(); playThrough(4); break;   /* Marcus: fever/knee (escalates) → reassurance */
+          case 'sooner': showCheck(); playThrough(7); break;   /* earlier visit → yes → confirm + assign */
+          case 'tasks':  assignTasks(); showTasks(); break;
+          case 'chat':   showCheck(); break;
+        }
+      } catch (e) {}
+    });
+  }
+
+  progress();
+})();
+</script>
+</body>
+</html>

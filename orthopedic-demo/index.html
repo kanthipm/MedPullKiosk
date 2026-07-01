@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MedPull Recovery Copilot — Guided demo</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+/* =============================================================================
+   index.html — guided demo shell (the star).
+   Presents patient.html · tablet.html · dashboard.html as <iframe> device
+   mockups, ONE at a time, sized with CSS `zoom` (crisp — unlike transform
+   scale, which bitmap-blurs). The active device + its narration card are laid
+   out as a single CENTERED CLUSTER, so it looks right at any window width
+   (laptop → ultrawide). Each surface rings its OWN target element (.demo-hl),
+   so the "box" is always in the right place; the shell draws a short arrow from
+   the card to the device. All driving crosses frames via the shared Bus
+   (postMessage '*'), so it runs clean over file://. Controls: Restart + Autoplay.
+============================================================================= */
+html,body{height:100%;}
+body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
+ background:
+   radial-gradient(1200px 760px at 12% -12%,#eef0ff 0%,transparent 58%),
+   radial-gradient(1100px 720px at 112% 0%,#e4fbff 0%,transparent 52%),
+   linear-gradient(160deg,#e7ebf8,#dee5f4);}
+
+.app{position:fixed; inset:0; display:flex; flex-direction:column;}
+
+/* ---------------------------------------------------------------- header -- */
+.hdr{flex:0 0 auto; display:flex; align-items:center; gap:16px; z-index:60;
+ padding:8px 20px; border-bottom:1px solid rgba(15,24,48,.06);
+ background:var(--glass-strong); backdrop-filter:saturate(1.5) blur(18px); -webkit-backdrop-filter:saturate(1.5) blur(18px);}
+.brandwrap{display:flex; align-items:center; gap:12px; flex:0 0 auto;}
+.logo{width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff;
+ background:linear-gradient(135deg,var(--oxy),#56ccf2); box-shadow:0 8px 20px rgba(47,128,237,.35);}
+.h-t{font-size:15.5px; font-weight:900; letter-spacing:-.02em; line-height:1.05;}
+.h-s{font-size:11px; font-weight:700; color:var(--muted); margin-top:1px;}
+.hdr .prog-wrap{flex:1 1 auto; height:6px; border-radius:999px; background:rgba(15,24,48,.07); overflow:hidden; margin:0 6px;}
+.hdr .prog-bar{height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,var(--oxy),#56ccf2); transition:width .5s cubic-bezier(.4,1,.4,1);}
+.hdr .demo-pill{flex:0 0 auto; font-size:10.5px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; color:#5b647d;
+ background:#fff; border:1px solid var(--line); padding:6px 11px; border-radius:999px; display:inline-flex; align-items:center; gap:7px;}
+.hdr .demo-pill::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--exer); box-shadow:0 0 0 3px rgba(31,209,122,.2);}
+
+/* ----------------------------------------------------------------- stage -- */
+.stage{position:relative; flex:1 1 auto; overflow:hidden;}
+
+/* full-stage tap layer: click anywhere to advance (the tour is shell-driven,
+   and an iframe would otherwise swallow the click). */
+.devtap{position:absolute; inset:0; z-index:15; cursor:pointer; background:transparent;}
+
+/* device wrapper is UNZOOMED and JS-positioned; the mock inside carries `zoom`
+   so position math never compounds with scale. */
+.devwrap{position:absolute; left:0; top:0; z-index:8;
+ transition:left .55s cubic-bezier(.34,1.2,.42,1), top .55s cubic-bezier(.34,1.2,.42,1);}
+.devwrap::before{content:""; position:absolute; inset:-6% -8%; z-index:-1; border-radius:44px;
+ background:radial-gradient(closest-side, rgba(47,128,237,.16), rgba(47,128,237,.05) 60%, transparent 78%); filter:blur(12px);}
+
+.mock{display:none; animation:mockIn .5s cubic-bezier(.34,1.28,.42,1);}
+.mock.active{display:block;}
+@keyframes mockIn{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
+
+.mock.phone{width:392px; height:850px; border-radius:56px; overflow:hidden; box-shadow:0 42px 82px -30px rgba(22,28,60,.6);}
+.mock.phone iframe{position:absolute; left:-40px; top:-60px; width:472px; height:970px; border:0;}
+.mock.tablet{width:1024px; height:768px; border-radius:34px; overflow:hidden; box-shadow:0 46px 92px -32px rgba(22,28,60,.55);}
+.mock.tablet iframe{position:absolute; left:-40px; top:-40px; width:1104px; height:848px; border:0;}
+.mock.dashboard{width:1192px; height:776px; border-radius:22px; overflow:hidden; background:#0b1020; box-shadow:0 46px 96px -30px rgba(22,28,60,.62);}
+.mon-bar{height:44px; display:flex; align-items:center; gap:9px; padding:0 16px; background:linear-gradient(180deg,#1b2138,#12172a);}
+.mon-dots{display:flex; gap:7px;}
+.mon-dots i{width:12px; height:12px; border-radius:50%; display:block;}
+.mon-dots i:nth-child(1){background:#ff5f57;} .mon-dots i:nth-child(2){background:#febc2e;} .mon-dots i:nth-child(3){background:#28c840;}
+.mon-url{margin-left:10px; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:#b6c0dc; background:rgba(255,255,255,.08); padding:5px 13px; border-radius:9px;}
+.mon-url::before{content:""; width:11px; height:11px; border-radius:3px; background:linear-gradient(135deg,var(--oxy),#56ccf2);}
+.mon-screen{position:absolute; left:16px; top:44px; width:1160px; height:716px; overflow:hidden; background:#eaeefb; border-radius:0 0 12px 12px;}
+.mon-screen iframe{width:1160px; height:716px; border:0; display:block;}
+
+/* ------------------------------------------------------- narration card -- */
+.narr-col{position:absolute; left:0; top:0; z-index:30;}
+.narr{width:100%; border-radius:22px; padding:20px 20px 18px;
+ background:var(--glass-strong); backdrop-filter:saturate(1.5) blur(20px); -webkit-backdrop-filter:saturate(1.5) blur(20px);
+ border:1px solid var(--glass-border); box-shadow:0 26px 60px -24px rgba(22,28,60,.4);}
+.narr .n-where{display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:900; letter-spacing:.11em;
+ text-transform:uppercase; color:var(--oxy); background:#eaf1ff; padding:5px 11px; border-radius:999px;}
+.narr .n-where i{width:6px; height:6px; border-radius:50%; background:var(--oxy);}
+.narr .n-title{font-size:26px; font-weight:900; letter-spacing:-.02em; line-height:1.12; margin:14px 0 10px;}
+.narr .n-body{font-size:18px; font-weight:600; color:#3a4560; line-height:1.45;}
+.narr .n-tip{margin-top:18px; padding-top:14px; border-top:1px solid rgba(15,24,48,.08);
+ font-size:13px; font-weight:700; color:#8a93a8; display:flex; align-items:center; gap:8px;}
+.narr .n-tip .kbd{font-weight:900; color:#5b647d; background:#fff; border:1px solid var(--line); border-radius:7px; padding:2px 7px; font-size:11px;}
+.narr .n-devs{display:flex; gap:7px; margin-top:16px;}
+.narr .n-dev{flex:1; text-align:center; font-size:10.5px; font-weight:800; color:#9aa3b8; padding:7px 4px; border-radius:10px; background:#fff; border:1px solid var(--line);}
+.narr .n-dev.on{color:#fff; background:linear-gradient(135deg,var(--oxy),#56ccf2); border-color:transparent; box-shadow:0 6px 14px rgba(47,128,237,.28);}
+
+/* intro / cover treatment — a centered hero card, no device, no arrow */
+.narr-col.cover{left:0 !important; top:0 !important; right:0; bottom:0; width:auto !important;
+ display:flex; align-items:center; justify-content:center;}
+.narr-col.cover .narr{max-width:660px; text-align:center; padding:40px 44px 34px;}
+.narr.is-cover .n-title{font-size:40px; margin:18px 0 14px;}
+.narr.is-cover .n-body{font-size:20px; line-height:1.55; color:#33405c;}
+.narr.is-cover .n-where{font-size:11px;}
+.narr.is-cover .n-devs{display:none;}
+.narr.is-cover .n-tip{justify-content:center; border-top:0; margin-top:20px;}
+
+/* ------------------------------------------------------- arrow overlay --- */
+.overlay{position:absolute; inset:0; z-index:26; pointer-events:none;}
+.callout-svg .farrow{fill:none; stroke:var(--oxy); stroke-width:2.6; stroke-linecap:round;
+ stroke-dasharray:2600; stroke-dashoffset:2600; animation:drawArrow .6s ease forwards;}
+@keyframes drawArrow{to{stroke-dashoffset:0}}
+.hotspot{position:absolute; width:40px; height:40px; border-radius:50%; z-index:28; pointer-events:auto; cursor:pointer;
+ background:rgba(47,128,237,.16); border:2px solid var(--oxy);}
+.hotspot::after{content:""; position:absolute; inset:-2px; border-radius:50%; border:2px solid var(--oxy); animation:hotspotPulse 1.8s ease-out infinite;}
+.hotspot.hide{display:none;}
+
+/* --------------------------------------------------------------- controls - */
+.ctrls{flex:0 0 auto; z-index:60; display:flex; align-items:center; justify-content:center; gap:14px;
+ padding:9px 16px; border-top:1px solid rgba(15,24,48,.06);
+ background:var(--glass-strong); backdrop-filter:saturate(1.5) blur(18px); -webkit-backdrop-filter:saturate(1.5) blur(18px);}
+.cbtn{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:#fff; color:var(--ink);
+ font-family:inherit; font-weight:800; font-size:13.5px; padding:11px 20px; border-radius:13px; cursor:pointer;
+ transition:transform .15s, box-shadow .15s, background .15s, opacity .15s;}
+.cbtn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(20,30,60,.1);}
+.cbtn:active{transform:translateY(0);}
+.cbtn.primary{background:linear-gradient(135deg,var(--oxy),#56ccf2); color:#fff; border-color:transparent; box-shadow:0 10px 22px rgba(47,128,237,.32);}
+.cbtn.playing{background:linear-gradient(135deg,var(--heart),#ff7a59); color:#fff; border-color:transparent;}
+
+@media(prefers-reduced-motion:reduce){ .mock,.farrow,.devwrap{animation:none !important; transition:none !important;} .farrow{stroke-dashoffset:0 !important;} }
+</style>
+</head>
+<body class="demo">
+<div class="app">
+
+  <!-- ============================ header ============================= -->
+  <header class="hdr">
+    <div class="brandwrap">
+      <span class="logo" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12h3l2-5 3 10 2.5-7 1.5 2H21" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <div class="h-t">MedPull Recovery Copilot</div>
+        <div class="h-s">Guided walkthrough · orthopedic recovery, end to end</div>
+      </div>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" id="progBar"></div></div>
+    <span class="demo-pill">Live demo · sample data</span>
+  </header>
+
+  <!-- ============================== stage =============================== -->
+  <div class="stage" id="stage">
+    <div class="devtap" id="devtap" title="Click to continue"></div>
+
+    <div class="devwrap" id="devwrap">
+      <div class="mock phone" id="mockPhone">
+        <iframe id="ifPhone" title="Patient phone app" src="patient.html" loading="eager"></iframe>
+      </div>
+      <div class="mock tablet" id="mockTablet">
+        <iframe id="ifTablet" title="Clinician tablet app" src="tablet.html" loading="eager"></iframe>
+      </div>
+      <div class="mock dashboard" id="mockDash">
+        <div class="mon-bar"><span class="mon-dots"><i></i><i></i><i></i></span><span class="mon-url">recoverycopilot.med · clinician dashboard</span></div>
+        <div class="mon-screen"><iframe id="ifDash" title="Clinician dashboard" src="dashboard.html" loading="eager"></iframe></div>
+      </div>
+    </div>
+
+    <!-- narration card -->
+    <div class="narr-col" id="narrCol">
+      <aside class="narr" id="narr">
+        <span class="n-where" id="nWhere"><i></i><span>Patient · iPhone</span></span>
+        <div class="n-title" id="nTitle">—</div>
+        <div class="n-body" id="nBody">—</div>
+        <div class="n-devs" id="nDevs">
+          <div class="n-dev" data-dev="phone">Patient phone</div>
+          <div class="n-dev" data-dev="tablet">Clinician tablet</div>
+          <div class="n-dev" data-dev="dashboard">Dashboard</div>
+        </div>
+        <div class="n-tip" id="nTip">Click the device or press <span class="kbd">→</span> to continue</div>
+      </aside>
+    </div>
+
+    <!-- arrow overlay (spans the whole stage) -->
+    <div class="overlay">
+      <svg class="callout-svg" id="calloutSvg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+    </div>
+    <div class="hotspot" id="hotspot" role="button" tabindex="0" aria-label="Continue"></div>
+  </div>
+
+  <!-- ============================ controls ============================= -->
+  <div class="ctrls">
+    <button class="cbtn" id="btnRestart" type="button">↻ Restart</button>
+    <button class="cbtn primary" id="btnAuto" type="button">▶ Autoplay</button>
+  </div>
+</div>
+
+<!-- shared foundations (load order per SPEC §4): charts · data · bus · voice · ui -->
+<script src="assets/charts.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/bus.js"></script>
+<script src="assets/voice.js"></script>
+<script src="assets/ui.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var Bus = window.Bus || { emit: function () {}, on: function () {} };
+  var UI  = window.UI || null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* Show the SMS-to-clinician alert at the SHELL level so it's visible even
+     while the phone is the active device (the clinician surfaces render their
+     own copy inside their — currently hidden — iframes). */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]; }); }
+  Bus.on('SMS_FIRE', function (pl) {
+    if (!UI || !UI.showToast) return;
+    var who = (pl && pl.patient) ? esc(pl.patient) : 'the patient';
+    UI.showToast('<strong>⚠️ Secure alert sent — ' + who + '</strong><br>New fever with a warmer, more swollen knee · texted to the care team.', { danger: true, timeout: 6500 });
+  });
+
+  var stage = $('stage'), devwrap = $('devwrap'), narrCol = $('narrCol'), narr = $('narr');
+  var svg = $('calloutSvg'), hotspot = $('hotspot');
+  var nWhere = $('nWhere'), nTitle = $('nTitle'), nBody = $('nBody'), nDevs = $('nDevs'), nTip = $('nTip'), progBar = $('progBar');
+  var mocks = { phone: $('mockPhone'), tablet: $('mockTablet'), dashboard: $('mockDash') };
+  var iframes = { phone: $('ifPhone'), tablet: $('ifTablet'), dashboard: $('ifDash') };
+
+  var NAT = { phone: { w: 392, h: 850 }, tablet: { w: 1024, h: 768 }, dashboard: { w: 1192, h: 776 } };
+  var WHERE = { phone: 'Patient · iPhone', tablet: 'Clinician · iPad', dashboard: 'Clinician · dashboard' };
+  var OXY = '#2f80ed';
+
+  function emit(surface, cmd, arg) { try { Bus.emit('DEMO', { surface: surface, cmd: cmd, arg: arg }); } catch (e) {} }
+
+  /* =====================================================================
+   *  The walkthrough. Two intro/backstory cards, then every use case &
+   *  workflow step by step. each step: intro? · device · title · body ·
+   *  at (arrow height 0..1) · cmds [[surface,cmd,arg]…] · dwell (autoplay ms).
+   * ===================================================================== */
+  var STEPS = [
+    /* -------- INTRO / BACKSTORY -------- */
+    { intro: true, where: 'MedPull · Recovery Copilot', title: 'Recovery doesn’t stop at discharge.',
+      body: 'It happens at home, between visits — mostly unseen.',
+      speak: 'Recovery doesn’t stop at discharge. It happens at home, between visits — mostly unseen.',
+      dwell: 7000 },
+
+    { intro: true, where: 'MedPull · Recovery Copilot', title: 'Meet Recovery Copilot.',
+      body: 'The patient just talks. We turn it into signals the care team can act on.',
+      speak: 'Meet Recovery Copilot. The patient just talks, and we turn it into monitored signals the care team can act on. Here’s the whole loop.',
+      dwell: 8000 },
+
+    /* -------- PATIENT PHONE (kiosk-style voice check-in) -------- */
+    { device: 'phone', title: 'The patient’s app',
+      body: 'Calm and voice-first. No numbers, ever.',
+      speak: 'This is the patient’s app — calm, voice-first, and no numbers, ever.',
+      at: 0.5, cmds: [['patient', 'reset']], dwell: 6500 },
+
+    { device: 'phone', title: 'Just talk',
+      body: 'The copilot asks one question. Marcus answers out loud.',
+      speak: 'The copilot asks one simple question, and Marcus answers out loud.',
+      at: 0.5, cmds: [['patient', 'start']], dwell: 9000 },
+
+    { device: 'phone', title: 'In his own words',
+      body: 'Pain climbing for days — worse at night.',
+      speak: 'In his own words — his knee pain has climbed for days, and it’s worse at night.',
+      at: 0.5, cmds: [['patient', 'answer']], dwell: 11000 },
+
+    { device: 'phone', title: 'A red flag',
+      body: 'Feverish. Warm, swollen knee. His care team is texted.',
+      speak: 'A red flag — feverish, with a warm, swollen knee. A secure alert is texted to his care team.',
+      at: 0.5, cmds: [['patient', 'fever']], dwell: 12000 },
+
+    { device: 'phone', title: 'Seen sooner',
+      body: 'The copilot books him an earlier visit.',
+      speak: 'He asks to be seen sooner, and the copilot books an earlier visit.',
+      at: 0.5, cmds: [['patient', 'sooner']], dwell: 11000 },
+
+    { device: 'phone', title: 'His tasks',
+      body: 'Five gentle to-dos. Qualitative only.',
+      speak: 'And his tasks — five gentle to-dos, qualitative only, never a number.',
+      at: 0.5, cmds: [['patient', 'tasks']], dwell: 8000 },
+
+    /* -------- CLINICIAN TABLET -------- */
+    { device: 'tablet', title: 'The triage board',
+      body: 'Patients ranked by risk. Marcus is now on top.',
+      speak: 'The clinician’s triage board ranks patients by risk. Marcus jumped to the top when he crossed into high.',
+      at: 0.34, cmds: [['tablet', 'triage'], ['tablet', 'hlList']], dwell: 8500 },
+
+    { device: 'tablet', title: 'Reading a row',
+      body: 'Risk · why it flagged · data confidence · last check-in.',
+      speak: 'Each row: the risk, why it flagged, a data-confidence tag, and the last check-in.',
+      at: 0.3, cmds: [['tablet', 'hlList']], dwell: 8000 },
+
+    { device: 'tablet', title: 'Opening Marcus',
+      body: 'His summary is pinned right at the top.',
+      speak: 'Opening Marcus — the appointment summary is pinned right at the top.',
+      at: 0.42, cmds: [['tablet', 'openMarcus'], ['tablet', 'hlSummary']], dwell: 9000 },
+
+    { device: 'tablet', title: 'Monitoring, not diagnosis',
+      body: 'Signals to review — never a diagnosis.',
+      speak: 'Every clinician view carries the guardrail — monitoring signals for review, not a diagnosis.',
+      at: 0.28, cmds: [['tablet', 'hlBanner']], dwell: 7500 },
+
+    { device: 'tablet', title: 'Act on the spot',
+      body: 'Message · escalate · bring the visit forward.',
+      speak: 'She can act on the spot — message him, escalate to nurse triage, or bring the visit forward.',
+      at: 0.5, cmds: [['tablet', 'hlActions']], dwell: 8000 },
+
+    { device: 'tablet', title: 'Assign the plan',
+      body: 'Five tasks — pushed to his phone.',
+      speak: 'She assigns his five tasks, and they push straight to his phone.',
+      at: 0.5, cmds: [['tablet', 'assign']], dwell: 8500 },
+
+    { device: 'tablet', title: 'The full record',
+      body: 'Grouped by clinical profile.',
+      speak: 'And below, the full record — grouped by clinical profile.',
+      at: 0.5, cmds: [['tablet', 'hlProfiles']], dwell: 8000 },
+
+    /* -------- CLINICIAN DASHBOARD -------- */
+    { device: 'dashboard', title: 'The exception queue',
+      body: 'Needs review · drifting · missing data · stable.',
+      speak: 'At the clinic, the dashboard opens on the exception queue — needs review, drifting, missing data, and stable.',
+      at: 0.32, cmds: [['dashboard', 'selectMarcus'], ['dashboard', 'hlQueue']], dwell: 8500 },
+
+    { device: 'dashboard', title: 'When data is thin',
+      body: 'Priya’s low wear-time gates every metric — shown honestly.',
+      speak: 'When data is thin — Priya’s low watch wear gates every metric, shown honestly instead of guessed.',
+      at: 0.3, cmds: [['dashboard', 'selectPriya'], ['dashboard', 'hlBucket', 'missing']], dwell: 9000 },
+
+    { device: 'dashboard', title: 'What the surgeon reads first',
+      body: 'The whole record — summary on top.',
+      speak: 'Back to Marcus — the whole record, with the summary on top, what the surgeon reads first.',
+      at: 0.34, cmds: [['dashboard', 'selectMarcus'], ['dashboard', 'hlSummary']], dwell: 8500 },
+
+    { device: 'dashboard', title: 'The headline read',
+      body: 'Deviation index · trajectory · confidence · adherence.',
+      speak: 'The headline read — a composite deviation index, his trajectory, the data confidence, and verified adherence.',
+      at: 0.4, cmds: [['dashboard', 'hl', 'index']], dwell: 9000 },
+
+    { device: 'dashboard', title: 'Anatomy of a report object',
+      body: 'Status · finding · graph · confidence · next step.',
+      speak: 'Every metric is a report object — status versus baseline, a finding, a graph, a confidence chip, and a next step.',
+      at: 0.5, cmds: [['dashboard', 'hl', 'profiles']], dwell: 9500 },
+
+    { device: 'dashboard', title: 'One signal, many lenses',
+      body: 'Eight ways to analyze the same stream.',
+      speak: 'One signal, many lenses — eight ways to analyze the same wearable stream.',
+      at: 0.5, cmds: [['dashboard', 'hl', 'analytics']], dwell: 9500 },
+
+    { device: 'dashboard', title: 'Recovery trajectory',
+      body: 'On track, behind, or ahead — vs. the expected curve.',
+      speak: 'His recovery trajectory — on track, behind, or ahead of the expected curve, with a confidence band.',
+      at: 0.5, cmds: [['dashboard', 'hl', 'trajectory']], dwell: 8500 },
+
+    { device: 'dashboard', title: 'Complication surveillance',
+      body: 'Temp + HR + HRV, fused. Deviating — recommend review.',
+      speak: 'Complication surveillance fuses temperature, heart rate and HRV — signals deviating from baseline, recommend review.',
+      at: 0.5, cmds: [['dashboard', 'hl', 'surveillance']], dwell: 9500 },
+
+    { device: 'dashboard', title: 'Movement & biomechanics',
+      body: 'Gait, load, cadence, endurance, transfers.',
+      speak: 'The orthopedic movement panel — gait symmetry, load, cadence, endurance, transfers, and the complication watch.',
+      at: 0.5, cmds: [['dashboard', 'hl', 'biomechanics']], dwell: 10000 },
+
+    { device: 'dashboard', title: 'Advanced',
+      body: 'The model provenance behind each signal.',
+      speak: 'Advanced depth reveals the model provenance behind each signal.',
+      at: 0.5, cmds: [['dashboard', 'tier', '2'], ['dashboard', 'hlAdvanced']], dwell: 8000 },
+
+    { device: 'dashboard', title: 'Clinical',
+      body: 'Deep autonomic evidence — with methods and limits.',
+      speak: 'Clinical depth surfaces the deep autonomic evidence — Poincaré, spectrum and scalogram — with methods and limits.',
+      at: 0.55, cmds: [['dashboard', 'tier', '3'], ['dashboard', 'hl', 'clinical']], dwell: 9500 },
+
+    { device: 'dashboard', title: 'Adherence & RTM',
+      body: 'Objective device-days — not self-report.',
+      speak: 'Verified adherence and an auditable RTM summary — objective device-days, not self-report.',
+      at: 0.5, cmds: [['dashboard', 'tier', '1'], ['dashboard', 'hl', 'adherence']], dwell: 8500 },
+
+    { device: 'dashboard', title: 'The check-in history',
+      body: 'Every check-in, ready to review.',
+      speak: 'And the full check-in history, ready for the team to review any time.',
+      at: 0.5, cmds: [['dashboard', 'hl', 'conversation']], dwell: 8000 },
+
+    { device: 'dashboard', title: 'That’s the loop',
+      body: 'The patient talks. The team acts early.',
+      speak: 'That’s the loop. The patient just talks, and the team acts early.',
+      at: 0.34, cmds: [['dashboard', 'tier', '1'], ['dashboard', 'selectMarcus'], ['dashboard', 'hlSummary']], dwell: 9000 }
+  ];
+  var N = STEPS.length;
+
+  /* ---- state ------------------------------------------------------------ */
+  var current = 0, activeDev = 'phone', userActed = false, playing = false, apTimer = null, cmdTimers = [];
+  var Voice = window.Voice || { speak: function () {}, cancel: function () {}, available: function () { return false; } };
+
+  function speak(text) {
+    if (!userActed || !text) return;   /* stays silent until the first user gesture (autoplay policy) */
+    Voice.cancel();
+    Voice.speak(text, 'narrator');     /* female narrator, a little faster */
+  }
+
+  function setActiveDevice(dev) {
+    activeDev = dev;
+    Object.keys(mocks).forEach(function (k) { mocks[k].classList.toggle('active', k === dev); });
+    Array.prototype.forEach.call(nDevs.children, function (el) { el.classList.toggle('on', el.getAttribute('data-dev') === dev); });
+  }
+
+  /* ---- layout: center the [device | gap | card] cluster in the stage ---- */
+  function layout() {
+    var step = STEPS[current] || {};
+    var sr = stage.getBoundingClientRect();
+    var SW = sr.width, SH = sr.height;
+    if (!SW || !SH) return;
+
+    if (step.intro) {                       /* cover: centered hero card only */
+      devwrap.style.display = 'none';
+      hotspot.classList.add('hide');
+      svg.innerHTML = '';
+      narrCol.className = 'narr-col cover';
+      narrCol.style.left = ''; narrCol.style.top = ''; narrCol.style.width = '';
+      return;
+    }
+
+    devwrap.style.display = '';
+    hotspot.classList.remove('hide');
+    narrCol.className = 'narr-col';
+
+    var nat = NAT[activeDev];
+    /* compact card + small margins → devices get as much room as possible and
+       shrink/grow with the window. */
+    var margin = Math.max(16, SW * 0.012);
+    var cardW = Math.round(Math.min(340, Math.max(250, SW * 0.20)));
+    var GAP = Math.round(Math.max(28, SW * 0.018));
+    var availW = SW - margin * 2 - GAP - cardW;
+    var availH = SH - 24;
+    var z = Math.min(availW / nat.w, availH / nat.h);
+    z = Math.max(0.3, Math.min(z, 2.0));
+    mocks[activeDev].style.zoom = z;
+
+    var devW = nat.w * z, devH = nat.h * z;
+    var clusterW = devW + GAP + cardW;
+    var startX = Math.max(margin, Math.round((SW - clusterW) / 2));
+    var devY = Math.max(20, Math.round((SH - devH) / 2));
+    devwrap.style.left = startX + 'px';
+    devwrap.style.top = devY + 'px';
+
+    narrCol.style.width = cardW + 'px';
+    narrCol.style.left = (startX + devW + GAP) + 'px';
+    /* vertical-center the card after it measures its height */
+    requestAnimationFrame(function () {
+      var ch = narr.offsetHeight;
+      narrCol.style.top = Math.max(20, Math.min(SH - ch - 20, Math.round((SH - ch) / 2))) + 'px';
+      drawArrow();
+    });
+  }
+
+  function drawArrow() {
+    if ((STEPS[current] || {}).intro) { svg.innerHTML = ''; return; }
+    var s = stage.getBoundingClientRect();
+    var m = mocks[activeDev].getBoundingClientRect();
+    var c = narr.getBoundingClientRect();
+    var atFrac = STEPS[current].at != null ? STEPS[current].at : 0.5;
+
+    /* card is to the RIGHT of the device: short arrow from card's left edge to
+       the device's right edge, at the step's target height. */
+    var fromX = c.left - s.left - 8, fromY = c.top - s.top + c.height * 0.5;
+    var toX = m.right - s.left + 6, toY = m.top - s.top + m.height * atFrac;
+    toY = Math.max(m.top - s.top + 14, Math.min(m.bottom - s.top - 14, toY));
+
+    var cxp = (fromX + toX) / 2;
+    var cyp = Math.min(fromY, toY) - Math.max(30, Math.abs(fromX - toX) * 0.16);
+
+    svg.setAttribute('width', s.width); svg.setAttribute('height', s.height);
+    svg.setAttribute('viewBox', '0 0 ' + s.width + ' ' + s.height);
+    svg.innerHTML =
+      '<defs><marker id="mpAh" markerWidth="12" markerHeight="12" refX="8.5" refY="5" orient="auto" markerUnits="userSpaceOnUse">' +
+        '<path d="M0 0 L11 5 L0 10 L3 5 Z" fill="' + OXY + '"/></marker></defs>' +
+      '<circle cx="' + fromX.toFixed(1) + '" cy="' + fromY.toFixed(1) + '" r="4.5" fill="' + OXY + '"/>' +
+      '<path class="farrow" d="M ' + fromX.toFixed(1) + ' ' + fromY.toFixed(1) + ' Q ' + cxp.toFixed(1) + ' ' + cyp.toFixed(1) + ' ' + toX.toFixed(1) + ' ' + toY.toFixed(1) + '" marker-end="url(#mpAh)"/>';
+
+    hotspot.style.left = (toX - 20) + 'px';
+    hotspot.style.top = (toY - 20) + 'px';
+  }
+
+  function fireCmds(cmds) {
+    cmdTimers.forEach(clearTimeout); cmdTimers = [];
+    (cmds || []).forEach(function (c, i) { cmdTimers.push(setTimeout(function () { emit(c[0], c[1], c[2]); }, i * 380)); });
+  }
+
+  function enterStep(n) {
+    current = Math.max(0, Math.min(N - 1, n));
+    var step = STEPS[current];
+    if (!step.intro) setActiveDevice(step.device);
+    nWhere.querySelector('span').textContent = step.intro ? (step.where || 'MedPull') : WHERE[step.device];
+    nTitle.textContent = step.title;
+    nBody.textContent = step.body;
+    narr.classList.toggle('is-cover', !!step.intro);
+    nTip.innerHTML = step.intro
+      ? 'Click anywhere or press <span class="kbd">→</span> to begin'
+      : 'Click the device or press <span class="kbd">→</span> to continue';
+    progBar.style.width = ((current + 1) / N * 100).toFixed(1) + '%';
+    layout();
+    fireCmds(step.cmds);
+    setTimeout(drawArrow, 260 + (step.cmds ? step.cmds.length * 380 : 0));
+    speak(step.speak);
+    if (playing) scheduleNext();
+  }
+
+  function next() { userActed = true; if (current >= N - 1) { if (playing) stopAutoplay(); restart(); } else enterStep(current + 1); }
+  function prev() { userActed = true; if (current > 0) enterStep(current - 1); }
+
+  function restart() {
+    userActed = true;
+    stopAutoplay();
+    Voice.cancel();
+    Object.keys(iframes).forEach(function (k) { try { iframes[k].contentWindow.location.reload(); } catch (e) { iframes[k].src = iframes[k].src; } });
+    current = 0;
+    setTimeout(function () { enterStep(0); }, 360);
+  }
+
+  function scheduleNext() {
+    clearTimeout(apTimer);
+    var dwell = (STEPS[current] && STEPS[current].dwell) || 7500;
+    apTimer = setTimeout(function () { if (!playing) return; if (current >= N - 1) { stopAutoplay(); return; } enterStep(current + 1); }, dwell);
+  }
+  function startAutoplay() {
+    userActed = true; playing = true;
+    $('btnAuto').textContent = '❙❙ Pause'; $('btnAuto').classList.add('playing');
+    if (current >= N - 1) { restart(); } else { speak(STEPS[current].speak); scheduleNext(); }
+  }
+  function stopAutoplay() { playing = false; clearTimeout(apTimer); var b = $('btnAuto'); b.textContent = '▶ Autoplay'; b.classList.remove('playing'); }
+  function toggleAutoplay() { if (playing) stopAutoplay(); else startAutoplay(); }
+  function stopIfManual() { if (playing) stopAutoplay(); }
+
+  /* ---- wiring ----------------------------------------------------------- */
+  $('btnRestart').addEventListener('click', restart);
+  $('btnAuto').addEventListener('click', toggleAutoplay);
+  $('devtap').addEventListener('click', function () { stopIfManual(); next(); });
+  narrCol.addEventListener('click', function () { stopIfManual(); next(); });
+  hotspot.addEventListener('click', function (e) { e.stopPropagation(); stopIfManual(); next(); });
+  hotspot.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stopIfManual(); next(); } });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); stopIfManual(); next(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); stopIfManual(); prev(); }
+  });
+  var rz = null;
+  window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(layout, 120); });
+
+  /* ---- boot ------------------------------------------------------------- */
+  function boot() { setTimeout(function () { enterStep(0); }, 400); }
+  if (document.readyState === 'complete' || document.readyState === 'interactive') boot();
+  else window.addEventListener('DOMContentLoaded', boot);
+})();
+</script>
+</body>
+</html>

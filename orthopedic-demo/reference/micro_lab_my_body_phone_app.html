@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Micro-Lab · My Body</title>
+<style>
+:root{
+ --ink:#0f1830; --muted:#6b7793; --line:#eef1f7; --card:#ffffff; --bg1:#eaeefb; --bg2:#e3e9f6;
+ --heart:#ff4d6d; --heart2:#ff8fa3; --move:#ff5a3c; --move2:#ff8a5b; --exer:#1fd17a; --exer2:#9bf06a;
+ --stand:#00bcd4; --sleep:#6c5ce7; --sleep2:#a29bfe; --stress:#ff9f1c; --stress2:#ffd166;
+ --oxy:#2f80ed; --oxy2:#56ccf2; --recov:#00b894; --soft:#f5f7fc;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif;color:var(--ink);
+ background:radial-gradient(1200px 700px at 20% -10%,#f4f1ff 0%,transparent 60%),
+            radial-gradient(1000px 700px at 110% 10%,#e6fbff 0%,transparent 55%),
+            linear-gradient(160deg,var(--bg1),var(--bg2));
+ display:flex; align-items:center; justify-content:center; min-height:100vh; padding:26px 12px;}
+.pagehint{position:fixed; left:0; right:0; top:14px; text-align:center; color:#8893ad; font-size:12px; font-weight:700; letter-spacing:.02em;}
+/* ===== phone device ===== */
+.device{position:relative; width:392px; height:850px; background:#0b1020; border-radius:56px;
+ padding:13px; box-shadow:0 50px 90px -28px rgba(22,28,60,.55), 0 0 0 2px rgba(255,255,255,.04) inset, 0 8px 30px rgba(0,0,0,.35);}
+.screenframe{position:relative; width:100%; height:100%; background:var(--soft); border-radius:44px; overflow:hidden; display:flex; flex-direction:column;}
+.island{position:absolute; top:14px; left:50%; transform:translateX(-50%); width:118px; height:30px; background:#05070f; border-radius:18px; z-index:40;}
+.statusbar{height:50px; flex:0 0 50px; display:flex; align-items:center; justify-content:space-between; padding:0 26px 0 28px; font-size:14px; font-weight:800; color:var(--ink); z-index:30;}
+.statusbar .r{display:flex; align-items:center; gap:7px;}
+.statusbar svg{display:block}
+/* app bar */
+.appbar{flex:0 0 auto; background:linear-gradient(180deg,rgba(245,247,252,.96),rgba(245,247,252,.82)); backdrop-filter:saturate(1.3) blur(8px);
+ padding:4px 16px 10px; z-index:25; border-bottom:1px solid rgba(15,24,48,.04);}
+.greet{display:flex; align-items:center; gap:11px;}
+.avatar{width:42px; height:42px; border-radius:50%; flex:0 0 42px; background:linear-gradient(135deg,#7c9cff,#6c5ce7); color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:15px; box-shadow:0 6px 16px rgba(108,92,231,.35);}
+.greet h1{margin:0; font-size:18px; letter-spacing:-.02em;}
+.greet p{margin:1px 0 0; color:var(--muted); font-size:12px; font-weight:600;}
+.bell{margin-left:auto; width:38px; height:38px; border-radius:13px; background:#fff; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; position:relative;}
+.bell::after{content:""; position:absolute; top:9px; right:10px; width:7px; height:7px; border-radius:50%; background:var(--heart); border:2px solid #fff;}
+.tierrow{display:flex; align-items:center; gap:8px; margin-top:11px;}
+.segment{display:flex; background:#e9edf6; border-radius:13px; padding:3px; flex:1;}
+.segment button{flex:1; border:0; background:transparent; padding:8px 4px; border-radius:10px; font-weight:800; font-size:12px; color:var(--muted); cursor:pointer; transition:.18s; letter-spacing:-.01em;}
+.segment button.on{background:#fff; color:var(--ink); box-shadow:0 3px 10px rgba(20,30,60,.12);}
+.demochip{font-size:10px; font-weight:800; color:#8a93a8; background:#fff; border:1px solid var(--line); padding:6px 9px; border-radius:10px; white-space:nowrap;}
+/* screens */
+.screens{position:relative; flex:1 1 auto; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding:14px 14px 96px;}
+.screens::-webkit-scrollbar{width:0}
+.screen{display:none; animation:fade .25s ease;}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+/* cards */
+.card{background:var(--card); border-radius:22px; padding:16px; box-shadow:0 10px 26px rgba(20,30,60,.06); margin-bottom:13px; border:1px solid rgba(15,24,48,.03);}
+.card.tight{padding:13px}
+.card h2{margin:0 0 2px; font-size:15px; letter-spacing:-.01em;}
+.card .sub{color:var(--muted); font-size:11.5px; font-weight:600; margin:0 0 11px;}
+.row{display:flex; align-items:center; gap:12px;}
+.between{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:11px;}
+.grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px;}
+.sec-title{display:flex; align-items:center; justify-content:space-between; margin:4px 2px 9px;}
+.sec-title h3{margin:0; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:#8a93a8;}
+.sec-title a{font-size:12px; color:var(--oxy); font-weight:800; text-decoration:none;}
+.pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; padding:4px 8px; border-radius:999px;}
+.pill.good{background:#e6f8ef; color:#0a9d57;} .pill.warn{background:#fff3e0; color:#e07b00;} .pill.info{background:#e8f1ff; color:#2f6fed;}
+.pill.prem{background:#efeaff; color:#6c5ce7;} .pill.clin{background:#e7f6f9; color:#0093a8;}
+.badge-tier{font-size:9.5px; font-weight:900; letter-spacing:.04em; padding:3px 7px; border-radius:7px; text-transform:uppercase;}
+.badge-tier.prem{background:#efeaff; color:#6c5ce7;} .badge-tier.clin{background:#e7f6f9; color:#0093a8;}
+/* metric mini card */
+.metric{background:#fff; border:1px solid var(--line); border-radius:18px; padding:12px;}
+.metric .top{display:flex; align-items:center; gap:7px; color:var(--muted); font-size:11px; font-weight:800;}
+.metric .ico{width:24px; height:24px; border-radius:8px; display:flex; align-items:center; justify-content:center;}
+.metric .val{font-size:23px; font-weight:900; letter-spacing:-.03em; margin:6px 0 0; line-height:1;}
+.metric .val small{font-size:12px; font-weight:800; color:var(--muted); margin-left:2px;}
+.metric .delta{font-size:10.5px; font-weight:800; margin-top:3px; display:flex; align-items:center; gap:3px;}
+.delta.up{color:#0a9d57} .delta.down{color:var(--heart)} .delta.flat{color:var(--muted)}
+.bignum{font-size:44px; font-weight:900; letter-spacing:-.04em; line-height:.9;}
+.unit{font-size:14px; font-weight:800; color:var(--muted);}
+.story{display:flex; gap:11px; align-items:flex-start;}
+.story .dot{width:34px; height:34px; border-radius:11px; flex:0 0 34px; display:flex; align-items:center; justify-content:center;}
+.story p{margin:0; font-size:13px; line-height:1.5; color:#39435c;}
+.kv{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--muted); font-weight:600} .kv .v{font-weight:800}
+.legendrow{display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:10px;}
+.legendrow span{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:#4b5570;}
+.legendrow i{width:10px; height:10px; border-radius:3px; display:inline-block;}
+.fig{width:100%; display:block; border-radius:14px; overflow:hidden; background:#fff;}
+.clin-fig{border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+/* tabbar */
+.tabbar{position:absolute; left:13px; right:13px; bottom:13px; height:74px; background:rgba(255,255,255,.86); backdrop-filter:saturate(1.4) blur(16px);
+ border-radius:26px; display:flex; align-items:center; justify-content:space-around; padding:0 6px 8px; box-shadow:0 14px 34px rgba(20,30,60,.16); border:1px solid rgba(255,255,255,.6); z-index:35;}
+.tab{flex:1; border:0; background:transparent; display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 0 0; color:#9aa3b8; cursor:pointer; font-size:10px; font-weight:800;}
+.tab svg{width:23px; height:23px}
+.tab.on{color:var(--ink);}
+.tab.on .ti{transform:translateY(-1px)}
+.fab{position:absolute; right:22px; bottom:98px; width:54px; height:54px; border-radius:18px; border:0; z-index:36; color:#fff;
+ background:linear-gradient(135deg,var(--heart),#ff7a59); box-shadow:0 14px 28px rgba(255,77,109,.45); font-size:24px; font-weight:300; display:flex; align-items:center; justify-content:center;}
+.gate{display:none!important}
+body.tier-2 .gate.t2, body.tier-3 .gate.t2, body.tier-3 .gate.t3{display:block!important}
+body.tier-2 .t1only, body.tier-3 .t1only{display:none!important}
+.tierhint{font-size:11px; color:#8a93a8; font-weight:700; text-align:center; padding:6px 0 2px;}
+.scorewrap{display:flex; align-items:center; gap:14px;}
+.scoremeta{flex:1}
+.scoremeta .lbl{font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
+.scoremeta .st{font-size:20px; font-weight:900; letter-spacing:-.02em; margin:3px 0 6px;}
+.mini-bars{display:flex; gap:5px; align-items:flex-end; height:34px;}
+.mini-bars i{flex:1; background:var(--line); border-radius:4px; min-height:5px;}
+@media(max-width:430px){
+ body{padding:0; align-items:stretch}
+ .pagehint{display:none}
+ .device{width:100vw; height:100vh; min-height:100dvh; border-radius:0; padding:0;}
+ .screenframe{border-radius:0}
+ .island{top:9px}
+}
+
+/* ===== Reports / profiles / cascades ===== */
+.kicker{color:#2f80ed;font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.hero-reports{background:linear-gradient(135deg,#ffffff,#f3f7ff)}
+.profile-tiles{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.profile-tile{margin-bottom:0;padding:14px;cursor:pointer;transition:.15s}
+.profile-tile:active{transform:scale(.98)}
+.ptile-name{font-size:13px;font-weight:800;letter-spacing:-.01em;line-height:1.22}
+.ptile-meta{color:#8a93a8;font-size:10.5px;font-weight:600;margin-top:5px}
+.ptile-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;font-weight:800;color:#2f80ed}
+.chev{font-size:18px;color:#c0c8d8}
+.backbtn{border:0;background:transparent;color:#2f80ed;font-weight:800;font-size:13px;padding:2px 0 8px;cursor:pointer}
+.rc-tier{font-size:10px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#8a93a8}
+.report-out{display:flex;gap:9px;align-items:flex-start;background:#f5f8ff;border-radius:14px;padding:11px;margin:10px 0}
+.report-out .ro-ic{color:#2f80ed;font-size:10px;margin-top:3px}
+.report-out p{margin:0;font-size:13px;line-height:1.5;font-weight:600;color:#2a3550}
+.report-figs{display:flex;flex-direction:column;gap:10px;margin:4px 0 10px}
+.report-figs .fig{border:1px solid var(--line)}
+.rc-chips{font-size:11px;color:#6b7793;margin-top:4px;line-height:2}
+.rc-chips strong,.rc-methods strong,.rc-anchors strong{color:#39435c;font-weight:800}
+.chip-in{display:inline-block;background:#eef2fb;color:#4b5570;border-radius:8px;padding:3px 7px;font-size:10.5px;font-weight:700;margin:0 3px 3px 0}
+.rc-methods,.rc-anchors{font-size:11px;color:#7c879e;line-height:1.5;margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.gate-row{margin-top:10px;font-size:11.5px;font-weight:700;color:#e07b00;background:#fff7ec;border-radius:11px;padding:8px 10px}
+.fam-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.fam-pill{font-size:10px;font-weight:700;color:#5b647d;background:#eef2fb;border-radius:8px;padding:4px 8px}
+.gate-clin{background:linear-gradient(135deg,#f0fbfd,#ffffff)}
+.exp-btn{margin-top:10px;width:100%;border:0;background:linear-gradient(135deg,#0093a8,#00bcd4);color:#fff;font-weight:800;padding:12px;border-radius:14px;font-size:13px;cursor:pointer}
+.tab svg{width:22px;height:22px}
+
+/* v2 reports: period, stats, kpis, edge */
+.period-seg{display:inline-flex;background:#e9edf6;border-radius:11px;padding:3px;gap:2px}
+.period-seg button{border:0;background:transparent;padding:7px 12px;border-radius:9px;font-weight:800;font-size:11.5px;color:#8a93a8;cursor:pointer}
+.period-seg button.on{background:#fff;color:#0f1830;box-shadow:0 2px 8px rgba(20,30,60,.12)}
+.edge-card{background:linear-gradient(135deg,#fbfcff,#eef4ff);border:1px solid #e2e9f7}
+.edge-rep{margin:8px 0 10px;font-size:13px;line-height:1.5;font-weight:600;color:#2a3550}
+.edge-win{font-size:12.5px;font-weight:800;color:#1f7a4d;background:#e9f9f0;border-radius:11px;padding:9px 11px}
+.edge-line{font-size:11.5px;color:#55617d;line-height:1.5;margin-top:8px}
+.edge-line strong{color:#39435c}
+.edge-guard{font-size:11.5px;font-weight:700;color:#c0392b;background:#fdecea;border-radius:11px;padding:8px 10px;margin-top:8px}
+.block-label{font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#9aa3b8;margin:13px 0 7px}
+.viz-block{margin-bottom:12px}
+.vhi{display:inline-block;font-size:10.5px;font-weight:800;color:#2f6fed;background:#eaf1ff;border-radius:8px;padding:4px 8px;margin-bottom:6px}
+.vstat{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.vstat-i{font-size:10.5px;font-weight:700;color:#6b7793;background:#f3f6fc;border-radius:8px;padding:4px 8px}
+.vstat-i b{color:#0f1830;font-weight:900}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.kpi{background:#f5f8ff;border:1px solid #e6edf9;border-radius:13px;padding:9px 6px;text-align:center}
+.kpi-v{font-size:15px;font-weight:900;letter-spacing:-.02em;color:#0f1830}
+.kpi-k{font-size:9px;font-weight:700;color:#8a93a8;margin-top:3px;line-height:1.1}
+.statcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.statcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px}
+.sc-top{font-size:11px;font-weight:800;color:#6b7793}
+.sc-val{font-size:22px;font-weight:900;letter-spacing:-.03em;margin:3px 0 6px}
+.sc-dl{font-size:10px;font-weight:800;margin-left:5px}
+.sc-dl.up{color:#0a9d57}.sc-dl.down{color:#ff4d6d}
+.sc-cap{font-size:9.5px;font-weight:700;color:#9aa3b8;margin-top:4px}
+.hdr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:11px}
+.hdr-stats>div{background:#f5f8ff;border-radius:12px;padding:8px 4px;text-align:center}
+.hdr-stats b{display:block;font-size:15px;font-weight:900;color:#0f1830}
+.hdr-stats span{font-size:9px;font-weight:700;color:#8a93a8}
+</style>
+</head>
+<body class="tier-1">
+<div class="pagehint">Micro-Lab — your body, every tier · swipe the tabs, switch tiers up top</div>
+<div class="device">
+ <div class="screenframe">
+  <div class="island"></div>
+  <div class="statusbar">
+   <span>9:41</span>
+   <span class="r">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="1" fill="#0f1830"/><rect x="5" y="4" width="3" height="8" rx="1" fill="#0f1830"/><rect x="10" y="2" width="3" height="10" rx="1" fill="#0f1830"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#0f1830"/></svg>
+    <svg width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 11.5 0.6 3.6a11 11 0 0 1 15.8 0z" fill="none" stroke="#0f1830" stroke-width="1.6"/><circle cx="8.5" cy="10" r="1.3" fill="#0f1830"/></svg>
+    <svg width="26" height="13" viewBox="0 0 26 13"><rect x="1" y="1" width="21" height="11" rx="3.2" fill="none" stroke="#0f1830" stroke-opacity=".5"/><rect x="3" y="3" width="15" height="7" rx="1.6" fill="#0f1830"/><rect x="23" y="4" width="2" height="5" rx="1" fill="#0f1830" fill-opacity=".5"/></svg>
+   </span>
+  </div>
+  <div class="appbar">
+   <div class="greet">
+    <div class="avatar">AL</div>
+    <div><h1>Good morning, Alex</h1><p id="todayDate">Sunday, 28 June</p></div>
+    <div class="bell" title="Notifications"></div>
+   </div>
+   <div class="tierrow">
+    <div class="segment" id="segment">
+     <button class="on" data-tier="1">Everyday</button>
+     <button data-tier="2">Advanced</button>
+     <button data-tier="3">Clinical</button>
+    </div>
+    <span class="demochip" title="Illustrative sample data">● Demo</span>
+   </div>
+  </div>
+  <main class="screens" id="screens">
+   <section class="screen active" id="scr-today"></section>
+   <section class="screen" id="scr-heart"></section>
+   <section class="screen" id="scr-sleep"></section>
+   <section class="screen" id="scr-body"></section>
+   <section class="screen" id="scr-reports"></section>
+   <section class="screen" id="scr-trends"></section>
+  </main>
+  <button class="fab" id="fab" title="Take a measurement">+</button>
+  <nav class="tabbar" id="tabbar">
+   <button class="tab on" data-scr="today"><span class="ti"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5 12 4l9 7.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h13V10" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Today</button>
+   <button class="tab" data-scr="heart"><span class="ti"><svg viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.5-9.2-9C1.3 8 3 4.6 6.3 4.6 8.4 4.6 9.7 6 12 8.2 14.3 6 15.6 4.6 17.7 4.6 21 4.6 22.7 8 21.2 11 19 15.5 12 20 12 20z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 12h3l1.5-2.5L12 14l1.8-3 1.2 1H19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Heart</button>
+   <button class="tab" data-scr="sleep"><span class="ti"><svg viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Sleep</button>
+   <button class="tab" data-scr="body"><span class="ti"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2.3" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5v7m0 0-3.5 5m3.5-5 3.5 5M6 10l6-1.2L18 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Body</button>
+   <button class="tab" data-scr="reports"><span class="ti"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3.5" width="14" height="17" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 3.2h6v3.2H9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 11h7M8.5 14.3h7M8.5 17.6h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>Reports</button>
+   <button class="tab" data-scr="trends"><span class="ti"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5m0 14h16M7 15l3.5-4 3 2.5L20 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Trends</button>
+  </nav>
+ </div>
+</div>
+
+<script>
+/* ============================ deterministic data ============================ */
+let _uid=0; const uid=()=>'g'+(++_uid);
+function rng(seed){let x=seed%2147483647; if(x<=0)x+=2147483646; return ()=>{x=(x*48271)%2147483647; return x/2147483647;};}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+const R=rng(20260628);
+function series(n,base,amp,drift,sd){const a=[];for(let i=0;i<n;i++)a.push(base+Math.sin(i/2.1)*amp+drift*i+(R()-0.5)*sd);return a;}
+
+const ME={
+ readiness:82, sleepScore:86, activity:74,
+ rhr:58, hrv:64, spo2:98, resp:14.2, temp:0.2, stress:34, vo2:46, weight:74.6, bp:'118/76',
+ move:{cur:540,goal:600}, exer:{cur:38,goal:30}, stand:{cur:9,goal:12}, steps:9120, dist:6.8, floors:11, kcalTotal:2380,
+ rhrWeek:[60,59,61,58,57,59,58], hrvWeek:[51,58,55,67,62,70,64],
+ rhr14:series(14,58,3,-0.05,2.4), hrv14:series(14,60,7,0.4,5),
+ vo2_12:series(12,44,1.2,0.18,0.8), weight12:series(12,75.4,0.3,-0.08,0.25),
+ stepsWeek:[8200,10450,6700,12300,9100,4300,9120], sleepWeek:[7.1,6.4,7.8,7.2,8.0,6.9,7.7],
+ hrZones:[182,96,54,22,8], // Z1..Z5 minutes
+ sleep:{total:7.7,latency:11,eff:93,awakenings:2,deep:78,rem:104,light:248,awake:32,avgHR:54,lowHR:49,hrv:71},
+ stages:[['Awake',12],['Light',38],['Deep',32],['Light',44],['REM',26],['Deep',24],['Light',56],['REM',34],['Light',40],['Awake',8],['REM',30],['Light',46],['Deep',14],['Awake',12]],
+ stressDay:[22,18,16,20,46,58,40,30,62,72,55,38,30,26,44,52,35,28,24,30,42,33,24,20],
+ battery:[42,55,68,80,88,92,86,80,72,66,58,64,70,62,54,48,40,52,60,55,46,38,30,26],
+ spo2Night:series(60,97.6,0.4,0,0.6).map(v=>Math.min(99.6,Math.max(89,v))),
+ desats:[14,29,41,52],
+ cal: Array.from({length:35},()=>Math.round(R()*100)/100),
+};
+
+/* ============================ widget toolkit ============================ */
+function grad(id,c0,c1,horiz){return `<linearGradient id="${id}" x1="0" y1="0" x2="${horiz?1:0}" y2="${horiz?0:1}"><stop offset="0" stop-color="${c0}"/><stop offset="1" stop-color="${c1}"/></linearGradient>`;}
+function pol(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+function arc(cx,cy,r,a0,a1){const [x0,y0]=pol(cx,cy,r,a0),[x1,y1]=pol(cx,cy,r,a1);const lg=(a1-a0)>180?1:0;return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${lg} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;}
+
+function ringChart(items,centerTop,centerBig,centerSub){
+ const cx=100,cy=100;let defs='',s='';
+ items.forEach((it,i)=>{const r=84-i*21;const C=2*Math.PI*r;const id=uid();
+  defs+=grad(id,it.c[0],it.c[1],true);
+  s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eef1f7" stroke-width="15"/>`;
+  s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="15" stroke-linecap="round" stroke-dasharray="${(Math.min(1,it.pct)*C).toFixed(1)} ${(C+4).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+ });
+ let txt='';
+ if(centerBig)txt=`<text x="100" y="98" text-anchor="middle" font-size="34" font-weight="900" fill="#0f1830" letter-spacing="-1">${esc(centerBig)}</text>`+
+  (centerTop?`<text x="100" y="74" text-anchor="middle" font-size="12" font-weight="800" fill="#8a93a8">${esc(centerTop)}</text>`:'')+
+  (centerSub?`<text x="100" y="118" text-anchor="middle" font-size="11" font-weight="800" fill="#8a93a8">${esc(centerSub)}</text>`:'');
+ return `<svg class="fig" viewBox="0 0 200 200" style="height:178px"><defs>${defs}</defs>${s}${txt}</svg>`;
+}
+
+function gauge(score,label,statusTxt,c0,c1,max){
+ max=max||100; const cx=100,cy=104,r=78; const a0=-135,a1=135, sweep=270;
+ const id=uid(); const p=Math.max(0,Math.min(1,score/max));
+ let s=`<defs>${grad(id,c0,c1,true)}</defs>`;
+ s+=`<path d="${arc(cx,cy,r,a0,a1)}" fill="none" stroke="#eef1f7" stroke-width="15" stroke-linecap="round"/>`;
+ s+=`<path d="${arc(cx,cy,r,a0,a0+sweep*p)}" fill="none" stroke="url(#${id})" stroke-width="15" stroke-linecap="round"/>`;
+ const [hx,hy]=pol(cx,cy,r,a0+sweep*p);
+ s+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="7" fill="#fff" stroke="${c1}" stroke-width="3"/>`;
+ s+=`<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="42" font-weight="900" fill="#0f1830" letter-spacing="-2">${score}</text>`;
+ if(label)s+=`<text x="${cx}" y="${cy+22}" text-anchor="middle" font-size="12" font-weight="800" fill="#8a93a8" letter-spacing=".5">${esc(label)}</text>`;
+ if(statusTxt)s+=`<text x="${cx}" y="${cy+50}" text-anchor="middle" font-size="14" font-weight="900" fill="${c1}">${esc(statusTxt)}</text>`;
+ return `<svg class="fig" viewBox="0 0 200 196" style="height:172px">${s}</svg>`;
+}
+
+function spark(data,w,h,c0,c1,opts){opts=opts||{};w=w||130;h=h||44;
+ const mn=Math.min.apply(null,data),mx=Math.max.apply(null,data),pad=(mx-mn)*0.2||1,lo=mn-pad,hi=mx+pad;
+ const X=i=>3+i/(data.length-1)*(w-6),Y=v=>h-4-((v-lo)/(hi-lo))*(h-9);
+ const id=uid(),id2=uid();
+ let ln='';data.forEach((v,i)=>ln+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' ');
+ const area=`M${X(0).toFixed(1)} ${h} L`+data.map((v,i)=>X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' L')+` L${X(data.length-1).toFixed(1)} ${h} Z`;
+ let base='';
+ if(opts.baseline!=null){const by=Y(opts.baseline);base=`<line x1="3" y1="${by.toFixed(1)}" x2="${w-3}" y2="${by.toFixed(1)}" stroke="#cdd5e6" stroke-width="1" stroke-dasharray="3 3"/>`;}
+ const last=data.length-1;
+ return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><defs>${grad(id,c0,c1,true)}<linearGradient id="${id2}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}" stop-opacity=".26"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient></defs>${base}<path d="${area}" fill="url(#${id2})"/><path d="${ln}" fill="none" stroke="url(#${id})" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${X(last).toFixed(1)}" cy="${Y(data[last]).toFixed(1)}" r="3.1" fill="#fff" stroke="${c1}" stroke-width="2"/></svg>`;
+}
+
+function barChart(data,labels,hi,c0,c1,unit){
+ const w=320,h=130,pad=20,bw=(w-pad*2)/data.length;const mx=Math.max.apply(null,data)*1.18;
+ const id=uid();let s=`<defs>${grad(id,c0,c1)}</defs>`;
+ data.forEach((v,i)=>{const bh=(v/mx)*(h-34);const x=pad+i*bw+bw*0.18, y=h-22-bh, bwi=bw*0.64;
+  const on=i===hi;
+  s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bwi.toFixed(1)}" height="${bh.toFixed(1)}" rx="6" fill="${on?`url(#${id})`:'#e7ecf6'}"/>`;
+  if(on)s+=`<text x="${(x+bwi/2).toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="900" fill="#0f1830">${unit?(v>=1000?(v/1000).toFixed(1)+'k':v):v}</text>`;
+  s+=`<text x="${(x+bwi/2).toFixed(1)}" y="${h-6}" text-anchor="middle" font-size="10" font-weight="800" fill="#9aa3b8">${esc(labels[i])}</text>`;
+ });
+ return `<svg class="fig" viewBox="0 0 ${w} ${h}" style="height:142px">${s}</svg>`;
+}
+
+function hypnogram(stages){
+ const w=340,h=158,L=44,T=16,B=26;const order=['Awake','REM','Light','Deep'];
+ const col={Awake:'#ff9aab',REM:'#7c9cff',Light:'#a99bff',Deep:'#5b4bd6'};
+ const total=stages.reduce((a,b)=>a+b[1],0);const X=t=>L+t/total*(w-L-8);
+ const yOf=st=>T+order.indexOf(st)*((h-T-B)/4)+((h-T-B)/8);
+ let s='',t=0,prevY=null,prevXe=null;
+ order.forEach((st,i)=>{const y=T+i*((h-T-B)/4);s+=`<text x="${L-8}" y="${(y+(h-T-B)/8+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="800" fill="#8a93a8">${st}</text>`;
+  s+=`<line x1="${L}" y1="${(y+(h-T-B)/8).toFixed(1)}" x2="${w-8}" y2="${(y+(h-T-B)/8).toFixed(1)}" stroke="#f1f4fa"/>`;});
+ stages.forEach(([st,dur])=>{const x0=X(t),x1=X(t+dur),y=yOf(st);const c=col[st];
+  if(prevY!=null)s+=`<line x1="${prevXe.toFixed(1)}" y1="${prevY.toFixed(1)}" x2="${prevXe.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#cdd5ea" stroke-width="2"/>`;
+  s+=`<rect x="${x0.toFixed(1)}" y="${(y-6).toFixed(1)}" width="${Math.max(2,x1-x0).toFixed(1)}" height="12" rx="5" fill="${c}"/>`;
+  prevY=y;prevXe=x1;t+=dur;});
+ ['23:30','01:30','03:30','05:30','07:00'].forEach((tt,i)=>{const x=L+i/4*(w-L-8);s+=`<text x="${x.toFixed(1)}" y="${h-7}" text-anchor="middle" font-size="9" font-weight="700" fill="#9aa3b8">${tt}</text>`;});
+ return `<svg class="fig" viewBox="0 0 ${w} ${h}" style="height:168px">${s}</svg>`;
+}
+
+function donut(segs){
+ const cx=66,cy=66,r=50,sw=20;const tot=segs.reduce((a,b)=>a+b.v,0);let a0=-90,s='';
+ segs.forEach(g=>{const a1=a0+g.v/tot*360;s+=`<path d="${arc(cx,cy,r,a0,a1-1)}" fill="none" stroke="${g.c}" stroke-width="${sw}" stroke-linecap="round"/>`;a0=a1;});
+ s+=`<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="20" font-weight="900" fill="#0f1830">${esc(segs.center||'')}</text><text x="${cx}" y="${cy+15}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#8a93a8">${esc(segs.sub||'')}</text>`;
+ return `<svg viewBox="0 0 132 132" width="132" height="132">${s}</svg>`;
+}
+
+function calendarHeat(vals){
+ const cols=7,cell=15,gap=5,w=cols*(cell+gap),rows=Math.ceil(vals.length/cols),h=rows*(cell+gap);
+ const c=t=>{const a=[230,245,233],b=[12,157,87];return `rgb(${a.map((x,i)=>Math.round(x+(b[i]-x)*t)).join(',')})`;};
+ let s='';vals.forEach((v,i)=>{const x=(i%cols)*(cell+gap),y=Math.floor(i/cols)*(cell+gap);s+=`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="4" fill="${c(v)}"/>`;});
+ return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${s}</svg>`;
+}
+
+function hrZones(z){
+ const w=320,h=58,L=4,R2=4;const cols=['#9bd6ff','#5ec2f2','#33d17a','#ffb020','#ff5a6a'];const names=['Z1','Z2','Z3','Z4','Z5'];
+ const tot=z.reduce((a,b)=>a+b,0);let x=L,s='';
+ z.forEach((m,i)=>{const bw=m/tot*(w-L-R2);s+=`<rect x="${x.toFixed(1)}" y="8" width="${Math.max(0,bw-2).toFixed(1)}" height="20" rx="5" fill="${cols[i]}"/>`;
+  s+=`<text x="${(x+bw/2).toFixed(1)}" y="44" text-anchor="middle" font-size="10" font-weight="800" fill="#8a93a8">${names[i]}</text><text x="${(x+bw/2).toFixed(1)}" y="56" text-anchor="middle" font-size="9.5" font-weight="700" fill="#aab2c5">${m}m</text>`;x+=bw;});
+ return `<svg class="fig" viewBox="0 0 ${w} ${h}" style="height:64px">${s}</svg>`;
+}
+
+function bodyBattery(d){
+ const w=320,h=120,L=8,T=10,B=18;const X=i=>L+i/(d.length-1)*(w-L-8),Y=v=>h-B-(v/100)*(h-T-B);
+ const id=uid(),id2=uid();let ln='';d.forEach((v,i)=>ln+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' ');
+ const area=`M${X(0).toFixed(1)} ${h-B} L`+d.map((v,i)=>X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' L')+` L${X(d.length-1).toFixed(1)} ${h-B} Z`;
+ let mxi=0,mni=0;d.forEach((v,i)=>{if(v>d[mxi])mxi=i;if(v<d[mni])mni=i;});
+ let s=`<defs>${grad(id,'#00b894','#33d17a',true)}<linearGradient id="${id2}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33d17a" stop-opacity=".28"/><stop offset="1" stop-color="#33d17a" stop-opacity="0"/></linearGradient></defs>`;
+ ['06','12','18','24'].forEach((t,i)=>{const x=L+(i+0.0)/3*(w-L-8);s+=`<text x="${x.toFixed(1)}" y="${h-4}" text-anchor="middle" font-size="9" font-weight="700" fill="#9aa3b8">${t}:00</text>`;});
+ s+=`<path d="${area}" fill="url(#${id2})"/><path d="${ln}" fill="none" stroke="url(#${id})" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+ s+=`<circle cx="${X(mxi).toFixed(1)}" cy="${Y(d[mxi]).toFixed(1)}" r="3.4" fill="#00b894"/><text x="${X(mxi).toFixed(1)}" y="${(Y(d[mxi])-7).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#0a9d57">${d[mxi]}</text>`;
+ s+=`<circle cx="${X(mni).toFixed(1)}" cy="${Y(d[mni]).toFixed(1)}" r="3.4" fill="#ff7043"/><text x="${X(mni).toFixed(1)}" y="${(Y(d[mni])+14).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#e0572a">${d[mni]}</text>`;
+ return `<svg class="fig" viewBox="0 0 ${w} ${h}" style="height:128px">${s}</svg>`;
+}
+
+function spo2Night(d,desats){
+ const w=340,h=120,L=30,T=12,B=18;const lo=88,hi=100;const X=i=>L+i/(d.length-1)*(w-L-8),Y=v=>h-B-((v-lo)/(hi-lo))*(h-T-B);
+ const id=uid();let s=`<defs>${grad(id,'#2f80ed','#56ccf2',true)}</defs>`;
+ [90,95,100].forEach(v=>{s+=`<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${w-8}" y2="${Y(v).toFixed(1)}" stroke="#f1f4fa"/><text x="${L-5}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end" font-size="9" font-weight="700" fill="#9aa3b8">${v}</text>`;});
+ let ln='';d.forEach((v,i)=>ln+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' ');
+ s+=`<path d="${ln}" fill="none" stroke="url(#${id})" stroke-width="2.2" stroke-linejoin="round"/>`;
+ desats.forEach(i=>{s+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(d[i]).toFixed(1)}" r="3.4" fill="#ff5a6a" stroke="#fff" stroke-width="1.4"/>`;});
+ return `<svg class="fig" viewBox="0 0 ${w} ${h}" style="height:128px">${s}</svg>`;
+}
+
+/* ============================ clinical figures (your signals) ============================ */
+function cgeo(o){return Object.assign({x0:50,x1:420,y0:30,y1:196,xticks:5,yticks:4},o);}
+function cframe(g){
+ const X=v=>g.x0+(v-g.xmin)/(g.xmax-g.xmin)*(g.x1-g.x0),Y=v=>g.y1-(v-g.ymin)/(g.ymax-g.ymin)*(g.y1-g.y0);
+ let s=`<rect x="${g.x0}" y="${g.y0}" width="${(g.x1-g.x0).toFixed(1)}" height="${(g.y1-g.y0).toFixed(1)}" fill="#fff" stroke="#dbe2ee"/>`;
+ const xt=g.xticks,yt=g.yticks;
+ for(let i=0;i<=xt;i++){const v=g.xmin+(g.xmax-g.xmin)*i/xt,x=X(v);if(g.grid!==false)s+=`<line x1="${x.toFixed(1)}" y1="${g.y0}" x2="${x.toFixed(1)}" y2="${g.y1}" stroke="#eef2f8"/>`;s+=`<text x="${x.toFixed(1)}" y="${g.y1+14}" fill="#7c879e" font-size="9" text-anchor="middle">${g.xfmt?g.xfmt(v):(+v.toFixed(2))}</text>`;}
+ for(let i=0;i<=yt;i++){const v=g.ymin+(g.ymax-g.ymin)*i/yt,y=Y(v);if(g.grid!==false)s+=`<line x1="${g.x0}" y1="${y.toFixed(1)}" x2="${g.x1}" y2="${y.toFixed(1)}" stroke="#eef2f8"/>`;s+=`<text x="${g.x0-6}" y="${(y+3).toFixed(1)}" fill="#7c879e" font-size="9" text-anchor="end">${g.yfmt?g.yfmt(v):(+v.toFixed(2))}</text>`;}
+ if(g.title)s+=`<text x="${g.x0}" y="18" fill="#10264f" font-size="12.5" font-weight="800">${esc(g.title)}</text>`;
+ if(g.xlabel)s+=`<text x="${((g.x0+g.x1)/2).toFixed(1)}" y="${g.y1+28}" fill="#7c879e" font-size="10" text-anchor="middle">${esc(g.xlabel)}</text>`;
+ if(g.ylabel){const my=((g.y0+g.y1)/2).toFixed(1);s+=`<text x="14" y="${my}" fill="#7c879e" font-size="10" text-anchor="middle" transform="rotate(-90 14 ${my})">${esc(g.ylabel)}</text>`;}
+ return {s,X,Y};
+}
+function cborder(g){return `<rect x="${g.x0}" y="${g.y0}" width="${(g.x1-g.x0).toFixed(1)}" height="${(g.y1-g.y0).toFixed(1)}" fill="none" stroke="#dbe2ee"/>`;}
+function cpath(d,X,Y,c,w,dash){let p='';for(let i=0;i<d.length;i++)p+=(i?'L':'M')+X(d[i][0]).toFixed(1)+' '+Y(d[i][1]).toFixed(1)+' ';return `<path d="${p}" fill="none" stroke="${c}" stroke-width="${w||1.5}"${dash?` stroke-dasharray="${dash}"`:''} stroke-linejoin="round" stroke-linecap="round"/>`;}
+function gss(p,mu,s){return Math.exp(-((p-mu)*(p-mu))/(2*s*s));}
+const VIR=[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]];
+function vir(t){t=Math.max(0,Math.min(1,t));const s=t*(VIR.length-1),i=Math.min(Math.floor(s),VIR.length-2),f=s-i,a=VIR[i],b=VIR[i+1];return `rgb(${Math.round(a[0]+(b[0]-a[0])*f)},${Math.round(a[1]+(b[1]-a[1])*f)},${Math.round(a[2]+(b[2]-a[2])*f)})`;}
+function svgWrap(inner,cap){return `<svg class="fig" viewBox="0 0 440 244" style="height:188px"><rect width="440" height="244" fill="#fbfdff"/>${inner}${cap?`<text x="50" y="238" fill="#9aa6bd" font-size="9">${esc(cap)}</text>`:''}</svg>`;}
+
+function figECG(){const r=rng(7);const g=cgeo({xmin:0,xmax:4,ymin:-0.5,ymax:1.6,xticks:8,title:'Your ECG · lead I',xlabel:'Time (s)',ylabel:'mV'});const ax=cframe(Object.assign({},g,{grid:false}));
+ let bg='';const gl=(a,b,c,d,col,w)=>`<line x1="${a.toFixed(1)}" y1="${b.toFixed(1)}" x2="${c.toFixed(1)}" y2="${d.toFixed(1)}" stroke="${col}" stroke-width="${w}"/>`;
+ for(let t=0;t<=4.0001;t+=0.04){const x=ax.X(t);bg+=gl(x,g.y0,x,g.y1,'#fbe2e2',0.5);}for(let v=-0.5;v<=1.6;v+=0.1){const y=ax.Y(v);bg+=gl(g.x0,y,g.x1,y,'#fbe2e2',0.5);}
+ for(let t=0;t<=4.0001;t+=0.2){const x=ax.X(t);bg+=gl(x,g.y0,x,g.y1,'#f2b8b8',0.8);}for(let v=-0.5;v<=1.6;v+=0.5){const y=ax.Y(v);bg+=gl(g.x0,y,g.x1,y,'#f2b8b8',0.8);}
+ const on=[];let t=0.18;while(t<4){on.push(t);t+=0.82+(r()-0.5)*0.06;}const pts=[],dt=0.008;
+ for(let i=0;i*dt<=4;i++){const ts=i*dt;let bi=0;while(on[bi+1]!==undefined&&on[bi+1]<=ts)bi++;const o=on[bi],rr=(on[bi+1]||o+0.8)-o,p=(ts-o)/rr;
+  let y=0.12*gss(p,0.18,0.026)-0.10*gss(p,0.31,0.01)+1.22*gss(p,0.345,0.01)-0.30*gss(p,0.38,0.013)+0.28*gss(p,0.6,0.045);y+=(r()-0.5)*0.012;pts.push([ts,y]);}
+ const hr=Math.round(60/(on.slice(1).reduce((a,o,i)=>a+(o-on[i]),0)/(on.length-1)));
+ const note=`<rect x="${g.x1-86}" y="${g.y0+6}" width="80" height="20" rx="5" fill="#fff" stroke="#e6c4c4"/><text x="${g.x1-46}" y="${g.y0+20}" text-anchor="middle" font-size="11" font-weight="800" fill="#dc4437">${hr} bpm</text>`;
+ return svgWrap(ax.s+bg+cpath(pts,ax.X,ax.Y,'#15233f',1.4)+note+cborder(g),'30-second single-lead capture · sinus rhythm');}
+
+function figPoincare(){const r=rng(11);const N=120,rr=[];let c=820;for(let i=0;i<N;i++){c+=(r()-0.5)*60;c=Math.max(660,Math.min(990,c));rr.push(c+Math.sin(i/6)*16);}
+ const mn=Math.min.apply(null,rr)-30,mx=Math.max.apply(null,rr)+30;const g=cgeo({xmin:mn,xmax:mx,ymin:mn,ymax:mx,xticks:4,title:'HRV · Poincaré plot',xlabel:'RRn (ms)',ylabel:'RRn+1 (ms)'});const ax=cframe(g);
+ let s=`<line x1="${ax.X(mn).toFixed(1)}" y1="${ax.Y(mn).toFixed(1)}" x2="${ax.X(mx).toFixed(1)}" y2="${ax.Y(mx).toFixed(1)}" stroke="#9aa7bd" stroke-dasharray="4 4"/>`;
+ const mean=rr.reduce((a,b)=>a+b,0)/N,diff=[],sum=[];for(let i=0;i<N-1;i++){diff.push((rr[i+1]-rr[i])/Math.SQRT2);sum.push((rr[i+1]+rr[i])/Math.SQRT2);}
+ const sd=a=>{const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length);};const SD1=sd(diff),SD2=sd(sum);
+ const cx=ax.X(mean),cy=ax.Y(mean),sc=(ax.X(mx)-ax.X(mn))/(mx-mn);
+ s+=`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(SD2*sc).toFixed(1)}" ry="${(SD1*sc).toFixed(1)}" fill="rgba(108,92,231,.1)" stroke="#6c5ce7" stroke-width="1.6" transform="rotate(-45 ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
+ let dots='';for(let i=0;i<N-1;i++)dots+=`<circle cx="${ax.X(rr[i]).toFixed(1)}" cy="${ax.Y(rr[i+1]).toFixed(1)}" r="2" fill="#2f80ed" opacity=".6"/>`;
+ const note=`<rect x="${g.x0+8}" y="${g.y0+8}" width="92" height="34" rx="5" fill="#fff" stroke="#dce4f0"/><text x="${g.x0+14}" y="${g.y0+22}" font-size="9.5" fill="#5f6368">SD1 ${SD1.toFixed(0)} ms</text><text x="${g.x0+14}" y="${g.y0+35}" font-size="9.5" fill="#5f6368">SD2 ${SD2.toFixed(0)} ms</text>`;
+ return svgWrap(ax.s+s+dots+note+cborder(g),'beat-to-beat variability · parasympathetic tone');}
+
+function figPSD(){const r=rng(13);const g=cgeo({xmin:0,xmax:0.5,ymin:0,ymax:1,xticks:5,title:'HRV power spectrum',xlabel:'Frequency (Hz)',ylabel:'PSD (norm.)'});const ax=cframe(g);
+ const band=(a,b,c)=>`<rect x="${ax.X(a).toFixed(1)}" y="${g.y0}" width="${(ax.X(b)-ax.X(a)).toFixed(1)}" height="${g.y1-g.y0}" fill="${c}" opacity=".12"/>`;
+ let s=band(0,0.04,'#9aa7bd')+band(0.04,0.15,'#2f80ed')+band(0.15,0.4,'#0f9d58');
+ s+=`<text x="${ax.X(0.095).toFixed(1)}" y="${g.y0+12}" font-size="9" fill="#2f80ed" text-anchor="middle" font-weight="700">LF</text><text x="${ax.X(0.27).toFixed(1)}" y="${g.y0+12}" font-size="9" fill="#0f9d58" text-anchor="middle" font-weight="700">HF</text>`;
+ const lf=0.09,hf=0.26,Alf=0.78,Ahf=0.62,pts=[];for(let f=0;f<=0.5;f+=0.004){let y=Alf/(1+Math.pow((f-lf)/0.018,2))+Ahf/(1+Math.pow((f-hf)/0.03,2))+0.15/(1+Math.pow((f-0.01)/0.02,2))+0.02;y+=r()*0.012;pts.push([f,Math.min(y,1)]);}
+ const note=`<rect x="${g.x1-94}" y="${g.y0+6}" width="88" height="20" rx="5" fill="#fff" stroke="#dce4f0"/><text x="${g.x1-50}" y="${g.y0+20}" text-anchor="middle" font-size="10" font-weight="800" fill="#10264f">LF/HF ${(Alf/Ahf).toFixed(2)}</text>`;
+ return svgWrap(ax.s+s+cpath(pts,ax.X,ax.Y,'#15233f',1.6)+note+cborder(g),'Welch periodogram · autonomic balance');}
+
+function figScalogram(){const g=cgeo({x1:392,xmin:0,xmax:8,ymin:0,ymax:1,xticks:4,yticks:6,title:'Time-frequency scalogram',xlabel:'Time (s)',ylabel:'Freq (Hz)'});
+ const ax=cframe(Object.assign({},g,{grid:false,yfmt:v=>['0.5','1','2','4','8','16','32'][Math.round(v*6)]}));
+ const nx=40,ny=24,cw=(g.x1-g.x0)/nx,ch=(g.y1-g.y0)/ny;let cells='',vmax=1e-6;const G=[];const r=rng(5);
+ for(let j=0;j<ny;j++){G[j]=[];for(let i=0;i<nx;i++){const t=i/nx,f=j/ny,ridge=0.25+0.5*t+0.12*Math.sin(t*7);let p=Math.exp(-Math.pow(f-ridge,2)/(2*0.012))*(0.6+0.4*Math.sin(t*9));p+=0.25*Math.exp(-Math.pow(f-0.2,2)/(2*0.02))*Math.max(0,Math.sin(t*5));p+=0.05*r();G[j][i]=p;if(p>vmax)vmax=p;}}
+ for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=g.x0+i*cw,y=g.y0+(ny-1-j)*ch;cells+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(cw+0.6).toFixed(1)}" height="${(ch+0.6).toFixed(1)}" fill="${vir(G[j][i]/vmax)}"/>`;}
+ const cbid=uid();let st='';for(let i=0;i<=10;i++)st+=`<stop offset="${i*10}%" stop-color="${vir(i/10)}"/>`;
+ const cb=`<defs><linearGradient id="${cbid}" x1="0" y1="1" x2="0" y2="0">${st}</linearGradient></defs><rect x="400" y="${g.y0}" width="12" height="${g.y1-g.y0}" fill="url(#${cbid})" stroke="#c9d4e6"/><text x="416" y="${g.y0+8}" font-size="8" fill="#7c879e">hi</text><text x="416" y="${g.y1}" font-size="8" fill="#7c879e">lo</text>`;
+ return svgWrap(ax.s+cells+cb+cborder(g),'continuous wavelet transform of pulse signal');}
+
+function figEDA(){const r=rng(17);const g=cgeo({xmin:0,xmax:60,ymin:0,ymax:8,xticks:6,title:'Skin conductance · tonic & phasic',xlabel:'Time (s)',ylabel:'uS'});const ax=cframe(g);
+ const ev=[];const n=4;for(let i=0;i<n;i++)ev.push({t:8+r()*44,a:1.4+r()*2});const tonic=t=>2.5+0.8*Math.sin(t/22)+0.0015*t;const scr=t=>{let v=0;ev.forEach(e=>{const d=t-e.t;if(d>0&&d<14)v+=e.a*(Math.exp(-d/3.5)-Math.exp(-d/0.5));});return Math.max(0,v);};
+ const tp=[],fp=[];for(let t=0;t<=60;t+=0.25){const to=tonic(t);tp.push([t,to]);fp.push([t,to+scr(t)]);}
+ let marks='';ev.forEach(e=>{const x=ax.X(e.t);marks+=`<path d="M${x.toFixed(1)} ${g.y0+4} l-3 -5 l6 0 z" fill="#ff7043"/>`;});
+ return svgWrap(ax.s+marks+cpath(tp,ax.X,ax.Y,'#a29bfe',1.6,'5 4')+cpath(fp,ax.X,ax.Y,'#0a7d8c',1.7)+cborder(g),'arousal responses · '+ev.length+' events detected');}
+
+function figResp(){const r=rng(19);const g=cgeo({xmin:0,xmax:30,ymin:-1.2,ymax:1.2,xticks:6,title:'Respiration during sleep',xlabel:'Time (s)',ylabel:'Excursion'});const ax=cframe(g);
+ let s=`<rect x="${ax.X(16).toFixed(1)}" y="${g.y0}" width="${(ax.X(22)-ax.X(16)).toFixed(1)}" height="${g.y1-g.y0}" fill="#dc4437" opacity=".07"/><text x="${ax.X(19).toFixed(1)}" y="${g.y0+12}" text-anchor="middle" font-size="8.5" fill="#dc4437" font-weight="700">pause</text>`;
+ const pts=[];for(let t=0;t<=30;t+=0.1){const amp=(t>16&&t<22)?0.12:1;pts.push([t,amp*Math.sin(t*2*Math.PI/4)*0.9+(r()-0.5)*0.04]);}
+ return svgWrap(ax.s+s+cpath(pts,ax.X,ax.Y,'#2f80ed',1.8)+cborder(g),'breathing waveform · 15 breaths/min');}
+
+/* ============================ helpers for screen markup ============================ */
+function ico(bg,svg){return `<span class="ico" style="background:${bg}">${svg}</span>`;}
+function delta(v,unit,inv){const up=v>0;const cls=v===0?'flat':((up!==!!inv)?'up':'down');const arr=v===0?'→':(up?'▲':'▼');return `<div class="delta ${cls}">${arr} ${Math.abs(v)}${unit||''} vs last week</div>`;}
+function metric(label,icobg,icosvg,val,unit,sub){return `<div class="metric"><div class="top">${ico(icobg,icosvg)} ${esc(label)}</div><div class="val">${val}${unit?`<small>${esc(unit)}</small>`:''}</div>${sub||''}</div>`;}
+const I={
+ heart:'<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.6-9.3-9.2C1.2 8.6 3 5.4 6.2 5.4c2 0 3.3 1.2 5.8 3.6 2.5-2.4 3.8-3.6 5.8-3.6 3.2 0 5 3.2 3.5 6.4C19 16.4 12 21 12 21z"/></svg>',
+ wave:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 12h3l2-5 3 10 2.5-7 1.5 2H21" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ lung:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 3v8M8 11c-3 1-4 4-4 8 0 1 1 2 2 2s2-1 2-2v-8zM16 11c3 1 4 4 4 8 0 1-1 2-2 2s-2-1-2-2v-8z"/></svg>',
+ o2:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 3C8 8 6 11 6 14a6 6 0 0 0 12 0c0-3-2-6-6-11z"/></svg>',
+ temp:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M11 4a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/></svg>',
+ bolt:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>',
+ step:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M8 4c2 0 3 2 3 5s-1 6-3 6-2-3-2-5 0-6 2-6zM16 9c1.5 0 2 1.5 2 3.5S17 16 16 16s-1.5-1.5-1.5-3.5S14.5 9 16 9z"/></svg>',
+};
+
+function statBlock(){
+ return `<div class="grid3">
+  ${metric('Resting HR','linear-gradient(135deg,#ff4d6d,#ff8fa3)',I.heart,ME.rhr,'bpm',delta(-2,''))}
+  ${metric('HRV','linear-gradient(135deg,#6c5ce7,#a29bfe)',I.wave,ME.hrv,'ms',delta(6,'',false))}
+  ${metric('Blood O₂','linear-gradient(135deg,#2f80ed,#56ccf2)',I.o2,ME.spo2,'%',delta(0,''))}
+  ${metric('Respiration','linear-gradient(135deg,#00bcd4,#56ccf2)',I.lung,ME.resp.toFixed(0),'br/m',delta(0,''))}
+  ${metric('Skin temp','linear-gradient(135deg,#ff9f1c,#ffd166)',I.temp,'+'+ME.temp,'°C',delta(0.1,'°',true))}
+  ${metric('Stress','linear-gradient(135deg,#ff7043,#ffa726)',I.bolt,ME.stress,'/100',delta(-8,'',true))}
+ </div>`;
+}
+
+/* ============================ screens ============================ */
+function screenToday(){
+ return `
+ <div class="card">
+  <div class="scorewrap">
+   ${gauge(ME.readiness,'READINESS','Recovered','#00b894','#33d17a')}
+   <div class="scoremeta">
+    <div class="lbl">You're ready</div>
+    <div class="st">Primed for a hard day</div>
+    <div class="row" style="gap:8px"><span class="pill good">HRV ▲ 6ms</span><span class="pill info">Sleep 86</span></div>
+    <p style="color:#6b7793;font-size:12px;line-height:1.5;margin:9px 0 0">Recovery is high and your overnight heart rate settled early. A good window for training.</p>
+   </div>
+  </div>
+ </div>
+
+ <div class="sec-title"><h3>Activity</h3><a>Today</a></div>
+ <div class="card">
+  <div class="row">
+   ${ringChart([
+     {pct:ME.move.cur/ME.move.goal,c:['#ff5a3c','#ff8a5b']},
+     {pct:ME.exer.cur/ME.exer.goal,c:['#1fd17a','#9bf06a']},
+     {pct:ME.stand.cur/ME.stand.goal,c:['#00bcd4','#56ccf2']}
+   ])}
+   <div style="flex:1">
+    <div class="kv"><span class="k" style="color:#ff5a3c;font-weight:800">Move</span><span class="v">${ME.move.cur} / ${ME.move.goal} kcal</span></div>
+    <div class="kv"><span class="k" style="color:#0fb56a;font-weight:800">Exercise</span><span class="v">${ME.exer.cur} / ${ME.exer.goal} min</span></div>
+    <div class="kv"><span class="k" style="color:#00bcd4;font-weight:800">Stand</span><span class="v">${ME.stand.cur} / ${ME.stand.goal} hr</span></div>
+   </div>
+  </div>
+  <div class="grid3" style="margin-top:11px">
+   ${metric('Steps','linear-gradient(135deg,#1fd17a,#9bf06a)',I.step,(ME.steps/1000).toFixed(1)+'k','',`<div class="delta flat">${ME.dist} km · ${ME.floors} floors</div>`)}
+   ${metric('Energy','linear-gradient(135deg,#ff5a3c,#ff8a5b)',I.bolt,ME.kcalTotal,'kcal','')}
+   ${metric('Move goal','linear-gradient(135deg,#00b894,#33d17a)','<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 1 0 .01 0zM11 7h2v6h-2zM11 15h2v2h-2z"/></svg>',Math.round(ME.move.cur/ME.move.goal*100),'%','')}
+  </div>
+ </div>
+
+ <div class="sec-title"><h3>Vitals now</h3><a>All</a></div>
+ <div class="card">${statBlock()}</div>
+
+ <div class="card t1only">
+  <div class="story">
+   <span class="dot" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)">${I.wave}</span>
+   <div><h2 style="margin:0 0 3px">Today's story</h2><p>Your nervous system looks calm and recovered. Heart-rate variability is above your monthly average and resting heart rate is near its lowest. Keep hydration up and you're set for a strong session.</p></div>
+  </div>
+ </div>
+
+ <div class="card gate t2">
+  <div class="between"><h2>Daytime heart rate zones</h2><span class="badge-tier prem">Advanced</span></div>
+  <p class="sub">How long your heart spent in each intensity zone today</p>
+  ${hrZones(ME.hrZones)}
+ </div>
+
+ <div class="card gate t2">
+  <div class="between"><h2>Body energy</h2><span class="badge-tier prem">Advanced</span></div>
+  <p class="sub">Estimated readiness reserve across the day</p>
+  ${bodyBattery(ME.battery)}
+ </div>
+
+ <div class="card gate t3">
+  <div class="between"><h2>Signal provenance</h2><span class="badge-tier clin">Clinical</span></div>
+  <p class="sub">Source quality behind today's metrics</p>
+  <div class="kv"><span class="k">PPG coverage</span><span class="v">22h 51m · 98.6%</span></div>
+  <div class="kv"><span class="k">Motion artifact rejected</span><span class="v">1m 12s</span></div>
+  <div class="kv"><span class="k">ECG captures</span><span class="v">2 · both clean</span></div>
+  <div class="kv"><span class="k">Sampling</span><span class="v">PPG 100 Hz · ECG 500 Hz · ACC 50 Hz</span></div>
+ </div>
+ `;
+}
+
+function screenHeart(){
+ return `
+ <div class="card">
+  <div class="between"><div><h2>Resting heart rate</h2><p class="sub">14-day trend</p></div><div style="text-align:right"><div class="bignum" style="color:#ff4d6d">${ME.rhr}<span class="unit"> bpm</span></div><span class="pill good" style="margin-top:4px">▼ 2 vs avg</span></div></div>
+  ${spark(ME.rhr14,300,64,'#ff4d6d','#ff8fa3',{baseline:ME.rhr14.reduce((a,b)=>a+b,0)/ME.rhr14.length})}
+ </div>
+
+ <div class="card">
+  <div class="between"><div><h2>ECG capture</h2><p class="sub">Single-lead · this morning</p></div><span class="pill good">Sinus rhythm</span></div>
+  ${figECG()}
+  <div class="legendrow"><span><i style="background:#15233f"></i>Your trace</span><span><i style="background:#dc4437"></i>R-peaks</span><span>No signs of atrial fibrillation</span></div>
+ </div>
+
+ <div class="grid2">
+  <div class="card tight">${metric('Avg HR today','linear-gradient(135deg,#ff4d6d,#ff8fa3)',I.heart,72,'bpm','')}<div style="margin-top:8px">${spark(series(20,72,8,0,5),130,38,'#ff4d6d','#ff8fa3')}</div></div>
+  <div class="card tight">${metric('Cardio load','linear-gradient(135deg,#ff7043,#ffa726)',I.bolt,'Optimal','','')}<div style="margin-top:8px">${spark(series(20,40,10,0.4,6),130,38,'#ff7043','#ffa726')}</div></div>
+ </div>
+
+ <div class="card gate t2">
+  <div class="between"><h2>Heart-rate variability</h2><span class="badge-tier prem">Advanced</span></div>
+  <p class="sub">Beat-to-beat structure · last night</p>
+  ${figPoincare()}
+  <div class="grid3" style="margin-top:10px">
+   <div class="metric"><div class="top">SD1</div><div class="val" style="font-size:19px">22<small>ms</small></div></div>
+   <div class="metric"><div class="top">SD2</div><div class="val" style="font-size:19px">69<small>ms</small></div></div>
+   <div class="metric"><div class="top">RMSSD</div><div class="val" style="font-size:19px">${ME.hrv}<small>ms</small></div></div>
+  </div>
+ </div>
+
+ <div class="card gate t2">
+  <div class="between"><h2>Time in heart-rate zones</h2><span class="badge-tier prem">Advanced</span></div>
+  <p class="sub">Today's training distribution</p>
+  ${hrZones(ME.hrZones)}
+ </div>
+
+ <div class="card gate t3">
+  <div class="between"><h2>HRV power spectrum</h2><span class="badge-tier clin">Clinical</span></div>
+  <p class="sub">Autonomic balance · frequency domain</p>
+  ${figPSD()}
+ </div>
+ <div class="card gate t3">
+  <div class="between"><h2>Pulse-wave scalogram</h2><span class="badge-tier clin">Clinical</span></div>
+  <p class="sub">Continuous wavelet transform of PPG</p>
+  ${figScalogram()}
+  <div class="kv" style="margin-top:6px"><span class="k">QTc estimate</span><span class="v">412 ms · normal</span></div>
+  <div class="kv"><span class="k">PR interval</span><span class="v">158 ms</span></div>
+ </div>
+ <div class="tierhint gate t3">Tap any figure to export a clinician-ready PDF packet</div>
+ `;
+}
+
+function screenSleep(){
+ const sl=ME.sleep;
+ return `
+ <div class="card">
+  <div class="scorewrap">
+   ${gauge(ME.sleepScore,'SLEEP SCORE','Restorative','#6c5ce7','#a29bfe')}
+   <div class="scoremeta">
+    <div class="lbl">Last night</div>
+    <div class="st">${sl.total} h asleep</div>
+    <div class="row" style="gap:8px"><span class="pill prem">Deep ${sl.deep}m</span><span class="pill info">REM ${sl.rem}m</span></div>
+    <p style="color:#6b7793;font-size:12px;line-height:1.5;margin:9px 0 0">You fell asleep in ${sl.latency} min and stayed efficient at ${sl.eff}%. Deep sleep landed in the healthy range.</p>
+   </div>
+  </div>
+ </div>
+
+ <div class="card">
+  <div class="between"><h2>Sleep stages</h2><p class="sub">${'23:30 → 07:12'}</p></div>
+  ${hypnogram(ME.stages)}
+  <div class="legendrow">
+   <span><i style="background:#ff9aab"></i>Awake</span><span><i style="background:#7c9cff"></i>REM</span><span><i style="background:#a99bff"></i>Light</span><span><i style="background:#5b4bd6"></i>Deep</span>
+  </div>
+ </div>
+
+ <div class="card">
+  <div class="row" style="gap:16px">
+   ${donut(Object.assign([{label:'Deep',v:sl.deep,c:'#5b4bd6'},{label:'REM',v:sl.rem,c:'#7c9cff'},{label:'Light',v:sl.light,c:'#a99bff'},{label:'Awake',v:sl.awake,c:'#ff9aab'}],{center:sl.total+'h',sub:'in bed'}))}
+   <div style="flex:1">
+    <div class="kv"><span class="k">Deep</span><span class="v">${sl.deep} min</span></div>
+    <div class="kv"><span class="k">REM</span><span class="v">${sl.rem} min</span></div>
+    <div class="kv"><span class="k">Light</span><span class="v">${sl.light} min</span></div>
+    <div class="kv"><span class="k">Awake</span><span class="v">${sl.awake} min</span></div>
+   </div>
+  </div>
+ </div>
+
+ <div class="grid2">
+  <div class="card tight">${metric('Sleeping HR','linear-gradient(135deg,#ff4d6d,#ff8fa3)',I.heart,sl.avgHR,'bpm',`<div class="delta flat">low ${sl.lowHR} bpm</div>`)}</div>
+  <div class="card tight">${metric('Sleep HRV','linear-gradient(135deg,#6c5ce7,#a29bfe)',I.wave,sl.hrv,'ms',delta(5,'',false))}</div>
+ </div>
+
+ <div class="card">
+  <div class="between"><h2>This week</h2><p class="sub">hours asleep</p></div>
+  ${barChart(ME.sleepWeek.map(v=>+v.toFixed(1)),['M','T','W','T','F','S','S'],6,'#6c5ce7','#a29bfe')}
+ </div>
+
+ <div class="card gate t2">
+  <div class="between"><h2>Sleep statistics</h2><span class="badge-tier prem">Advanced</span></div>
+  <div class="kv"><span class="k">Sleep latency</span><span class="v">${sl.latency} min</span></div>
+  <div class="kv"><span class="k">Efficiency</span><span class="v">${sl.eff}%</span></div>
+  <div class="kv"><span class="k">Awakenings</span><span class="v">${sl.awakenings}</span></div>
+  <div class="kv"><span class="k">Midpoint</span><span class="v">03:21</span></div>
+  <div class="kv"><span class="k">Consistency</span><span class="v">+8 min vs target</span></div>
+ </div>
+
+ <div class="card gate t3">
+  <div class="between"><h2>Overnight blood oxygen</h2><span class="badge-tier clin">Clinical</span></div>
+  <p class="sub">SpO₂ with desaturation events</p>
+  ${spo2Night(ME.spo2Night,ME.desats)}
+  <div class="kv" style="margin-top:6px"><span class="k">Mean SpO₂</span><span class="v">97.4%</span></div>
+  <div class="kv"><span class="k">Desaturations (≥3%)</span><span class="v">${ME.desats.length} · ODI 2.1/h</span></div>
+ </div>
+ <div class="card gate t3">
+  <div class="between"><h2>Respiration waveform</h2><span class="badge-tier clin">Clinical</span></div>
+  <p class="sub">Derived from chest excursion</p>
+  ${figResp()}
+ </div>
+ `;
+}
+
+function screenBody(){
+ return `
+ <div class="card">
+  <div class="scorewrap">
+   ${gauge(ME.stress,'STRESS','Balanced','#ff9f1c','#ffd166')}
+   <div class="scoremeta">
+    <div class="lbl">Right now</div>
+    <div class="st">Calm & steady</div>
+    <div class="row" style="gap:8px"><span class="pill good">3h restorative</span><span class="pill warn">1 stress peak</span></div>
+    <p style="color:#6b7793;font-size:12px;line-height:1.5;margin:9px 0 0">Most of your day was spent in a balanced state. One stress peak around midday recovered quickly.</p>
+   </div>
+  </div>
+ </div>
+
+ <div class="card">
+  <div class="between"><h2>Stress across the day</h2><p class="sub">0–100</p></div>
+  ${spark(ME.stressDay,300,72,'#ff9f1c','#ff7043',{baseline:40})}
+  <div class="legendrow"><span><i style="background:#33d17a"></i>Restorative</span><span><i style="background:#ffd166"></i>Balanced</span><span><i style="background:#ff7043"></i>Stress</span></div>
+ </div>
+
+ <div class="card">
+  <div class="between"><h2>Body energy</h2><p class="sub">reserve over 24h</p></div>
+  ${bodyBattery(ME.battery)}
+ </div>
+
+ <div class="grid2">
+  <div class="card tight" style="text-align:center">
+   <h2 style="font-size:14px">Breathe</h2><p class="sub" style="margin-bottom:6px">2-min reset</p>
+   ${ringChart([{pct:0.66,c:['#00bcd4','#56ccf2']}],'IN','4s','hold 7s')}
+  </div>
+  <div class="card tight">
+   ${metric('Respiration','linear-gradient(135deg,#00bcd4,#56ccf2)',I.lung,ME.resp.toFixed(1),'br/m','')}
+   <div style="margin-top:8px">${spark(series(20,14,1.5,0,1),130,40,'#00bcd4','#56ccf2')}</div>
+   <div class="kv" style="margin-top:6px"><span class="k">Skin temp</span><span class="v">+${ME.temp}°C</span></div>
+  </div>
+ </div>
+
+ <div class="card gate t2">
+  <div class="between"><h2>Recovery balance</h2><span class="badge-tier prem">Advanced</span></div>
+  <div class="kv"><span class="k">Restorative time</span><span class="v">3h 12m</span></div>
+  <div class="kv"><span class="k">Stress responses</span><span class="v">9 events</span></div>
+  <div class="kv"><span class="k">Recovery minutes</span><span class="v">142 min</span></div>
+  <div class="kv"><span class="k">Strain vs recovery</span><span class="v">Well balanced</span></div>
+ </div>
+
+ <div class="card gate t3">
+  <div class="between"><h2>Electrodermal activity</h2><span class="badge-tier clin">Clinical</span></div>
+  <p class="sub">Tonic level & phasic responses</p>
+  ${figEDA()}
+ </div>
+ `;
+}
+
+function screenTrends(){
+ return `
+ <div class="sec-title"><h3>Your trends</h3><a>90 days</a></div>
+ <div class="grid2">
+  <div class="card tight"><div class="top" style="color:#6b7793;font-size:11px;font-weight:800;display:flex;gap:6px;align-items:center">${ico('linear-gradient(135deg,#6c5ce7,#a29bfe)',I.wave)} HRV</div><div class="bignum" style="font-size:26px;margin:6px 0 2px">${ME.hrv}<span class="unit"> ms</span></div>${spark(ME.hrv14,140,42,'#6c5ce7','#a29bfe')}<div class="delta up" style="margin-top:4px">▲ 11% this month</div></div>
+  <div class="card tight"><div class="top" style="color:#6b7793;font-size:11px;font-weight:800;display:flex;gap:6px;align-items:center">${ico('linear-gradient(135deg,#ff4d6d,#ff8fa3)',I.heart)} Resting HR</div><div class="bignum" style="font-size:26px;margin:6px 0 2px">${ME.rhr}<span class="unit"> bpm</span></div>${spark(ME.rhr14,140,42,'#ff4d6d','#ff8fa3')}<div class="delta up" style="margin-top:4px">▼ 3 bpm this month</div></div>
+  <div class="card tight"><div class="top" style="color:#6b7793;font-size:11px;font-weight:800;display:flex;gap:6px;align-items:center">${ico('linear-gradient(135deg,#00b894,#33d17a)',I.bolt)} VO₂max</div><div class="bignum" style="font-size:26px;margin:6px 0 2px">${ME.vo2}<span class="unit"> ml/kg</span></div>${spark(ME.vo2_12,140,42,'#00b894','#33d17a')}<div class="delta up" style="margin-top:4px">Top 15% for your age</div></div>
+  <div class="card tight"><div class="top" style="color:#6b7793;font-size:11px;font-weight:800;display:flex;gap:6px;align-items:center">${ico('linear-gradient(135deg,#2f80ed,#56ccf2)',I.o2)} Weight</div><div class="bignum" style="font-size:26px;margin:6px 0 2px">${ME.weight}<span class="unit"> kg</span></div>${spark(ME.weight12,140,42,'#2f80ed','#56ccf2')}<div class="delta up" style="margin-top:4px">▼ 0.6 kg this month</div></div>
+ </div>
+
+ <div class="card">
+  <div class="between"><h2>Daily steps</h2><p class="sub">this week</p></div>
+  ${barChart(ME.stepsWeek,['M','T','W','T','F','S','S'],6,'#1fd17a','#9bf06a',true)}
+ </div>
+
+ <div class="card">
+  <div class="between"><h2>Consistency</h2><p class="sub">last 5 weeks · goal days</p></div>
+  <div class="row" style="gap:14px;align-items:flex-start">
+   ${calendarHeat(ME.cal)}
+   <div style="flex:1">
+    <div class="bignum" style="font-size:30px">82<span class="unit">%</span></div>
+    <p class="sub" style="margin-top:4px">of days you hit your move goal</p>
+    <div class="row" style="gap:6px;margin-top:8px"><span class="pill good">12-day streak</span></div>
+   </div>
+  </div>
+ </div>
+
+ <div class="card">
+  <div class="between"><h2>What to watch</h2></div>
+  <div class="story" style="margin-bottom:10px"><span class="dot" style="background:linear-gradient(135deg,#00b894,#33d17a)">✓</span><div><p style="margin:0;font-weight:800;font-size:13px">Recovery is trending up</p><p style="margin:2px 0 0;color:#6b7793;font-size:12px">HRV has risen 4 of the last 5 days.</p></div></div>
+  <div class="story" style="margin-bottom:10px"><span class="dot" style="background:linear-gradient(135deg,#ff9f1c,#ffd166)">!</span><div><p style="margin:0;font-weight:800;font-size:13px">Bedtime drifting later</p><p style="margin:2px 0 0;color:#6b7793;font-size:12px">Average sleep onset moved 22 min later this week.</p></div></div>
+  <div class="story"><span class="dot" style="background:linear-gradient(135deg,#2f80ed,#56ccf2)">i</span><div><p style="margin:0;font-weight:800;font-size:13px">Hydration nudges efficiency</p><p style="margin:2px 0 0;color:#6b7793;font-size:12px">Higher water-intake days show 4% better sleep efficiency.</p></div></div>
+ </div>
+
+ <div class="card gate t2">
+  <div class="between"><h2>Monthly report</h2><span class="badge-tier prem">Advanced</span></div>
+  <div class="kv"><span class="k">Avg readiness</span><span class="v">79 · +5</span></div>
+  <div class="kv"><span class="k">Avg sleep</span><span class="v">7h 18m · +12m</span></div>
+  <div class="kv"><span class="k">Training load</span><span class="v">Optimal 22 / 30 days</span></div>
+  <div class="kv"><span class="k">Resting HR drift</span><span class="v">−3 bpm</span></div>
+ </div>
+
+ <div class="card gate t3">
+  <div class="between"><h2>Clinician export</h2><span class="badge-tier clin">Clinical</span></div>
+  <p class="sub">Source-gated evidence packet with raw signals, intervals & provenance</p>
+  <div class="kv"><span class="k">ECG strips</span><span class="v">14 · PDF</span></div>
+  <div class="kv"><span class="k">HRV nightly</span><span class="v">CSV · 30 nights</span></div>
+  <div class="kv"><span class="k">SpO₂ + respiration</span><span class="v">EDF</span></div>
+  <div class="row" style="margin-top:12px;gap:10px"><button style="flex:1;border:0;background:linear-gradient(135deg,#0093a8,#00bcd4);color:#fff;font-weight:800;padding:12px;border-radius:14px;font-size:13px">Export packet</button><button style="border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:800;padding:12px 14px;border-radius:14px;font-size:13px">Share</button></div>
+ </div>
+ `;
+}
+
+/* ============================ wiring ============================ */
+/* ================= REAL PACK: profiles · cascades · reports (v2) ================= */
+const PACK={"profiles":[{"name":"Activity / Training Profile","gate":"Activity + HR; GPS/route only for training profiles","t1":"Load-recovery match; weekly activity change; sedentary breaks; effort context.","t2":"Training zones; strain-recovery model; pace/GPS trends; response model.","t3":"Longitudinal activity context; functional trend; evidence/coverage; no disease conclusion.","t4":"Training load; fatigue; pace/route context; periodization; recovery response.","visuals":"Load-recovery card, weekly trend, zones, GPS/pace, response curves.","core":89,"premium":75,"selected":164,"families":["Sensor Fusion","Statistical Analysis","Anomaly Detection","Model Fitting","Hrv Nonlinear","Imu Analysis","Frequency Domain Analysis","Gps Gnss Analysis","AKG / ACC Activity Rhythm Wrapper","Trend Analysis"],"t1Rep":"Load-recovery match; weekly activity change; effort context.","t2Rep":"Training zones, response model, pace/GPS trends, strain vs recovery explanation.","t3Rep":"Longitudinal activity evidence, functional trend, coverage, method limits.","t4Rep":"Periodization, HR drift, fatigue, readiness, performance driver map.","win":"WHOOP quantifies strain; we explain load in the full body context.","outperform":"Outperform by being device-agnostic and report-based: load-recovery mismatch, multi-source activity, lab/metabolic overlays, coach-science output, not just strain score.","whoopDoes":"WHOOP Strain combines cardiovascular load and muscular load; Strength Trainer is built for resistance training and functional fitness.","risk":"Do not claim superiority over WHOOP strain unless demo shows clear connected report value."},{"name":"Autonomic / Recovery Profile","gate":"HRV + sleep + activity; add EDA/temp when available","t1":"Recovery state; HRV baseline delta; sleep-activity mismatch; temperature context.","t2":"Autonomic balance; nonlinear HRV; arousal episodes; driver decomposition.","t3":"DFA/entropy/Poincare; model residuals; EDA/temp context; quality and limitations.","t4":"Readiness, fatigue, recovery load, training adjustment context.","visuals":"Recovery card, HRV baseline trend, driver matrix, nonlinear HRV panels.","core":83,"premium":57,"selected":140,"families":["Statistical Analysis","Anomaly Detection","Model Fitting","Time Domain Analysis","Hrv Nonlinear","Eda Analysis","Frequency Domain Analysis","Trend Analysis"],"t1Rep":"Recovery state with readable reason: what moved together and why confidence is high/medium/low.","t2Rep":"Nonlinear HRV, driver decomposition, lag/correlation, repeated arousal windows, baseline deviation.","t3Rep":"DFA/entropy/Poincaré, residuals, method notes, signal-quality masks, limitations.","t4Rep":"Readiness with reasoned training adjustment, fatigue driver map.","win":"WHOOP gives a recovery score; we explain the recovery mechanism.","outperform":"Outperform by decomposing WHY recovery changed: sleep debt, oxygen instability, training load, temperature shift, arousal, glucose/labs if present.","whoopDoes":"Recovery score uses HRV/RHR/respiratory rate/sleep; Stress Monitor uses HR/HRV against baseline and motion.","risk":"Avoid illness/stress-disorder diagnosis; state physiological recovery pattern."},{"name":"Autonomic Arousal / EDA Profile","gate":"EDA/GSR + motion/temp quality; context required","t1":"Arousal context; episode count; sleep/recovery relationship.","t2":"EDA episode panel; tonic/phasic separation; trigger/context comparison.","t3":"SCR morphology; artifact masks; motion/temp quality; event-aligned charts.","t4":"Stress-load windows; competition/workout arousal and recovery context.","visuals":"Arousal card, episode timeline, tonic/phasic panel, event-aligned view.","core":75,"premium":48,"selected":123,"families":["Statistical Analysis","Anomaly Detection","Zero Phase Filtering","Time Domain Analysis","Eda Analysis","Frequency Domain Analysis","Trend Analysis"],"t1Rep":"Arousal context; episode count; sleep/recovery relationship.","t2Rep":"EDA episode panel, tonic/phasic separation, context comparison.","t3Rep":"SCR morphology, artifact masks, motion/temp quality, event-aligned charts.","t4Rep":"Stress-load windows, competition/workout arousal and recovery context.","win":"WHOOP scores stress; we map arousal episodes and evidence.","outperform":"Win if we support EDA/GSR sources plus HRV/temperature/context: tonic/phasic separation, episode morphology, triggers, and evidence timeline.","whoopDoes":"WHOOP Stress Monitor uses HR, HRV, baseline, and motion to estimate stress on a 0–3 scale.","risk":"No anxiety/stress-disorder diagnosis; EDA advanced view requires EDA input."},{"name":"Blood Pressure / Vascular Pressure Profile","gate":"Measured BP source required; cuffless inference not visible","t1":"Measured BP trend; morning/evening pattern; personal baseline; category context.","t2":"BP variability; pulse pressure; context/posture/device metadata; longitudinal change.","t3":"Longitudinal BP panels; variability; reading provenance; lab/context overlay.","t4":"Measured BP response to training/recovery where appropriate.","visuals":"BP trend card, AM/PM pattern, variability chart, pulse pressure panel.","core":38,"premium":65,"selected":103,"families":["Statistical Analysis","Anomaly Detection","Model Fitting","Ppg Analysis","Pulse Metrics","Trend Analysis"],"t1Rep":"Measured BP trend and personal baseline, with category context.","t2Rep":"BP variability, pulse pressure, context/posture/device metadata.","t3Rep":"Longitudinal BP panels, reading provenance, lab/context overlay.","t4Rep":"Measured BP response to training/recovery.","win":"WHOOP estimates BP; we represent BP evidence and context.","outperform":"Win by being measured-BP-first and evidence-first: provenance, AM/PM patterns, variability, pulse pressure, posture/device metadata, cross-profile drivers.","whoopDoes":"WHOOP Life provides daily systolic/diastolic estimates from sleep data, calibrated with cuff readings; it is framed as wellness, not medical diagnosis.","risk":"Do not compete with cuffless BP diagnosis; require measured BP or clear wellness-only estimates."},{"name":"Body Composition / Anthropometrics Profile","gate":"Smart scale/manual measurements; body-fat estimates are trend-only","t1":"Weight/body composition trend; rate-of-change; habit context.","t2":"Trend model; variability confidence; activity/metabolic correlation.","t3":"Measurement provenance; trend slope; lab/context overlay; body-fat caveats.","t4":"Composition trend vs training/recovery/performance goals.","visuals":"Trend card, rate-of-change chart, composition breakdown, provenance panel.","core":38,"premium":31,"selected":69,"families":["Statistical Analysis","Anomaly Detection","Model Fitting","Trend Analysis"],"t1Rep":"Weight/body composition trend and rate-of-change.","t2Rep":"Trend model, variability confidence, activity/metabolic correlation.","t3Rep":"Measurement provenance, slope, lab/context overlay, body-fat caveats.","t4Rep":"Composition trend vs training/recovery/performance goals.","win":"WHOOP uses body metrics; we contextualize composition as a profile.","outperform":"Outperform by making body composition trend a provenance-aware report tied to activity, recovery, labs, glucose, and long-term change.","whoopDoes":"WHOOP API/profile supports body measurements; Healthspan includes lean body mass as one of its selected metrics.","risk":"Smart scale/manual data needed; body-fat is trend-only, not daily truth."},{"name":"Cardiac Electrical/Event Profile","gate":"Raw ECG strip or verified event notification; no waveform = no morphology","t1":"","t2":"","t3":"","t4":"","visuals":"ECG strip, QRS/beat timing, morphology overlay, STFT/CWT event evidence","core":81,"premium":52,"selected":133,"families":["Anomaly Detection","Statistical Analysis","Zero Phase Filtering","Time Domain Analysis","Frequency Domain Analysis","Advanced Time Frequency","Wavelet Analysis","ECG Wrapper / Rhythm Evidence"],"t1Rep":"Only show event review if a verified event/ECG exists; clear 'review if repeated' language.","t2Rep":"Event burden timeline; strip quality; context with sleep, oxygen, stress, activity.","t3Rep":"ECG strip, beat timing, morphology overlay, event windows, limitations, source provenance.","t4Rep":"Limited: training caution/context only when confirmed events exist.","win":"They detect events; we package events into scientific review reports.","outperform":"Do not try to beat ECG claims directly. Win by turning events into evidence reports with provenance, context, burden, confidence, and physician-ready export across supported sources.","whoopDoes":"WHOOP MG / Life supports on-demand ECG, irregular rhythm notifications, and region-dependent regulated features.","risk":"No waveform = no morphology panel. No medical diagnosis without regulated route."},{"name":"Cardiac Profile","gate":"HR time series + HRV; ECG/IBI only when available and quality-safe","t1":"Heart load and stability; resting HR/HRV shift; repeated unusual windows; baseline comparison.","t2":"HRV distribution; anomaly burden; recovery drivers; correlations with sleep, activity, temperature, oxygen.","t3":"RR tachogram; Poincare; PSD/band power; ECG strip/event windows when available; quality masks and limitations.","t4":"Cardiac response to load; HR zones; HR drift; recovery readiness; fatigue response.","visuals":"Profile card, baseline trend, event timeline, distribution, Poincare/PSD, ECG strip when available.","core":98,"premium":63,"selected":161,"families":["Statistical Analysis","Anomaly Detection","Zero Phase Filtering","Time Domain Analysis","Hrv Nonlinear","Frequency Domain Analysis","Advanced Time Frequency","Wavelet Analysis","Trend Analysis","ECG Wrapper / Rhythm Evidence"],"t1Rep":"Heart-load & stability card; baseline delta; repeated unusual windows; confidence.","t2Rep":"HRV distribution, anomaly burden, recovery-driver matrix, oxygen/sleep/activity correlations.","t3Rep":"RR tachogram, Poincaré, PSD/frequency, ECG strip/event windows if available, quality masks.","t4Rep":"HR drift, cardiac load after training, recovery readiness, load-response curve.","win":"WHOOP gives cardiac metrics; we generate a cardiac profile report.","outperform":"Represent cardiac load as a connected profile: baseline shift + HR/HRV dynamics + sleep/oxygen/activity/lab drivers + reliability, not only score/alert.","whoopDoes":"HR, RHR, HRV, Recovery, Health Monitor baselines; WHOOP Life adds ECG/heart features in supported regions.","risk":"Do not claim rhythm diagnosis unless using validated/regulatory-approved ECG workflow."},{"name":"Connected Health Context Profile","gate":"At least 3 reliable profiles or lab context for connected report","t1":"One connected explanation: what profiles moved together and likely drivers.","t2":"Driver matrix; shared-event heatmap; lag/correlation; optional lab overlays.","t3":"FHIR/lab overlay; evidence list; cross-profile timeline; limitations.","t4":"Performance/recovery drivers across sleep, cardiac, activity, nutrition/context.","visuals":"Connected body map, driver matrix, cross-profile heatmap, evidence list.","core":53,"premium":50,"selected":103,"families":["Statistical Analysis","Anomaly Detection","Model Fitting","Wavelet Coherence","Frequency Domain Analysis","Trend Analysis"],"t1Rep":"One connected explanation: what moved together and likely drivers.","t2Rep":"Driver matrix, shared-event heatmap, lag/correlation, optional lab overlays.","t3Rep":"FHIR/lab overlay, evidence list, cross-profile timeline, limitations.","t4Rep":"Performance/recovery driver map across sleep, cardiac, activity, nutrition/context.","win":"WHOOP connects data to coaching; we connect data into a scientific report.","outperform":"This is our main win: a connected report graph across profiles, not a coach chat or isolated score. Driver matrix + evidence list + cross-profile timeline + tiered report resolution.","whoopDoes":"Advanced Labs combines labs with 24/7 data; Healthspan connects habits, biomarkers, and long-term metrics; Journal connects behaviors with physiology; PDF health reports exist.","risk":"Need at least 3 reliable profiles or lab/context inputs; avoid medical decisions/treatment advice."},{"name":"Metabolic Glucose Profile","gate":"CGM or lab input required; do not infer glucose from watch signals alone","t1":"Glucose stability only when CGM/lab data exists; daily variability; meal/activity context.","t2":"Time-in-range; excursions; nocturnal patterns; meal/sleep/activity windows; variability.","t3":"AGP-like view; coefficient of variation; lab context overlay; provenance and caveats.","t4":"Fueling/recovery windows; exercise-glucose patterns when CGM exists.","visuals":"Glucose card, TIR/TAR/TBR, excursion timeline, lab overlay, AGP-like view.","core":53,"premium":51,"selected":104,"families":["Statistical Analysis","Anomaly Detection","Model Fitting","Time Domain Analysis","Frequency Domain Analysis","Trend Analysis"],"t1Rep":"Glucose stability only when CGM/lab exists; no watch-only glucose claims.","t2Rep":"Time-in-range, excursions, nocturnal patterns, meal/sleep/activity windows.","t3Rep":"AGP-like view, coefficient of variation, lab overlay, provenance/caveats.","t4Rep":"Fueling/recovery windows and exercise-glucose response.","win":"WHOOP adds labs; we turn metabolic data into a profile report.","outperform":"Outperform by supporting optional CGM + labs + wearable context: time-in-range, excursions, nocturnal patterns, meal/activity windows, glucose-recovery links.","whoopDoes":"Advanced Labs connects clinical lab results with WHOOP data and AI-powered insights; Healthspan links biomarkers to sleep/strain/fitness pillars.","risk":"CGM/lab required; no glucose prediction from wearable-only signals."},{"name":"Motion / Gait / Mobility Profile","gate":"Raw IMU + wear location + sample rate; otherwise activity summary only","t1":"Mobility consistency; movement-volume trend; change from personal baseline.","t2":"Bout segmentation; motion variability; symmetry proxy; gait stability.","t3":"IMU frequency panels; gait bouts; fall/mobility evidence; quality masks.","t4":"Movement economy; asymmetry trends; mobility readiness.","visuals":"Mobility card, bout timeline, gait variability, IMU frequency/quality panels.","core":96,"premium":72,"selected":168,"families":["Sensor Fusion","Anomaly Detection","Statistical Analysis","Attitude Estimation","Time Domain Analysis","Imu Analysis","Frequency Domain Analysis","Advanced Time Frequency","Wavelet Analysis","Trend Analysis"],"t1Rep":"Mobility consistency and movement-volume trend.","t2Rep":"Bout segmentation, motion variability, symmetry proxy, gait stability.","t3Rep":"IMU frequency panels, gait-bout evidence, quality masks.","t4Rep":"Movement economy, asymmetry trends, mobility readiness.","win":"WHOOP tracks workout motion; we create mobility science reports.","outperform":"Win with raw IMU gait/mobility reports: bouts, variability, symmetry proxy, stability, wear-location confidence, and mobility trend.","whoopDoes":"WHOOP Strength Trainer analyzes movement patterns for resistance training; not primarily a gait/mobility report product.","risk":"Requires raw IMU, sample rate, wear location; avoid neuro/MSK diagnosis."},{"name":"Oxygenation / Sleep Breathing Profile","gate":"Repeated high-quality SpO2 windows during sleep; quality gate required","t1":"Oxygen stability; nocturnal low-window summary; sleep context; repeated-pattern warning.","t2":"Desaturation burden; sustained low-window timeline; sleep-stage/HR coupling; baseline comparison.","t3":"SpO2 quality masks; respiration/PPG evidence; event windows; sleep context export.","t4":"Altitude/recovery/breathing context; oxygen response during sleep or exertion when data exists.","visuals":"Oxygen stability card, low-window timeline, burden bars, quality masks, event windows.","core":84,"premium":47,"selected":131,"families":["Statistical Analysis","Anomaly Detection","Time Domain Analysis","Ppg Analysis","Frequency Domain Analysis","Respiration Analysis","Advanced Time Frequency","Trend Analysis"],"t1Rep":"Oxygen stability card; repeated low-window warning; sleep-context explanation.","t2Rep":"Desaturation burden, sustained-window timeline, baseline comparison, coupling with HR/sleep.","t3Rep":"SpO2 quality masks, event windows, respiration/PPG evidence, export panel.","t4Rep":"Altitude/exertion/sleep oxygen context for recovery planning.","win":"WHOOP reports SpO2 deviation; we report oxygen-stability patterns.","outperform":"Outperform by turning oxygen into an event-based sleep-breathing report: stability, low-window burden, repetition, links to HR/respiration/sleep fragmentation.","whoopDoes":"Health Monitor includes SpO2 and respiratory rate, flags deviations from personal baseline.","risk":"Do not diagnose sleep apnea; require high-quality repeated sleep SpO2 windows."},{"name":"Pulse / Vascular Optical Profile","gate":"Raw PPG + sample rate + motion quality; otherwise summary trend only","t1":"Optical pulse reliability; pulse stability; oxygen/pulse context.","t2":"PPG morphology confidence; pulse variability; perfusion context; artifact burden.","t3":"Raw/clean PPG waveform; peak markers; pulse morphology; PSD/wavelet panels.","t4":"Optical HR reliability during workouts; pulse response; sensor quality notes.","visuals":"Signal confidence card, PPG strips, peak markers, morphology panel, wavelet/PSD.","core":84,"premium":68,"selected":152,"families":["Anomaly Detection","Zero Phase Filtering","Time Domain Analysis","Ppg Analysis","Pulse Metrics","Frequency Domain Analysis","Cwt Analysis","Advanced Time Frequency","Wavelet Analysis"],"t1Rep":"Pulse reliability badge; optical HR confidence; artifact warning.","t2Rep":"PPG confidence, pulse variability, perfusion context, artifact burden.","t3Rep":"Raw/clean PPG strips, peak markers, morphology, wavelet/PSD, quality mask.","t4Rep":"Workout optical HR reliability and pulse response context.","win":"They use optical signals; we report optical signal reliability and morphology.","outperform":"Win if we expose optical reliability, pulse morphology, artifact burden, and source agreement when raw PPG/sample data exist.","whoopDoes":"WHOOP uses optical/PPG-type data for HR and BP insight models, but consumer-facing outputs are mostly metrics/estimates rather than waveform science.","risk":"Requires raw PPG/sample-rate/motion quality. If not available, show summary only."},{"name":"Respiratory / Cardiorespiratory Profile","gate":"Respiration waveform or dense respiratory intervals for advanced view","t1":"Breathing regularity; night/rest trend; oxygen/cardiac connection.","t2":"Respiratory variability; pause/irregularity burden; RSA/coupling; trend analysis.","t3":"Respiration waveform; spectrum; coherence with HR; phase/lag panels.","t4":"Breathing efficiency; cardiorespiratory response; recovery breathing context.","visuals":"Breathing card, respiration timeline, coupling view, PSD/coherence panels.","core":96,"premium":65,"selected":161,"families":["Statistical Analysis","Anomaly Detection","Time Domain Analysis","Wavelet Coherence","Frequency Domain Analysis","Respiration Analysis","Cwt Analysis","Advanced Time Frequency","Wavelet Analysis","Trend Analysis"],"t1Rep":"Breathing regularity; night/rest trend; oxygen/cardiac connection.","t2Rep":"Respiratory variability, irregularity burden, coupling with HR/oxygen, trends.","t3Rep":"Respiration waveform, spectrum, coherence/phase panels, method limitations.","t4Rep":"Breathing efficiency and cardiorespiratory response to load/recovery.","win":"WHOOP reports respiratory rate; we report cardiorespiratory interaction.","outperform":"Outperform by representing respiratory rhythm, variability, coupling with HR/oxygen, phase/lag, and cardiorespiratory coherence when dense data exist.","whoopDoes":"WHOOP tracks respiratory rate during sleep and uses it in Health Monitor/Recovery context.","risk":"Advanced panels require respiratory waveform or dense intervals; no respiratory disease diagnosis."},{"name":"Signal Quality / Data Reliability Profile","gate":"Always active; blocks low-quality windows before premium analytics","t1":"Confidence badge; missing data warning; source coverage in simple language.","t2":"Coverage/missingness report; source disagreement; confidence grading.","t3":"Artifact windows; quality masks; source/device agreement; preprocessing trace.","t4":"Device/source reliability for training decisions.","visuals":"Confidence badge, coverage bars, quality mask, source disagreement panel.","core":100,"premium":63,"selected":163,"families":["Zero Phase Filtering","Statistical Analysis","Anomaly Detection","Time Domain Analysis","Eda Analysis","Adaptive Filter","Ppg Analysis","Frequency Domain Analysis","Imu Analysis"],"t1Rep":"Confidence badge, missing-data warning, source coverage in plain language.","t2Rep":"Coverage/missingness report, source disagreement, confidence grading.","t3Rep":"Artifact masks, preprocessing trace, device/source agreement, method limitations.","t4Rep":"Device/source reliability for training decisions.","win":"WHOOP reports outputs; we report output reliability.","outperform":"Big win: make confidence, coverage, missingness, artifact windows, source disagreement, and input provenance visible as first-class report elements.","whoopDoes":"WHOOP uses personal baselines and device-specific signals; public reports emphasize trends and health metrics, not full method-level signal-quality reporting.","risk":"Always active; blocks low-quality windows before advanced analytics. Never hide bad data."},{"name":"Sleep Profile","gate":"Sleep summary + movement + HR/SpO2 preferred; consumer stages remain estimates","t1":"Sleep regularity; fragmentation; recovery impact; timing consistency.","t2":"Stage distribution with caveats; movement/oxygen/HRV links; sleep debt and trend ribbons.","t3":"Actigraphy timeline; sleep architecture caveats; quality/coverage report; export.","t4":"Sleep-to-performance readiness; travel/timezone consistency; recovery planning.","visuals":"Sleep report card, timeline, fragmentation, profile links, actigraphy view.","core":82,"premium":50,"selected":132,"families":["Statistical Analysis","Anomaly Detection","Model Fitting","Time Domain Analysis","Hrv Nonlinear","Imu Analysis","Trend Analysis","AKG / ACC Activity Rhythm Wrapper"],"t1Rep":"Sleep regularity, fragmentation, timing consistency, recovery impact with serious explanation.","t2Rep":"Stage caveats, sleep debt, movement/oxygen/HRV links, trend ribbons.","t3Rep":"Actigraphy timeline, sleep architecture caveats, coverage/signal quality, exportable report.","t4Rep":"Sleep-to-performance readiness and travel/time-zone consistency.","win":"WHOOP tracks sleep; we explain sleep as part of a body system.","outperform":"Do not fight on sleep tracking alone. Win by making sleep a connected report across oxygen, cardiac, recovery, activity, temperature, labs, and context.","whoopDoes":"WHOOP has sleep tracking, sleep stages, wake/disturbance metrics, sleep efficiency, respiratory rate, and recovery links.","risk":"Sleep stages must be framed as estimates, not PSG-level truth."},{"name":"Thermal Profile","gate":"Skin/body temp with baseline history; context needed","t1":"Temperature deviation from personal baseline; sustained shift; sleep/recovery context.","t2":"Circadian trend; sustained shift panel; driver links with sleep/recovery/activity.","t3":"Circadian temperature trend; model residuals; context/lab overlays; limitations.","t4":"Recovery, travel, heat-stress, adaptation context.","visuals":"Temperature deviation card, circadian trend, sustained shift timeline, residuals.","core":53,"premium":35,"selected":88,"families":["Statistical Analysis","Anomaly Detection","Model Fitting","Time Domain Analysis","Trend Analysis"],"t1Rep":"Temperature deviation from personal baseline and sustained-shift note.","t2Rep":"Circadian trend, sustained shift, links to sleep/recovery/activity.","t3Rep":"Circadian model, residuals, context/lab overlays, limitations.","t4Rep":"Recovery, travel, heat-stress, adaptation context.","win":"WHOOP flags temperature deviation; we explain thermal pattern context.","outperform":"Outperform by representing temperature as a sustained/circadian profile connected to sleep, recovery, travel, environment, menstrual/context, labs if available.","whoopDoes":"Health Monitor includes skin temperature and baseline deviation; Recovery also uses temperature context.","risk":"Do not claim infection/disease detection."},{"name":"Hearing / Audiology Profile","tag":"Expansion","gate":"Apple-heavy profile; environmental/headphone audio exposure or audiogram required","t1":"Daily sound-exposure summary; safe-listening status; loud-environment time.","t2":"Exposure-dose trend; headphone vs environment split; risk context vs limits.","t3":"Threshold/audiogram matrix; occupational exposure profile; provenance & caveats.","t4":"Training-environment noise load; recovery acoustics context.","visuals":"Exposure dose card, daily sound timeline, threshold matrix, risk bands.","families":["Statistical Analysis","Trend Analysis","Anomaly Detection","Frequency Domain Analysis"],"t1Rep":"Safe-listening card; daily sound dose; loud-time minutes; confidence.","t2Rep":"Cumulative exposure trend; headphone/environment split; risk vs recommended limit.","t3Rep":"Threshold/audiogram matrix; occupational exposure profile; provenance.","t4Rep":"Environment noise load around training and recovery.","win":"Apple exposes audio exposure; we turn it into a structured hearing report.","outperform":"Make hearing a structured report with exposure dose + audiogram evidence, not a single number.","whoopDoes":"Not a core wearable hearing feature.","risk":"Not a diagnostic hearing-loss test by itself; keep separate from body profiles.","core":0,"premium":0,"selected":0},{"name":"Labs / Clinical Records Profile","tag":"Expansion","gate":"FHIR provider connection or manual lab upload required; supplier-agnostic","t1":"Latest labs in plain language; in/out of range; what changed.","t2":"Longitudinal biomarker trend; reference-range bands; lab-wearable overlay.","t3":"Biomarker panels; provenance; lab overlay onto every profile; limitations.","t4":"Performance biomarkers vs training/recovery context.","visuals":"Biomarker panel, reference-range bands, lab trend, overlay onto profiles.","families":["Statistical Analysis","Trend Analysis","Model Fitting","Connected Health Context"],"t1Rep":"Latest results card; in/out of range; plain-language change summary.","t2Rep":"Per-biomarker trend with reference-range bands; lab-wearable overlay.","t3Rep":"Biomarker panels; provenance; lab context overlaid on every profile.","t4Rep":"Performance-relevant biomarkers vs load and recovery.","win":"Apple/WHOOP lab access is locked; we build a supplier-agnostic lab layer that expands every profile.","outperform":"Supplier-agnostic biomarker layer (FHIR + upload) that overlays onto all wearable profiles.","whoopDoes":"WHOOP Advanced Labs exists but the normal API does not expose a broad lab feed.","risk":"Do not depend on provider coverage; build own lab-upload path; not diagnostic.","core":0,"premium":0,"selected":0},{"name":"Vitals / Multi-profile","tag":"Expansion","gate":"Cross-source vitals ingestion (Health Connect); source quality varies","t1":"All your core vitals in one place; today vs baseline.","t2":"Cross-vitals trends; source agreement; combined vitals dashboard.","t3":"Per-vital provenance; source disagreement; quality grading across devices.","t4":"Vitals readiness snapshot for training decisions.","visuals":"Vitals grid, baseline deltas, source agreement, combined trend.","families":["Statistical Analysis","Trend Analysis","Signal Quality / Data Reliability","Anomaly Detection"],"t1Rep":"Core vitals grid; today-vs-baseline deltas; simple confidence.","t2Rep":"Combined vitals trend; source agreement; out-of-baseline flags.","t3Rep":"Per-vital provenance; cross-device disagreement; quality grading.","t4Rep":"Vitals readiness snapshot before training.","win":"Android vitals are fragmented; we ingest them source-agnostically to feed every profile.","outperform":"Source-agnostic ingestion of BP, HR, RHR, temp, glucose, SpO2, respiration across devices.","whoopDoes":"Single-ecosystem vitals only.","risk":"Source quality varies; always show provenance and confidence.","core":0,"premium":0,"selected":0}],"cascades":[{"profile":"Cardiac Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Heart rate time series","HRV summary","RR / IBI / beat intervals"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["ESC/NASPE HRV standards","2023 ACC/AHA/ACCP/HRS AF guideline","Fitbit Web API reference","Health Connect data types"]},{"profile":"Cardiac Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["Heart rate time series","HRV summary","RR / IBI / beat intervals","Raw ECG waveform"],"families":["hrv_nonlinear","time_domain_analysis","ecg_wrapper"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["ESC/NASPE HRV standards","2023 ACC/AHA/ACCP/HRS AF guideline","Fitbit Web API reference","Health Connect data types"]},{"profile":"Cardiac Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Heart rate time series","HRV summary","RR / IBI / beat intervals","Raw ECG waveform"],"families":["frequency_domain_analysis","advanced_time_frequency","wavelet_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["ESC/NASPE HRV standards","2023 ACC/AHA/ACCP/HRS AF guideline","Fitbit Web API reference","Health Connect data types"]},{"profile":"Cardiac Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Heart rate time series","HRV summary","RR / IBI / beat intervals","Raw ECG waveform","ECG event / rhythm notification"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["ESC/NASPE HRV standards","2023 ACC/AHA/ACCP/HRS AF guideline","Fitbit Web API reference","Health Connect data types"]},{"profile":"Cardiac Electrical/Event Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Raw ECG waveform","ECG event / rhythm notification","RR / IBI / beat intervals"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["2023 ACC/AHA/ACCP/HRS AF guideline","ESC/NASPE HRV standards"]},{"profile":"Cardiac Electrical/Event Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["Raw ECG waveform","ECG event / rhythm notification","RR / IBI / beat intervals","Heart rate time series"],"families":["ecg_wrapper","time_domain_analysis"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["2023 ACC/AHA/ACCP/HRS AF guideline","ESC/NASPE HRV standards"]},{"profile":"Cardiac Electrical/Event Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Raw ECG waveform","ECG event / rhythm notification","RR / IBI / beat intervals","Heart rate time series"],"families":["frequency_domain_analysis","advanced_time_frequency","wavelet_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["2023 ACC/AHA/ACCP/HRS AF guideline","ESC/NASPE HRV standards"]},{"profile":"Cardiac Electrical/Event Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Raw ECG waveform","ECG event / rhythm notification","RR / IBI / beat intervals","Heart rate time series"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["2023 ACC/AHA/ACCP/HRS AF guideline","ESC/NASPE HRV standards"]},{"profile":"Autonomic / Recovery Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["HRV summary","RR / IBI / beat intervals","Heart rate time series"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["ESC/NASPE HRV standards","WHOOP Developer API","Garmin Health API","Fitbit Web API reference"]},{"profile":"Autonomic / Recovery Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["HRV summary","RR / IBI / beat intervals","Heart rate time series","Sleep summary / stages"],"families":["hrv_nonlinear","eda_analysis","time_domain_analysis"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["ESC/NASPE HRV standards","WHOOP Developer API","Garmin Health API","Fitbit Web API reference"]},{"profile":"Autonomic / Recovery Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["HRV summary","RR / IBI / beat intervals","Heart rate time series","Sleep summary / stages"],"families":["frequency_domain_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["ESC/NASPE HRV standards","WHOOP Developer API","Garmin Health API","Fitbit Web API reference"]},{"profile":"Autonomic / Recovery Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["HRV summary","RR / IBI / beat intervals","Heart rate time series","Sleep summary / stages","Skin/body temperature"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["ESC/NASPE HRV standards","WHOOP Developer API","Garmin Health API","Fitbit Web API reference"]},{"profile":"Pulse / Vascular Optical Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Raw PPG waveform","Heart rate time series","RR / IBI / beat intervals"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["Photoplethysmography and its application in clinical physiological measurement","FDA pulse oximeter accuracy information"]},{"profile":"Pulse / Vascular Optical Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["Raw PPG waveform","Heart rate time series","RR / IBI / beat intervals","SpO2 / oxygen saturation"],"families":["ppg_analysis","time_domain_analysis"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["Photoplethysmography and its application in clinical physiological measurement","FDA pulse oximeter accuracy information"]},{"profile":"Pulse / Vascular Optical Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Raw PPG waveform","Heart rate time series","RR / IBI / beat intervals","SpO2 / oxygen saturation"],"families":["frequency_domain_analysis","advanced_time_frequency","cwt_analysis","wavelet_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["Photoplethysmography and its application in clinical physiological measurement","FDA pulse oximeter accuracy information"]},{"profile":"Pulse / Vascular Optical Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Raw PPG waveform","Heart rate time series","RR / IBI / beat intervals","SpO2 / oxygen saturation","Accelerometer / gyro / motion"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["Photoplethysmography and its application in clinical physiological measurement","FDA pulse oximeter accuracy information"]},{"profile":"Oxygenation / Sleep Breathing Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["SpO2 / oxygen saturation","Respiration rate / waveform","Sleep summary / stages"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["AASM adult OSA diagnostic testing guideline","FDA pulse oximeter accuracy information","Fitbit Web API reference"]},{"profile":"Oxygenation / Sleep Breathing Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["SpO2 / oxygen saturation","Respiration rate / waveform","Sleep summary / stages","Raw PPG waveform"],"families":["ppg_analysis","respiration_analysis","time_domain_analysis"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["AASM adult OSA diagnostic testing guideline","FDA pulse oximeter accuracy information","Fitbit Web API reference"]},{"profile":"Oxygenation / Sleep Breathing Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["SpO2 / oxygen saturation","Respiration rate / waveform","Sleep summary / stages","Raw PPG waveform"],"families":["frequency_domain_analysis","advanced_time_frequency"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["AASM adult OSA diagnostic testing guideline","FDA pulse oximeter accuracy information","Fitbit Web API reference"]},{"profile":"Oxygenation / Sleep Breathing Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["SpO2 / oxygen saturation","Respiration rate / waveform","Sleep summary / stages","Raw PPG waveform","Heart rate time series"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["AASM adult OSA diagnostic testing guideline","FDA pulse oximeter accuracy information","Fitbit Web API reference"]},{"profile":"Respiratory / Cardiorespiratory Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Respiration rate / waveform","Heart rate time series","RR / IBI / beat intervals"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["AASM adult OSA diagnostic testing guideline","ESC/NASPE HRV standards"]},{"profile":"Respiratory / Cardiorespiratory Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["Respiration rate / waveform","Heart rate time series","RR / IBI / beat intervals","SpO2 / oxygen saturation"],"families":["respiration_analysis","time_domain_analysis"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["AASM adult OSA diagnostic testing guideline","ESC/NASPE HRV standards"]},{"profile":"Respiratory / Cardiorespiratory Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Respiration rate / waveform","Heart rate time series","RR / IBI / beat intervals","SpO2 / oxygen saturation"],"families":["frequency_domain_analysis","advanced_time_frequency","cwt_analysis","wavelet_analysis","wavelet_coherence"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["AASM adult OSA diagnostic testing guideline","ESC/NASPE HRV standards"]},{"profile":"Respiratory / Cardiorespiratory Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Respiration rate / waveform","Heart rate time series","RR / IBI / beat intervals","SpO2 / oxygen saturation","Raw PPG waveform"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["AASM adult OSA diagnostic testing guideline","ESC/NASPE HRV standards"]},{"profile":"Sleep Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Sleep summary / stages","Accelerometer / gyro / motion","Heart rate time series"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["AASM actigraphy clinical practice guideline","Fitbit Web API reference","WHOOP Developer API","Polar AccessLink API"]},{"profile":"Sleep Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["Sleep summary / stages","Accelerometer / gyro / motion","Heart rate time series","HRV summary"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["AASM actigraphy clinical practice guideline","Fitbit Web API reference","WHOOP Developer API","Polar AccessLink API"]},{"profile":"Sleep Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Sleep summary / stages","Accelerometer / gyro / motion","Heart rate time series","HRV summary","SpO2 / oxygen saturation"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["AASM actigraphy clinical practice guideline","Fitbit Web API reference","WHOOP Developer API","Polar AccessLink API"]},{"profile":"Activity / Training Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["WHO physical activity and sedentary behaviour guideline","Polar AccessLink API","Garmin Health API","WHOOP Developer API"]},{"profile":"Activity / Training Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series","HRV summary"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["WHO physical activity and sedentary behaviour guideline","Polar AccessLink API","Garmin Health API","WHOOP Developer API"]},{"profile":"Activity / Training Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series","HRV summary"],"families":["frequency_domain_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["WHO physical activity and sedentary behaviour guideline","Polar AccessLink API","Garmin Health API","WHOOP Developer API"]},{"profile":"Activity / Training Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series","HRV summary","Sleep summary / stages"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["WHO physical activity and sedentary behaviour guideline","Polar AccessLink API","Garmin Health API","WHOOP Developer API"]},{"profile":"Motion / Gait / Mobility Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["Accelerometry physical activity methods","Health Connect data types"]},{"profile":"Motion / Gait / Mobility Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series"],"families":["imu_analysis","time_domain_analysis"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["Accelerometry physical activity methods","Health Connect data types"]},{"profile":"Motion / Gait / Mobility Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series"],"families":["frequency_domain_analysis","advanced_time_frequency","wavelet_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["Accelerometry physical activity methods","Health Connect data types"]},{"profile":"Motion / Gait / Mobility Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Accelerometer / gyro / motion","GPS / pace / workout route","Heart rate time series"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["Accelerometry physical activity methods","Health Connect data types"]},{"profile":"Autonomic Arousal / EDA Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["EDA / GSR","Heart rate time series","HRV summary"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["EDA publication recommendations","Fitbit Web API reference"]},{"profile":"Autonomic Arousal / EDA Profile","tierName":"Middle / premium","lvl":2,"pkg":"Signal morphology + event package","inputs":["EDA / GSR","Heart rate time series","HRV summary","Skin/body temperature"],"families":["eda_analysis","time_domain_analysis"],"methods":"quality gate + peak/event detection + envelope/segmentation + profile-specific morphology metrics","output":"Explains what physical event happened inside the signal instead of only reporting a score.","visuals":["raw/clean signal strip","peak markers","morphology overlays","event cards"],"anchors":["EDA publication recommendations","Fitbit Web API reference"]},{"profile":"Autonomic Arousal / EDA Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["EDA / GSR","Heart rate time series","HRV summary","Skin/body temperature"],"families":["frequency_domain_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["EDA publication recommendations","Fitbit Web API reference"]},{"profile":"Autonomic Arousal / EDA Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["EDA / GSR","Heart rate time series","HRV summary","Skin/body temperature","Accelerometer / gyro / motion"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["EDA publication recommendations","Fitbit Web API reference"]},{"profile":"Metabolic Glucose Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["CGM / glucose","Heart rate time series","Sleep summary / stages"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["CGM time-in-range consensus","Dexcom API v3 endpoint overview","HL7 FHIR Observation"]},{"profile":"Metabolic Glucose Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["CGM / glucose","Heart rate time series","Sleep summary / stages","Activity / Training Profile"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["CGM time-in-range consensus","Dexcom API v3 endpoint overview","HL7 FHIR Observation"]},{"profile":"Metabolic Glucose Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["CGM / glucose","Heart rate time series","Sleep summary / stages","Activity / Training Profile"],"families":["frequency_domain_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["CGM time-in-range consensus","Dexcom API v3 endpoint overview","HL7 FHIR Observation"]},{"profile":"Metabolic Glucose Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["CGM / glucose","Heart rate time series","Sleep summary / stages","Activity / Training Profile","Lab observation / condition context"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["CGM time-in-range consensus","Dexcom API v3 endpoint overview","HL7 FHIR Observation"]},{"profile":"Blood Pressure / Vascular Pressure Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Blood pressure","Heart rate time series","Raw PPG waveform"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["2017 ACC/AHA blood pressure guideline","HL7 FHIR Observation"]},{"profile":"Blood Pressure / Vascular Pressure Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["Blood pressure","Heart rate time series","Raw PPG waveform","Body measurements / composition"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["2017 ACC/AHA blood pressure guideline","HL7 FHIR Observation"]},{"profile":"Blood Pressure / Vascular Pressure Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Blood pressure","Heart rate time series","Raw PPG waveform","Body measurements / composition","Lab observation / condition context"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["2017 ACC/AHA blood pressure guideline","HL7 FHIR Observation"]},{"profile":"Thermal Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Skin/body temperature","Heart rate time series","Sleep summary / stages"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["CDC flu signs and symptoms","Fitbit Web API reference","Health Connect data types"]},{"profile":"Thermal Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["Skin/body temperature","Heart rate time series","Sleep summary / stages","Activity / Training Profile"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["CDC flu signs and symptoms","Fitbit Web API reference","Health Connect data types"]},{"profile":"Thermal Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Skin/body temperature","Heart rate time series","Sleep summary / stages","Activity / Training Profile"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["CDC flu signs and symptoms","Fitbit Web API reference","Health Connect data types"]},{"profile":"Body Composition / Anthropometrics Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Body measurements / composition","CGM / glucose","Blood pressure"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["CDC adult BMI categories","Health Connect data types","FHIR Observation"]},{"profile":"Body Composition / Anthropometrics Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["Body measurements / composition","CGM / glucose","Blood pressure","Activity / Training Profile"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["CDC adult BMI categories","Health Connect data types","FHIR Observation"]},{"profile":"Body Composition / Anthropometrics Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Body measurements / composition","CGM / glucose","Blood pressure","Activity / Training Profile"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["CDC adult BMI categories","Health Connect data types","FHIR Observation"]},{"profile":"Connected Health Context Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Lab observation / condition context","Heart rate time series","CGM / glucose"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["HL7 FHIR Observation","FDA general wellness policy","Multimodal wearable health monitoring"]},{"profile":"Connected Health Context Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["Lab observation / condition context","Heart rate time series","CGM / glucose","Blood pressure"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["HL7 FHIR Observation","FDA general wellness policy","Multimodal wearable health monitoring"]},{"profile":"Connected Health Context Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Lab observation / condition context","Heart rate time series","CGM / glucose","Blood pressure"],"families":["frequency_domain_analysis","wavelet_coherence"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["HL7 FHIR Observation","FDA general wellness policy","Multimodal wearable health monitoring"]},{"profile":"Connected Health Context Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Lab observation / condition context","Heart rate time series","CGM / glucose","Blood pressure","SpO2 / oxygen saturation"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["HL7 FHIR Observation","FDA general wellness policy","Multimodal wearable health monitoring"]},{"profile":"Signal Quality / Data Reliability Profile","tierName":"Base / normal user","lvl":1,"pkg":"Baseline + trend + anomaly package","inputs":["Heart rate time series","Raw ECG waveform","Raw PPG waveform"],"families":["statistical_analysis","trend_analysis","anomaly_detection"],"methods":"robust/descriptive statistics + baseline correction + slope/change point + modified z-score/IQR/CUSUM/EWMA","output":"Shows whether the profile is stable, drifting, or repeatedly crossing personal baseline.","visuals":["baseline ribbon","rolling distribution","highlighted anomaly windows","control chart"],"anchors":["FDA pulse oximeter accuracy information","Consumer wearable validation reviews","Photoplethysmography and its application in clinical physiological measurement"]},{"profile":"Signal Quality / Data Reliability Profile","tierName":"Middle / premium","lvl":2,"pkg":"Context model + residual package","inputs":["Heart rate time series","Raw ECG waveform","Raw PPG waveform","Accelerometer / gyro / motion"],"families":["model_fitting","statistical_analysis","trend_analysis"],"methods":"LOESS/spline/piecewise trend + residual diagnostics + confidence bands","output":"Shows whether changes fit normal context or behave unusually after baseline adjustment.","visuals":["fit curve","residual panel","confidence band","driver tags"],"anchors":["FDA pulse oximeter accuracy information","Consumer wearable validation reviews","Photoplethysmography and its application in clinical physiological measurement"]},{"profile":"Signal Quality / Data Reliability Profile","tierName":"Premium / clinician-athlete","lvl":2,"pkg":"Frequency / time-frequency evidence package","inputs":["Heart rate time series","Raw ECG waveform","Raw PPG waveform","Accelerometer / gyro / motion"],"families":["frequency_domain_analysis"],"methods":"FFT/Welch PSD + STFT/spectrogram + Morlet CWT/scalogram + ridge/transient localization; optional coherence only for paired signals","output":"Shows periodic rhythm, transient ups/downs, and signal coupling when dense data exists.","visuals":["PSD","band-power bars","spectrogram/scalogram","ridge highlights","coherence map"],"anchors":["FDA pulse oximeter accuracy information","Consumer wearable validation reviews","Photoplethysmography and its application in clinical physiological measurement"]},{"profile":"Signal Quality / Data Reliability Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Connected explanation package","inputs":["Heart rate time series","Raw ECG waveform","Raw PPG waveform","Accelerometer / gyro / motion","EDA / GSR"],"families":["correlation/statistics","trend_analysis","model_fitting","anomaly_detection"],"methods":"cross-metric correlation + lagged trend comparison + shared anomaly windows + residual model","output":"Connects the profile to sleep/activity/temperature/glucose/BP context so the user sees a wider explanation.","visuals":["stacked timelines","lag/correlation matrix","shared-event heatmap","plain-English driver summary"],"anchors":["FDA pulse oximeter accuracy information","Consumer wearable validation reviews","Photoplethysmography and its application in clinical physiological measurement"]},{"profile":"Hearing / Audiology Profile","tierName":"Base / normal user","lvl":1,"pkg":"Sound exposure summary package","inputs":["Environmental audio exposure","Headphone audio exposure"],"families":["statistical_analysis","trend_analysis"],"methods":"exposure dose + rolling average + safe-limit threshold","output":"Shows your daily sound exposure and whether listening levels stay in a safe range.","visuals":["baseline ribbon","exposure dose"],"anchors":["Apple HealthKit headphoneAudioExposure"]},{"profile":"Hearing / Audiology Profile","tierName":"Middle / premium","lvl":2,"pkg":"Exposure dose & risk package","inputs":["Environmental audio exposure","Audio exposure events"],"families":["anomaly_detection","trend_analysis"],"methods":"dose trend + control limits + loud-window detection","output":"Tracks cumulative noise dose and flags repeated loud-exposure windows against recommended limits.","visuals":["control chart","highlighted anomaly windows"],"anchors":["WHO/NIOSH noise exposure limits"]},{"profile":"Hearing / Audiology Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Audiogram & occupational profile","inputs":["Audiogram","Environmental audio exposure"],"families":["frequency_domain_analysis","correlation/statistics"],"methods":"threshold matrix + frequency banding + exposure profile","output":"Builds a threshold/audiogram matrix and an occupational exposure profile with provenance.","visuals":["psd","driver matrix"],"anchors":["Apple HealthKit audiogram","OSHA occupational noise"]},{"profile":"Labs / Clinical Records Profile","tierName":"Base / normal user","lvl":1,"pkg":"Latest labs summary package","inputs":["Lab result records (FHIR or upload)"],"families":["statistical_analysis","trend_analysis"],"methods":"reference-range check + plain-language delta","output":"Explains your latest lab results in plain language and what moved in or out of range.","visuals":["baseline ribbon"],"anchors":["Apple Health Records FHIR"]},{"profile":"Labs / Clinical Records Profile","tierName":"Middle / premium","lvl":2,"pkg":"Longitudinal biomarker package","inputs":["Lab result records (FHIR or upload)"],"families":["trend_analysis","model_fitting"],"methods":"biomarker trend fit + reference-range bands + wearable overlay","output":"Tracks each biomarker over time with reference-range bands and a lab-wearable overlay.","visuals":["fit curve","confidence band"],"anchors":["Apple Health Records FHIR"]},{"profile":"Labs / Clinical Records Profile","tierName":"Premium / clinician","lvl":3,"pkg":"Profile-expansion overlay package","inputs":["Lab result records (FHIR or upload)","Wearable profile outputs"],"families":["correlation/statistics","model_fitting"],"methods":"cross-overlay + correlation + provenance","output":"Overlays labs onto every wearable profile to expand interpretation with clinical context.","visuals":["driver matrix","stacked timelines"],"anchors":["FHIR R4 Observation"]},{"profile":"Vitals / Multi-profile","tierName":"Base / normal user","lvl":1,"pkg":"Core vitals snapshot package","inputs":["Blood pressure","Heart rate","SpO2","Body temperature","Respiratory rate","Blood glucose"],"families":["statistical_analysis","trend_analysis"],"methods":"baseline delta per vital + rolling summary","output":"Brings all your core vitals into one place and compares today to your personal baseline.","visuals":["baseline ribbon"],"anchors":["Health Connect vitals"]},{"profile":"Vitals / Multi-profile","tierName":"Middle / premium","lvl":2,"pkg":"Cross-vitals trend package","inputs":["Blood pressure","Heart rate","SpO2","Body temperature","Respiratory rate"],"families":["trend_analysis","anomaly_detection"],"methods":"multi-vital trend + control limits + source agreement","output":"Trends every vital together and flags source disagreement or out-of-baseline windows.","visuals":["control chart","stacked timelines"],"anchors":["Health Connect vitals"]},{"profile":"Vitals / Multi-profile","tierName":"Premium / clinician","lvl":3,"pkg":"Vitals provenance package","inputs":["Blood pressure","Heart rate","SpO2","Body temperature"],"families":["correlation/statistics"],"methods":"cross-device agreement + quality grading + provenance","output":"Grades per-vital quality across devices and shows source agreement and provenance.","visuals":["driver matrix"],"anchors":["Health Connect data types"]}],"layers":[{"layer":"Normal user","name":"Body Report","purpose":"Make complex body data understandable","visuals":"Top summary, profile cards, trend ribbons, baseline delta, confidence badge, watchlist","hide":"method names, equations, waveform panels, diagnosis words"},{"layer":"Patient / serious user","name":"Expanded Body Report","purpose":"Give more evidence without overwhelming","visuals":"profile detail cards, anomaly windows, repeated-event history, driver summary, simple charts","hide":"raw scientific panels by default"},{"layer":"Premium analysis","name":"Advanced Report","purpose":"Monetize deeper interpretation","visuals":"correlation/lag matrix, confidence bands, distribution panels, event burden, profile interactions","hide":"unvalidated claims or unsupported panels"},{"layer":"Doctor / coach","name":"Scientific View","purpose":"Show evidence, methods, limits, and exportable interpretation","visuals":"raw/clean strips, PSD/scalogram, Poincare, quality masks, lab overlays, methodology notes","hide":"oversimplified consumer-only language"},{"layer":"Internal engine","name":"Computation Layer","purpose":"Run, select, gate, and validate analyses","visuals":"not normally visible; only confidence/quality evidence surfaces","hide":"the full method library to users"}],"counts":{"finalSelectedRows":2095,"methodFamilies":23,"uniqueSelectedFamilyMethodPairs":377}};
+function currentTier(){const m=document.body.className.match(/tier-(\d)/);return m?+m[1]:1;}
+function hstr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return Math.abs(h);}
+
+/* ---- period (daily / monthly / yearly) ---- */
+let PERIOD='month';
+function setPeriod(p){PERIOD=p;renderReports();}
+function pWord(){return PERIOD==='day'?'Today':PERIOD==='month'?'This month':'This year';}
+function pAxis(){return PERIOD==='day'?'Hour':PERIOD==='month'?'Day':'Month';}
+function pVs(){return PERIOD==='day'?'vs yest.':PERIOD==='month'?'vs last mo.':'vs last yr';}
+function pLen(){return PERIOD==='day'?24:PERIOD==='month'?30:12;}
+function periodSeg(){const o=[['day','Daily'],['month','Monthly'],['year','Yearly']];
+ return `<div class="period-seg">${o.map(x=>`<button class="${PERIOD===x[0]?'on':''}" onclick="setPeriod('${x[0]}')">${x[1]}</button>`).join('')}</div>`;}
+
+/* ---- highlight callout inside 440x244 figures ---- */
+function callout(x,y,text,c){const w=10+text.length*5.3;return `<g><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" fill="none" stroke="${c}" stroke-width="2"/><line x1="${x.toFixed(1)}" y1="${(y-4).toFixed(1)}" x2="${x.toFixed(1)}" y2="${(y-17).toFixed(1)}" stroke="${c}" stroke-width="1.2"/><rect x="${(x-2).toFixed(1)}" y="${(y-32).toFixed(1)}" width="${w.toFixed(1)}" height="15" rx="4" fill="${c}"/><text x="${(x+3).toFixed(1)}" y="${(y-21).toFixed(1)}" font-size="9" font-weight="800" fill="#fff">${esc(text)}</text></g>`;}
+
+/* ---- cascade figures (own; reuse cframe toolkit) ---- */
+function figControl(){const r=rng(31);const g=cgeo({xmin:0,xmax:60,ymin:-3,ymax:3,xticks:6,title:'Baseline & anomaly windows',xlabel:pAxis(),ylabel:'sigma'});const ax=cframe(g);
+ let s=`<rect x="${g.x0}" y="${ax.Y(2).toFixed(1)}" width="${g.x1-g.x0}" height="${(ax.Y(-2)-ax.Y(2)).toFixed(1)}" fill="#0f9d58" opacity=".05"/>`;
+ s+=`<line x1="${g.x0}" y1="${ax.Y(0).toFixed(1)}" x2="${g.x1}" y2="${ax.Y(0).toFixed(1)}" stroke="#0f9d58" stroke-width="1.2"/>`;
+ [2,-2].forEach(v=>{s+=`<line x1="${g.x0}" y1="${ax.Y(v).toFixed(1)}" x2="${g.x1}" y2="${ax.Y(v).toFixed(1)}" stroke="#dc4437" stroke-dasharray="5 4" stroke-width="1.1"/>`;});
+ const pts=[];for(let i=0;i<60;i++){let v=(r()-0.5)*2.2;if(i>40&&i<46)v+=(i-40)*0.7;if(i===22)v=2.6;pts.push([i,Math.max(-3,Math.min(3,v))]);}
+ s+=cpath(pts,ax.X,ax.Y,'#5f6b80',1.2);let dots='';pts.forEach(p=>{const o=Math.abs(p[1])>=2;dots+=`<circle cx="${ax.X(p[0]).toFixed(1)}" cy="${ax.Y(p[1]).toFixed(1)}" r="${o?3.2:2}" fill="${o?'#dc4437':'#2f80ed'}"${o?' stroke="#fff" stroke-width="1"':''}/>`;});
+ const hl=callout(ax.X(22),ax.Y(2.6),'+2.6 sigma','#dc4437');
+ return svgWrap(ax.s+s+dots+hl+cborder(g),'control chart - personal baseline crossings');}
+
+function figBaseline(){const r=rng(41);const g=cgeo({xmin:0,xmax:60,ymin:40,ymax:80,xticks:6,title:'Baseline ribbon & trend',xlabel:pAxis(),ylabel:'value'});const ax=cframe(g);
+ const base=58,sd=4;let s=`<rect x="${g.x0}" y="${ax.Y(base+sd).toFixed(1)}" width="${g.x1-g.x0}" height="${(ax.Y(base-sd)-ax.Y(base+sd)).toFixed(1)}" fill="#2f80ed" opacity=".08"/>`;
+ s+=`<line x1="${g.x0}" y1="${ax.Y(base).toFixed(1)}" x2="${g.x1}" y2="${ax.Y(base).toFixed(1)}" stroke="#2f80ed" stroke-dasharray="5 4"/>`;
+ const pts=[];for(let i=0;i<60;i++){let v=base+Math.sin(i/9)*4+(r()-0.5)*3;pts.push([i,Math.max(40,Math.min(80,v))]);}
+ s+=cpath(pts,ax.X,ax.Y,'#15233f',1.4);
+ const li=pts.length-1;const hl=callout(ax.X(pts[li][0]),ax.Y(pts[li][1]),'within +/-1 sigma','#2f80ed');
+ return svgWrap(ax.s+s+hl+cborder(g),'personal baseline with rolling value');}
+
+function figRegression(){const r=rng(23);const g=cgeo({xmin:0,xmax:10,ymin:0,ymax:10,xticks:5,title:'Response model & residuals',xlabel:'x',ylabel:'y'});const ax=cframe(g);
+ const sl=0.7,ic=1.6,pts=[];for(let i=0;i<50;i++){const x=r()*10,y=ic+sl*x+(r()-0.5)*2.4;pts.push([x,Math.max(0,Math.min(10,y))]);}
+ const band=[];for(let x=0;x<=10;x+=0.5)band.push([x,ic+sl*x]);
+ const up=band.map(p=>[p[0],Math.min(10,p[1]+1)]),lo=band.map(p=>[p[0],Math.max(0,p[1]-1)]);
+ const bp=`<path d="M${up.map(p=>ax.X(p[0]).toFixed(1)+' '+ax.Y(p[1]).toFixed(1)).join(' L')} L${lo.slice().reverse().map(p=>ax.X(p[0]).toFixed(1)+' '+ax.Y(p[1]).toFixed(1)).join(' L')} Z" fill="#0f9d58" opacity=".1"/>`;
+ let dots='';pts.forEach(p=>{dots+=`<circle cx="${ax.X(p[0]).toFixed(1)}" cy="${ax.Y(p[1]).toFixed(1)}" r="2.2" fill="#2f80ed" opacity=".55"/>`;});
+ const r2=(0.86+r()*0.1).toFixed(2);
+ const hl=callout(ax.X(8.4),ax.Y(ic+sl*8.4),'R2 '+r2,'#0f9d58');
+ return svgWrap(ax.s+bp+cpath(band,ax.X,ax.Y,'#0f9d58',2)+dots+hl+cborder(g),'fit + 95% confidence band');}
+
+function figPPG(){const r=rng(29);const g=cgeo({xmin:0,xmax:4,ymin:0,ymax:1.15,xticks:8,title:'Pulse waveform & fiducials',xlabel:'Time (s)',ylabel:'a.u.'});const ax=cframe(g);
+ const on=[];let t=0.1;while(t<4){on.push(t);t+=0.85+(r()-0.5)*0.06;}
+ const beat=p=>{const sys=Math.exp(-Math.pow(p-0.18,2)/(2*0.0045)),dic=0.45*Math.exp(-Math.pow(p-0.42,2)/(2*0.004)),dec=0.5*Math.exp(-p*2.2);return Math.min(1.05,sys*0.95+dic+dec*0.3);};
+ const pts=[],dt=0.006;for(let i=0;i*dt<=4;i++){const ts=i*dt;let bi=0;while(on[bi+1]!==undefined&&on[bi+1]<=ts)bi++;const o=on[bi],rr=(on[bi+1]||o+0.85)-o,p=(ts-o)/rr;pts.push([ts,beat(p)+(r()-0.5)*0.008]);}
+ let marks='';on.slice(0,4).forEach(o=>{marks+=`<circle cx="${ax.X(o+0.153).toFixed(1)}" cy="${ax.Y(beat(0.18)).toFixed(1)}" r="3" fill="#dc4437"/><circle cx="${ax.X(o+0.357).toFixed(1)}" cy="${ax.Y(beat(0.42)).toFixed(1)}" r="2.6" fill="#f57c00"/>`;});
+ const hl=callout(ax.X(on[0]+0.153),ax.Y(beat(0.18)),'systolic','#dc4437');
+ return svgWrap(ax.s+cpath(pts,ax.X,ax.Y,'#0a7d8c',1.7)+marks+hl+cborder(g),'systolic peak + dicrotic notch');}
+
+function figCoherence(){const g=cgeo({x1:392,xmin:0,xmax:8,ymin:0,ymax:1,xticks:4,yticks:6,title:'Wavelet coherence',xlabel:'Time (s)',ylabel:'Freq (Hz)'});
+ const ax=cframe(Object.assign({},g,{grid:false,yfmt:v=>['0.5','1','2','4','8','16','32'][Math.round(v*6)]}));
+ const nx=32,ny=24,cw=(g.x1-g.x0)/nx,ch=(g.y1-g.y0)/ny;let cells='',arrows='';
+ for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const t=i/nx,f=j/ny;let c=0.5+0.5*Math.sin(t*5+f*8)*Math.cos(f*6-t*3);c=Math.min(1,Math.abs(c)*(0.7+0.5*Math.sin(t*3+1)));
+  const x=g.x0+i*cw,y=g.y0+(ny-1-j)*ch;cells+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(cw+0.6).toFixed(1)}" height="${(ch+0.6).toFixed(1)}" fill="${vir(c)}"/>`;
+  if(c>0.8&&i%2===0&&j%2===0){const a=t*6+f*3,cxp=x+cw/2,cyp=y+ch/2;arrows+=`<line x1="${(cxp-4*Math.cos(a)).toFixed(1)}" y1="${(cyp-4*Math.sin(a)).toFixed(1)}" x2="${(cxp+4*Math.cos(a)).toFixed(1)}" y2="${(cyp+4*Math.sin(a)).toFixed(1)}" stroke="#fff" stroke-width="1"/>`;}}
+ const cbid=uid();let st='';for(let i=0;i<=10;i++)st+=`<stop offset="${i*10}%" stop-color="${vir(i/10)}"/>`;
+ const cb=`<defs><linearGradient id="${cbid}" x1="0" y1="1" x2="0" y2="0">${st}</linearGradient></defs><rect x="400" y="${g.y0}" width="12" height="${g.y1-g.y0}" fill="url(#${cbid})" stroke="#c9d4e6"/>`;
+ const hl=callout(g.x0+(g.x1-g.x0)*0.6,g.y0+(g.y1-g.y0)*0.4,'gamma2>0.8','#0b3d2e');
+ return svgWrap(ax.s+cells+arrows+cb+hl+cborder(g),'phase-locked coupling regions');}
+
+function figIMU(){const r=rng(37);const g=cgeo({xmin:0,xmax:10,ymin:-2,ymax:2.6,xticks:5,title:'Tri-axial motion & bouts',xlabel:'Time (s)',ylabel:'g'});const ax=cframe(g);
+ let s=`<rect x="${ax.X(3.5).toFixed(1)}" y="${g.y0}" width="${(ax.X(6.8)-ax.X(3.5)).toFixed(1)}" height="${g.y1-g.y0}" fill="#f57c00" opacity=".08"/>`;
+ const xa=[],ya=[],za=[];for(let t=0;t<=10;t+=0.04){const ac=(t>3.5&&t<6.8)?1:0.18;xa.push([t,0.9+ac*Math.sin(t*9)*0.7+(r()-0.5)*0.1*ac]);ya.push([t,ac*Math.sin(t*9+2)*0.6+(r()-0.5)*0.1*ac]);za.push([t,-1+ac*Math.sin(t*9+4)*0.5]);}
+ s+=cpath(xa,ax.X,ax.Y,'#2f80ed',1.1)+cpath(ya,ax.X,ax.Y,'#0f9d58',1.1)+cpath(za,ax.X,ax.Y,'#f57c00',1.1);
+ const hl=callout(ax.X(5.1),ax.Y(1.55),'active bout','#e07b00');
+ return svgWrap(ax.s+s+hl+cborder(g),'accelerometer norm - active bout shaded');}
+
+function figDriver(){const labs=['HR','HRV','Sleep','SpO2','Temp','Act'],n=labs.length,r=rng(47);
+ const W=300,L=70,T=44,cell=(W-L-10)/n;
+ const div=v=>{if(v>=0)return `rgb(${Math.round(255-v*210)},${Math.round(255-v*120)},${Math.round(255-v*40)})`;const a=-v;return `rgb(${Math.round(255-a*40)},${Math.round(255-a*120)},${Math.round(255-a*210)})`;};
+ const M=[];let best=0,bi=0,bj=1;for(let i=0;i<n;i++){M[i]=[];for(let j=0;j<n;j++){M[i][j]=i===j?1:(M[j]&&M[j][i]!==undefined?M[j][i]:(r()*1.7-0.7));if(i<j&&Math.abs(M[i][j])>best){best=Math.abs(M[i][j]);bi=i;bj=j;}}}
+ let s=`<text x="10" y="18" fill="#10264f" font-size="12.5" font-weight="800">Driver correlation matrix</text>`;
+ for(let i=0;i<n;i++)for(let j=0;j<n;j++){const x=L+j*cell,y=T+i*cell;s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(cell-1.5).toFixed(1)}" height="${(cell-1.5).toFixed(1)}" rx="3" fill="${div(M[i][j])}"/><text x="${(x+cell/2).toFixed(1)}" y="${(y+cell/2+3).toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="700" fill="${Math.abs(M[i][j])>0.6?'#fff':'#5f6b80'}">${M[i][j].toFixed(1)}</text>`;}
+ labs.forEach((l,i)=>{s+=`<text x="${L-6}" y="${(T+i*cell+cell/2+3).toFixed(1)}" text-anchor="end" font-size="9" font-weight="700" fill="#5f6b80">${l}</text><text x="${(L+i*cell+cell/2).toFixed(1)}" y="${T-6}" text-anchor="middle" font-size="9" font-weight="700" fill="#5f6b80">${l}</text>`;});
+ s+=`<rect x="${(L+bj*cell-1).toFixed(1)}" y="${(T+bi*cell-1).toFixed(1)}" width="${(cell+0.5).toFixed(1)}" height="${(cell+0.5).toFixed(1)}" rx="3" fill="none" stroke="#0b1b3a" stroke-width="2"/>`;
+ const H=T+n*cell+22;
+ return `<svg class="fig" viewBox="0 0 ${W} ${H}" style="height:188px"><rect width="${W}" height="${H}" fill="#fbfdff"/>${s}<text x="10" y="${H-7}" fill="#9aa6bd" font-size="9">strongest driver ${labs[bi]}-${labs[bj]} r=${best.toFixed(2)}</text></svg>`;}
+
+function figStacked(){const r=rng(53);const labs=[['Sleep','#6c5ce7'],['Cardiac','#ff4d6d'],['Activity','#1fd17a']];const W=320,H=178,L=54,T=26,laneH=(H-T-22)/3;
+ let s=`<text x="10" y="18" fill="#10264f" font-size="12.5" font-weight="800">Connected timelines</text>`;
+ const ex0=L+(W-L-8)*0.55,ex1=L+(W-L-8)*0.68;
+ s+=`<rect x="${ex0.toFixed(1)}" y="${T-2}" width="${(ex1-ex0).toFixed(1)}" height="${(laneH*3).toFixed(1)}" fill="#ff9f1c" opacity=".14"/>`;
+ labs.forEach((l,li)=>{const y0=T+li*laneH,yc=y0+laneH/2,data=[];for(let i=0;i<40;i++){let v=Math.sin(i/5+li)*0.6+(r()-0.5)*0.3;if(i>22&&i<28)v+=(li===1?1.2:-0.8);data.push(v);}
+  const X=i=>L+i/39*(W-L-8),Y=v=>yc-v*(laneH*0.38);let ln='';data.forEach((v,i)=>ln+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' ');
+  s+=`<line x1="${L}" y1="${(y0+laneH-2).toFixed(1)}" x2="${W-8}" y2="${(y0+laneH-2).toFixed(1)}" stroke="#eef2f8"/><text x="${L-6}" y="${(yc+3).toFixed(1)}" text-anchor="end" font-size="9" font-weight="800" fill="${l[1]}">${l[0]}</text><path d="${ln}" fill="none" stroke="${l[1]}" stroke-width="1.8" stroke-linejoin="round"/>`;});
+ s+=`<text x="${((ex0+ex1)/2).toFixed(1)}" y="${T-6}" text-anchor="middle" font-size="8.5" font-weight="800" fill="#e08600">shared event</text>`;
+ return `<svg class="fig" viewBox="0 0 ${W} ${H}" style="height:178px"><rect width="${W}" height="${H}" fill="#fbfdff"/>${s}<text x="10" y="${H-6}" fill="#9aa6bd" font-size="9">profiles moving together - lagged drivers</text></svg>`;}
+
+/* ---- registry: family -> {fig, kind} ; kind -> per-visual stats + highlight ---- */
+const FAMFIG={statistical_analysis:['figBaseline','baseline'],trend_analysis:['figBaseline','baseline'],anomaly_detection:['figControl','control'],hrv_nonlinear:['figPoincare','poincare'],time_domain_analysis:['figPPG','ppg'],frequency_domain_analysis:['figPSD','psd'],advanced_time_frequency:['figScalogram','scalo'],wavelet_analysis:['figScalogram','scalo'],cwt_analysis:['figScalogram','scalo'],wavelet_coherence:['figCoherence','coh'],ecg_wrapper:['figECG','ecg'],ppg_analysis:['figPPG','ppg'],eda_analysis:['figEDA','eda'],respiration_analysis:['figResp','resp'],imu_analysis:['figIMU','imu'],model_fitting:['figRegression','reg'],'correlation/statistics':['figDriver','driver']};
+const FIGFN={figBaseline,figControl,figRegression,figPPG,figCoherence,figIMU,figDriver,figStacked,figECG,figPoincare,figPSD,figScalogram,figEDA,figResp};
+const VSTATS={
+ baseline:{hi:'Drift within +/-1 sigma',f:r=>[['Mean',(56+r()*6).toFixed(0)],['SD',(3+r()*2).toFixed(1)],['Delta',(r()<.5?'-':'+')+(1+r()*3).toFixed(1)]]},
+ control:{hi:'Anomaly window flagged',f:r=>[['Crossings',(1+Math.floor(r()*4))],['Burden',(2+r()*6).toFixed(0)+'%'],['Max',(2+r()*1.2).toFixed(1)+'σ']]},
+ reg:{hi:'Strong model fit',f:r=>[['R2',(0.85+r()*0.1).toFixed(2)],['Slope',(0.5+r()*0.5).toFixed(2)],['RMSE',(0.4+r()*0.5).toFixed(2)]]},
+ ppg:{hi:'Clean systolic + dicrotic',f:r=>[['SQI',(0.9+r()*0.09).toFixed(2)],['PRV',(28+r()*20).toFixed(0)+'ms'],['Perfusion',(1.2+r()*2).toFixed(1)+'%']]},
+ coh:{hi:'Phase-locked band',f:r=>[['Coherence',(0.78+r()*0.18).toFixed(2)],['Lag',(40+r()*120).toFixed(0)+'ms'],['Band',(0.1+r()*0.2).toFixed(2)+'Hz']]},
+ imu:{hi:'Active bout detected',f:r=>[['ENMO',(20+r()*40).toFixed(0)+'mg'],['Bouts',(2+Math.floor(r()*6))],['Cadence',(95+r()*25).toFixed(0)]]},
+ scalo:{hi:'Ridge tracked',f:r=>[['Peak',(0.5+r()*6).toFixed(1)+'Hz'],['Power',(0.6+r()*0.4).toFixed(2)],['Entropy',(0.4+r()*0.4).toFixed(2)]]},
+ psd:{hi:'LF/HF balance',f:r=>[['LF',(0.4+r()*0.4).toFixed(2)],['HF',(0.3+r()*0.4).toFixed(2)],['LF/HF',(0.8+r()*1.6).toFixed(2)]]},
+ poincare:{hi:'Tight beat cluster',f:r=>[['SD1',(18+r()*12).toFixed(0)+'ms'],['SD2',(55+r()*30).toFixed(0)+'ms'],['RMSSD',(40+r()*30).toFixed(0)+'ms']]},
+ eda:{hi:'Arousal episodes',f:r=>[['SCRs',(2+Math.floor(r()*5))],['Amp',(0.4+r()*1.5).toFixed(2)+'uS'],['Tonic',(2+r()*3).toFixed(1)+'uS']]},
+ resp:{hi:'Breathing regular',f:r=>[['Rate',(12+r()*6).toFixed(0)+'br'],['Var',(4+r()*6).toFixed(0)+'%'],['Pauses',Math.floor(r()*3)]]},
+ ecg:{hi:'Sinus rhythm',f:r=>[['HR',(58+r()*22).toFixed(0)+'bpm'],['QTc',(400+r()*30).toFixed(0)+'ms'],['PR',(150+r()*20).toFixed(0)+'ms']]},
+ driver:{hi:'Strongest driver pair',f:r=>[['Top r',(0.5+r()*0.4).toFixed(2)],['Pairs',(3+Math.floor(r()*6))],['Lag',(1+Math.floor(r()*8))+pAxis().toLowerCase()[0]]]},
+};
+function cascadeViz(c){const out=[],used=new Set();
+ (c.families||[]).forEach(f=>{const m=FAMFIG[f.trim()];if(m&&!used.has(m[1])&&out.length<2){used.add(m[1]);out.push({kind:m[1],svg:FIGFN[m[0]]()});}});
+ const vt=(c.visuals||[]).join(' ').toLowerCase();
+ const add=(kw,fnName,kind)=>{if(vt.indexOf(kw)>=0&&!used.has(kind)&&out.length<2){used.add(kind);out.push({kind,svg:FIGFN[fnName]()});}};
+ add('control chart','figControl','control');add('heatmap','figDriver','driver');add('stacked timelines','figStacked','driver');add('scalogram','figScalogram','scalo');add('coherence','figCoherence','coh');
+ if(!out.length)out.push({kind:'baseline',svg:figBaseline()});
+ return out;
+}
+/* report-level statistics (numbers) — different from visual stats */
+function cascadeKPIs(c){const r=rng(hstr(c.profile+c.pkg+PERIOD));
+ const conf=['High','High','Moderate'][Math.floor(r()*3)];
+ return [['Confidence',conf],['Coverage',(88+Math.floor(r()*11))+'%'],['Methods run',(3+Math.floor(r()*7))],['Change '+pVs(),(r()<.5?'▲':'▼')+(1+Math.floor(r()*9))+'%']];
+}
+/* statistics that have their OWN visuals */
+const FAMSTAT={statistical_analysis:'Baseline index',trend_analysis:'Trend slope',anomaly_detection:'Anomaly burden',hrv_nonlinear:'SD1/SD2 ratio','correlation/statistics':'Driver strength',frequency_domain_analysis:'LF/HF ratio',advanced_time_frequency:'Spectral entropy',wavelet_analysis:'Wavelet power',cwt_analysis:'Ridge power',wavelet_coherence:'Coupling index',ecg_wrapper:'Beat stability',ppg_analysis:'Signal quality',eda_analysis:'Arousal index',respiration_analysis:'Breathing rate',time_domain_analysis:'Signal energy',model_fitting:'Model R2',imu_analysis:'Movement volume'};
+function statMiniCards(c){const fams=(c.families||[]).slice(0,2);if(fams.length<2)fams.push('trend_analysis');
+ return fams.map((f,i)=>{const name=FAMSTAT[f.trim()]||'Index';const r=rng(hstr(c.pkg+f+PERIOD+i));
+  const n=pLen();const d=[];let v=50+r()*20;for(let k=0;k<n;k++){v+=(r()-0.5)*8;v=Math.max(20,Math.min(95,v));d.push(v);}
+  const val=d[d.length-1].toFixed(0);const dl=(d[d.length-1]-d[0]);
+  const col=['#2f80ed','#6c5ce7','#00b894','#ff7043'][i%4],col2=['#56ccf2','#a29bfe','#33d17a','#ffa726'][i%4];
+  return `<div class="statcard"><div class="sc-top">${esc(name)}</div><div class="sc-val">${val}<span class="sc-dl ${dl>=0?'up':'down'}">${dl>=0?'▲':'▼'}${Math.abs(dl).toFixed(0)}</span></div>${spark(d,150,38,col,col2,{baseline:d.reduce((a,b)=>a+b,0)/d.length})}<div class="sc-cap">${PERIOD==='day'?'hourly':PERIOD==='month'?'daily':'monthly'} · ${pWord().toLowerCase()}</div></div>`;
+ }).join('');
+}
+
+/* ---- Reports screen ---- */
+let reportState={view:'list',pi:0};
+const RSTAT=[['Stable','good'],['Watch','warn'],['Improving','good'],['Balanced','info']];
+function layerName(t){return t===1?'Body Report':t===2?'Advanced Report':'Scientific View';}
+function tierName(t){return t===1?'Everyday':t===2?'Advanced':'Clinical';}
+function tierSurface(p,t){return t===1?p.t1:t===2?p.t2:p.t3;}
+function tierRep(p,t){return t===1?p.t1Rep:t===2?p.t2Rep:p.t3Rep;}
+
+function reportsList(){const t=currentTier();
+ const cards=PACK.profiles.map((p,i)=>{const st=RSTAT[i%4],n=PACK.cascades.filter(x=>x.profile===p.name&&x.lvl<=t).length;
+  const tag=p.tag?`<span class="pill prem">${esc(p.tag)}</span>`:`<span class="pill ${st[1]}">${st[0]}</span>`;
+  const meta=p.tag?`${p.families.length} families · expansion`:`${p.families.length} families · ${p.core+p.premium} methods`;
+  return `<div class="card profile-tile" onclick="openProfile(${i})"><div class="between"><div class="ptile-name">${esc(p.name.replace(' Profile',''))}</div>${tag}</div><div class="ptile-meta">${meta}</div><div class="ptile-foot"><span>${n} report${n!==1?'s':''}</span><span class="chev">›</span></div></div>`;}).join('');
+ return `<div class="card hero-reports">
+   <div class="kicker">Your body, decoded</div>
+   <h2 style="margin:4px 0 6px;font-size:19px">${PACK.profiles.length} health profiles</h2>
+   <p class="sub" style="margin:0">${PACK.counts.finalSelectedRows} methods · ${PACK.cascades.length} report combinations. ${periodSeg()? '':''}Open a profile to read the final report your data produces at ${tierName(t)} depth.</p>
+   <div style="margin-top:10px">${periodSeg()}</div>
+   <div class="grid3" style="margin-top:11px">
+    <div class="metric"><div class="val" style="font-size:20px">${PACK.counts.finalSelectedRows}</div><div class="ptile-meta">methods</div></div>
+    <div class="metric"><div class="val" style="font-size:20px">${PACK.profiles.length}</div><div class="ptile-meta">profiles</div></div>
+    <div class="metric"><div class="val" style="font-size:20px">${PACK.cascades.length}</div><div class="ptile-meta">cascades</div></div>
+   </div>
+  </div>
+  <div class="sec-title"><h3>Profiles · ${esc(pWord())}</h3><a>${tierName(t)}</a></div>
+  <div class="profile-tiles">${cards}</div>`;
+}
+
+function reportsDetail(p){const t=currentTier();
+ const casc=PACK.cascades.filter(x=>x.profile===p.name&&x.lvl<=t);
+ const rep=tierRep(p,t)||tierSurface(p,t);
+ const r0=rng(hstr(p.name+PERIOD));
+ const edge=`<div class="card edge-card">
+   <div class="between"><div class="rc-tier">${layerName(t)} · how it shows</div>${p.tag?`<span class="pill prem">${esc(p.tag)}</span>`:''}</div>
+   <p class="edge-rep">${esc(rep)}</p>
+   ${p.win?`<div class="edge-win">🏆 ${esc(p.win)}</div>`:''}
+   ${t>=2&&p.outperform?`<div class="edge-line"><strong>We go further —</strong> ${esc(p.outperform)}</div>`:''}
+   ${t===3&&p.whoopDoes?`<div class="edge-line"><strong>Baseline tech —</strong> ${esc(p.whoopDoes)}</div>`:''}
+   ${t===3&&p.risk?`<div class="edge-guard">⚠ ${esc(p.risk)}</div>`:''}
+  </div>`;
+ const cards=casc.map(c=>{
+  const vizs=cascadeViz(c);
+  const vizHTML=vizs.map(v=>{const vs=VSTATS[v.kind]||{hi:'',f:()=>[]};const rr=rng(hstr(c.pkg+v.kind+PERIOD));
+    const stats=vs.f(rr).map(s=>`<span class="vstat-i"><b>${esc(s[1])}</b> ${esc(s[0])}</span>`).join('');
+    return `<div class="viz-block"><div class="vhi">◆ ${esc(vs.hi)}</div>${v.svg}<div class="vstat">${stats}</div></div>`;}).join('');
+  const kpis=cascadeKPIs(c).map(k=>`<div class="kpi"><div class="kpi-v">${esc(String(k[1]))}</div><div class="kpi-k">${esc(k[0])}</div></div>`).join('');
+  const tb=c.lvl===1?'':c.lvl===2?'<span class="badge-tier prem">Advanced</span>':'<span class="badge-tier clin">Clinical</span>';
+  return `<div class="card report-card">
+    <div class="between"><div><div class="rc-tier">${esc(c.tierName)} · ${esc(pWord())}</div><h2 style="margin:2px 0 0;font-size:15px">${esc(c.pkg)}</h2></div>${tb}</div>
+    <div class="report-out"><span class="ro-ic">▶</span><p>${esc(c.output)}</p></div>
+    <div class="block-label">Visuals & highlights</div>
+    ${vizHTML}
+    <div class="block-label">Report statistics</div>
+    <div class="kpi-row">${kpis}</div>
+    <div class="block-label">Key metrics</div>
+    <div class="statcards">${statMiniCards(c)}</div>
+    <div class="rc-chips"><strong>Needs</strong> ${c.inputs.map(x=>`<span class="chip-in">${esc(x)}</span>`).join('')}</div>
+    ${t>=2&&c.methods?`<div class="rc-methods"><strong>Method mix —</strong> ${esc(c.methods)}</div>`:''}
+    ${t===3&&c.anchors.length?`<div class="rc-anchors"><strong>Evidence —</strong> ${c.anchors.map(a=>esc(a)).join(' · ')}</div>`:''}
+   </div>`;}).join('');
+ return `<button class="backbtn" onclick="reportsBack()">‹ All profiles</button>
+  <div class="card">
+   <div class="between"><h2 style="font-size:18px">${esc(p.name.replace(' Profile',''))}</h2><span class="pill info">${layerName(t)}</span></div>
+   <p class="sub" style="margin:6px 0 0">${esc(tierSurface(p,t))}</p>
+   <div class="hdr-stats"><div><b>${['High','High','Good'][Math.floor(r0()*3)]}</b><span>confidence</span></div><div><b>${(90+Math.floor(r0()*9))}%</b><span>coverage</span></div><div><b>${p.tag?p.families.length*4:p.core+p.premium}</b><span>methods</span></div><div><b>${casc.length}</b><span>reports</span></div></div>
+   <div class="gate-row">🔒 ${esc(p.gate)}</div>
+   <div class="fam-pills">${p.families.map(f=>`<span class="fam-pill">${esc(f)}</span>`).join('')}</div>
+  </div>
+  ${periodSeg()}
+  ${edge}
+  <div class="sec-title"><h3>Final reports · ${esc(pWord())}</h3><a>${casc.length} ready</a></div>
+  ${cards}
+  ${t<3?`<div class="tierhint">Switch to ${t===1?'Advanced or Clinical':'Clinical'} up top to unlock deeper packages</div>`
+       :`<div class="card gate-clin"><div class="between"><h2 style="font-size:15px">Clinician export</h2><span class="badge-tier clin">Clinical</span></div><p class="sub">Source-gated ${esc(pWord().toLowerCase())} packet · raw signals, intervals, provenance & limitations</p><button class="exp-btn">Export ${esc(p.name.replace(' Profile',''))} packet</button></div>`}`;
+}
+function renderReports(){const el=document.getElementById('scr-reports');if(!el)return;el.innerHTML=reportState.view==='list'?reportsList():reportsDetail(PACK.profiles[reportState.pi]);}
+function openProfile(i){reportState={view:'detail',pi:i};renderReports();document.getElementById('screens').scrollTop=0;}
+function reportsBack(){reportState={view:'list',pi:reportState.pi};renderReports();document.getElementById('screens').scrollTop=0;}
+
+const screens={today:screenToday,heart:screenHeart,sleep:screenSleep,body:screenBody,trends:screenTrends};
+function renderAll(){for(const k in screens){document.getElementById('scr-'+k).innerHTML=screens[k]();}}
+renderAll();
+renderReports();
+
+document.getElementById('tabbar').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));b.classList.add('on');
+ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+ document.getElementById('scr-'+b.dataset.scr).classList.add('active');
+ document.getElementById('screens').scrollTop=0;
+ document.getElementById('fab').style.display=(b.dataset.scr==='heart'||b.dataset.scr==='today')?'flex':'none';
+});
+document.getElementById('segment').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ document.querySelectorAll('#segment button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+ document.body.className='tier-'+b.dataset.tier;
+ renderReports();
+});
+document.getElementById('fab').addEventListener('click',()=>{
+ const f=document.getElementById('fab');f.textContent='●●●';f.style.fontSize='14px';
+ setTimeout(()=>{f.textContent='+';f.style.fontSize='24px';
+  document.querySelector('.tab[data-scr="heart"]').click();},900);
+});
+</script>
+</body>
+</html>
