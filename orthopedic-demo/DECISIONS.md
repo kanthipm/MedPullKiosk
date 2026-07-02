@@ -127,3 +127,52 @@ Cloudflare blocked automated access, so the user pasted both React source files.
 - **Dashboard summary no longer sticky** — `.quick-sum` is `position:static`, so it stays at the top of
   the record instead of floating on scroll. (Only the compact topbar remains pinned.)
 - All verified over http:// and file:// with zero console errors; SMS escalation + task-push still fire.
+
+## Round 5 — real neural voices (pre-generated, still zero-backend)
+- **Every scripted line is now a real neural-TTS clip.** `tools/generate_voices.py` extracts all spoken
+  lines (29 narrator lines in `index.html`, 8 check-in beats in `patient.html`), synthesizes them locally
+  with **Kokoro-82M** (Apache-2.0, runs offline via `kokoro-onnx`; ~340 MB of model files, ~1.5 MB of MP3s
+  out), and writes `assets/audio/manifest.js` keyed `"<role>|<exact text>"` with per-clip durations.
+  Voices: narrator `af_heart`, assistant `af_bella`, Marcus `am_michael` — change them in `VOICES` and re-run.
+- **`assets/voice.js` plays clips first, speechSynthesis second.** Clips queue back-to-back (mirroring
+  the utterance queue callers rely on); `Voice.cancel()` flushes; any text without a clip falls back to
+  the old Web Speech path, so ad-hoc lines still speak. New `Voice.duration(text, role)` lets
+  `patient.html` time beats to the real clip length instead of a chars-per-ms estimate.
+- The "just open index.html" constraint holds: clips are plain `<audio>` MP3s loaded relatively, so
+  file:// still works and nothing leaves the machine at demo time. `tools/generate_voices.py --check`
+  fails if a scripted line has no clip (run it after editing any `speak:`/beat text).
+- Gotcha found on the way: espeak-ng (Kokoro's phonemizer) truncates its data path at ~160 chars and
+  hard-exits, so the pip-bundled `espeakng-loader` breaks inside deeply nested venvs — the generator
+  prefers Homebrew's `libespeak-ng` when present.
+
+## Round 6 — formal narration + no overlapping voices
+- **Narration rewritten in a formal clinical register** (same conciseness): e.g. "Meet Recovery
+  Copilot. The patient just talks…" → "Recovery Copilot converts routine patient check-ins into
+  monitored clinical signals…". Titles/bodies updated to match; copilot dialogue formalized
+  ("It's time for your daily check-in"), Marcus's replies kept natural. Clips regenerated.
+- **Narrator and kiosk voices no longer overlap.** With speechSynthesis, parent + iframe utterances
+  were serialized by the OS speech engine; real `<audio>` clips play concurrently, so the shell now
+  sequences explicitly: (1) speech-producing patient cmds (`start/answer/fever/sooner`) are deferred
+  until the narrator clip ends (`Voice.duration` + 350 ms); (2) every `enterStep` emits a `patient hush`
+  cmd so an in-flight kiosk line stops when the step changes; (3) `playThrough` emits `BEATS {ms}` on
+  the Bus and the shell stretches the autoplay timer to narration + beats, so autoplay never advances
+  mid-conversation (fixed dwells remain the floor/fallback).
+
+## Round 7 — conversation-first phone steps, dashboard-first structure, tablet fixes
+- **Kiosk conversation now plays FIRST on phone steps; the narrator comments after.** Sequencing
+  inverted from Round 6: the speaky patient cmd fires immediately, the shell holds its narration in
+  `narrTimer` (900 ms fallback), and the `BEATS {ms}` report re-times it to conversation-end + 400 ms.
+  Autoplay stretches to beats + narration. The "In his own words…" narrator line was removed outright
+  (the card text stays); every autoplay dwell is floored at narration + 800 ms so no clip is ever cut.
+- **Demo restructured: the admin web dashboard is shown in full first; the tablet is a single
+  "Tablet-ready" compatibility step near the end** (same console, so no duplicated tour). The tablet
+  section's unique beats moved to the dashboard: guardrail (`hlBanner`), direct actions (new
+  `hlActions` cmd highlighting `.dash-actions`), and assign-plan (new `assign` cmd clicking the real
+  `[data-act=assign]` button → TASK_ASSIGN → phone).
+- **Tablet notifications now render INSIDE the tablet screen.** The shell crops the tablet page's outer
+  40 px, which hid the default `position:fixed; top:18px` toasts — tablet.html pre-creates
+  `.toast-wrap` inside `.screenframe` (UI.showToast reuses it) positioned absolute below the status bar.
+- **Tablet record summary no longer floats on scroll** — `.det-pin` is `position:static`, matching the
+  Round-4 dashboard change.
+- Verified end-to-end: two-window sequencing harness reports zero cross-window audio overlaps, and a
+  28-keypress headless-browser walk through all 26 steps produced zero console errors/exceptions.

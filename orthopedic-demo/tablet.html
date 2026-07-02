@@ -49,11 +49,10 @@
 .roster-legend{display:flex;gap:7px;flex-wrap:wrap;transform:scale(.92);transform-origin:right bottom;}
 .tap-hint{font-size:11px;font-weight:700;color:#9aa3b8;text-align:center;margin-top:14px;}
 
-/* detail view — pinned summary + actions, then scrollable record */
-.det-pin{position:sticky;top:0;z-index:14;padding:12px 20px 10px;
- background:linear-gradient(180deg,#f4f6fc 80%,rgba(244,246,252,.72));
- backdrop-filter:saturate(1.2) blur(7px);-webkit-backdrop-filter:saturate(1.2) blur(7px);
- box-shadow:0 10px 20px -14px rgba(20,30,60,.3);}
+/* detail view — summary + actions at the top of the record (static: stays at
+   the top of the page instead of floating over the record on scroll) */
+.det-pin{position:static;padding:12px 20px 10px;
+ background:linear-gradient(180deg,#f4f6fc 80%,rgba(244,246,252,.72));}
 .det-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px;}
 .det-pin .quick-sum{position:static;top:auto;margin-bottom:11px;box-shadow:0 10px 24px rgba(20,30,60,.08);}
 .det-pin .mon-banner{margin-bottom:11px;}
@@ -61,6 +60,10 @@
 .det-body{padding:12px 20px 34px;}
 .det-body .section-cap{font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:#9aa3b8;margin:18px 4px 10px;}
 .det-body .section-cap:first-child{margin-top:6px;}
+
+/* notifications INSIDE the tablet screen (the demo shell crops the page's
+   outer 40px, which hid the default fixed top-right toasts) */
+.screenframe .toast-wrap{position:absolute;top:78px;right:24px;left:auto;}
 </style>
 </head>
 <body>
@@ -123,6 +126,7 @@
    </section>
 
   </div><!-- /.tab-scroll -->
+  <div class="toast-wrap"></div><!-- pre-created so UI.showToast renders in-screen -->
  </div>
 </div>
 

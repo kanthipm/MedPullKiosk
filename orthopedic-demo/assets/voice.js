@@ -1,27 +1,62 @@
 /* =============================================================================
- * assets/voice.js — shared, no-backend text-to-speech for the demo.
+ * assets/voice.js — natural voice playback for the demo.
  * -----------------------------------------------------------------------------
- * The only offline / "just open index.html" TTS available in a static site is
- * the browser Web Speech API (window.speechSynthesis), which uses whatever OS /
- * browser voices are installed. This module picks the BEST available natural
- * FEMALE voice (for the demo narrator + the app's assistant) and MALE voice
- * (for the patient, Marcus), and speaks a little FASTER so it sounds more human
- * and less plodding. Chrome exposes higher-quality "Google" voices; on macOS,
- * installing an "Enhanced" / "Premium" system voice improves quality further.
+ * Preferred path: pre-generated neural voice clips (Kokoro-82M, generated
+ * locally by tools/generate_voices.py) listed in assets/audio/manifest.js as
+ * window.VOICE_CLIPS, keyed "<role>|<exact text>". Clips queue back-to-back,
+ * matching the old speechSynthesis queueing that callers rely on.
+ * Re-run the generator after editing any spoken line.
  *
- *   Voice.speak(text, role)   role ∈ 'narrator' | 'assistant' | 'marcus'
- *   Voice.cancel()            stop / flush the queue
- *   Voice.available()         boolean
+ * Fallback: browser Web Speech API (speechSynthesis) for any text that has no
+ * clip, so ad-hoc lines still speak — just in the older synthetic voice.
  *
- * No frameworks, no network, no build step.
+ *   Voice.speak(text, role)      role ∈ 'narrator' | 'assistant' | 'marcus'
+ *   Voice.cancel()               stop playback / flush the queue
+ *   Voice.duration(text, role)   clip length in ms, or null if no clip
+ *   Voice.available()            boolean
+ *   Voice.setMuted(bool)         mute/unmute (also stops anything in flight)
+ *   Voice.isMuted()              boolean
+ *   (also listens for Bus 'MUTE' {muted} so all frames mute together)
+ *
+ * No frameworks, no build step; clips are plain <audio> so file:// works.
  * ===========================================================================*/
 (function () {
   'use strict';
 
+  /* ---- pre-generated clips ------------------------------------------------ */
+  var cache = {};                        /* clip file -> Audio element */
+  var queue = [], playing = null;
+  var muted = false;
+
+  function entry(text, role) {
+    var m = window.VOICE_CLIPS;
+    return (m && m[(role || 'narrator') + '|' + String(text)]) || null;
+  }
+
+  function playNext() {
+    var next = queue.shift();
+    if (!next) { playing = null; return; }
+    var a = cache[next.f] || (cache[next.f] = new Audio(next.f));
+    playing = a;
+    try { a.currentTime = 0; } catch (e) {}
+    a.onended = playNext;
+    var p = a.play();
+    if (p && p.catch) p.catch(function () {   /* autoplay blocked — stay silent */
+      /* a.paused distinguishes a real block from a stale AbortError left by a
+         cancel()-then-respeak of the same clip (element already playing again) */
+      if (playing === a && a.paused) { playing = null; queue = []; }
+    });
+  }
+
+  function stopClips() {
+    queue = [];
+    if (playing) { try { playing.onended = null; playing.pause(); } catch (e) {} playing = null; }
+  }
+
+  /* ---- speechSynthesis fallback (only for text without a clip) ------------ */
   var TTS = (typeof window !== 'undefined') && ('speechSynthesis' in window) && (typeof SpeechSynthesisUtterance !== 'undefined');
   var picked = { female: null, male: null, ready: false };
 
-  /* preference lists, best-first — natural neural voices before robotic ones */
   var FEMALE = ['Google US English', 'Samantha', 'Ava', 'Allison', 'Susan', 'Zoe', 'Serena', 'Karen', 'Moira', 'Tessa', 'Fiona',
     'Microsoft Aria', 'Microsoft Jenny', 'Microsoft Zira', 'Kathy'];
   var MALE = ['Google UK English Male', 'Daniel', 'Arthur', 'Oliver', 'Tom', 'Aaron', 'Alex', 'Rishi', 'Gordon',
@@ -55,19 +90,17 @@
 
   if (TTS) {
     pick();
-    /* voices often load asynchronously — re-pick when they arrive */
     try { window.speechSynthesis.onvoiceschanged = pick; } catch (e) {}
   }
 
-  /* per-role delivery: faster than the 1.0 default; small pitch character */
   var ROLE = {
     narrator:  { voice: 'female', rate: 1.14, pitch: 1.0 },
     assistant: { voice: 'female', rate: 1.12, pitch: 1.03 },
     marcus:    { voice: 'male',   rate: 1.06, pitch: 0.92 }
   };
 
-  function speak(text, role) {
-    if (!TTS || !text) return;
+  function speakFallback(text, role) {
+    if (!TTS) return;
     try {
       if (!picked.ready) pick();
       var cfg = ROLE[role] || ROLE.narrator;
@@ -78,7 +111,47 @@
       window.speechSynthesis.speak(u);          /* utterances QUEUE — callers cancel() to interrupt */
     } catch (e) { /* non-fatal */ }
   }
-  function cancel() { try { if (TTS) window.speechSynthesis.cancel(); } catch (e) {} }
 
-  window.Voice = { speak: speak, cancel: cancel, available: function () { return TTS; }, picked: picked };
+  /* ---- public API ---------------------------------------------------------- */
+  function speak(text, role) {
+    if (!text || muted) return;
+    var e = entry(text, role);
+    if (e) {
+      queue.push(e);
+      if (!playing) playNext();
+      return;
+    }
+    speakFallback(text, role);
+  }
+
+  function cancel() {
+    stopClips();
+    try { if (TTS) window.speechSynthesis.cancel(); } catch (e) {}
+  }
+
+  function duration(text, role) {
+    var e = entry(text, role);
+    return e ? e.ms : null;
+  }
+
+  function setMuted(m) {
+    muted = !!m;
+    if (muted) cancel();
+  }
+
+  /* mute everywhere at once: the shell broadcasts MUTE over the Bus so every
+     framed surface's Voice instance follows suit. */
+  if (window.Bus && window.Bus.on) {
+    window.Bus.on('MUTE', function (pl) { setMuted(pl && pl.muted); });
+  }
+
+  window.Voice = {
+    speak: speak,
+    cancel: cancel,
+    duration: duration,
+    setMuted: setMuted,
+    isMuted: function () { return muted; },
+    available: function () { return !!window.VOICE_CLIPS || TTS; },
+    picked: picked
+  };
 })();

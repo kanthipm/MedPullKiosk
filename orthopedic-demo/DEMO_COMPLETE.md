@@ -11,12 +11,12 @@ screenshots viewed for every surface and several demo beats. Zero console errors
 - Or serve statically and open `/index.html`:
   `python3 -m http.server 8000` → http://localhost:8000/index.html
 - **Deploy:** drop the folder on Vercel (or any static host) as-is — it's pure static files.
-- Best experienced in **Chrome** with sound on — the patient + demo speak via the browser's Web Speech
-  API (a **female** narrator/copilot and a **male** Marcus). Chrome exposes higher-quality "Google"
-  voices; on macOS, installing an "Enhanced"/"Premium" system voice (System Settings → Accessibility →
-  Spoken Content → System Voice → Manage Voices) makes it sound noticeably more human. Everything is mock
-  data; nothing leaves the machine. (A cloud neural TTS like CapCut's would need an API + build step,
-  which the "just open index.html" / no-backend constraint rules out.)
+- Best experienced with **sound on** — every scripted line is a **pre-generated neural voice clip**
+  (Kokoro-82M, generated locally by `tools/generate_voices.py` into `assets/audio/`, ~1.5 MB total):
+  a female narrator (`af_heart`), a female copilot (`af_bella`) and a male Marcus (`am_michael`).
+  Clips are plain `<audio>` MP3s, so file:// works and nothing leaves the machine at demo time.
+  Any line without a clip (i.e. after editing scripted text — re-run the generator) falls back to the
+  browser's Web Speech API.
 
 ## What was built
 A self-contained, front-end-only, mock-data demo of the **P1 Orthopedic RTM product**, four surfaces:

@@ -40,6 +40,11 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
 .hdr .demo-pill{flex:0 0 auto; font-size:10.5px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; color:#5b647d;
  background:#fff; border:1px solid var(--line); padding:6px 11px; border-radius:999px; display:inline-flex; align-items:center; gap:7px;}
 .hdr .demo-pill::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--exer); box-shadow:0 0 0 3px rgba(31,209,122,.2);}
+.mutebtn{flex:0 0 auto; width:40px; height:40px; border-radius:12px; border:1px solid var(--line); background:#fff;
+ font-size:17px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+ transition:transform .15s, box-shadow .15s, background .15s;}
+.mutebtn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(20,30,60,.1);}
+.mutebtn.muted{background:#f1f3f9; color:#8a93a8;}
 
 /* ----------------------------------------------------------------- stage -- */
 .stage{position:relative; flex:1 1 auto; overflow:hidden;}
@@ -130,6 +135,7 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
 
   <!-- ============================ header ============================= -->
   <header class="hdr">
+    <button class="mutebtn" id="btnMute" type="button" aria-label="Mute all sound" aria-pressed="false" title="Mute all sound">🔊</button>
     <div class="brandwrap">
       <span class="logo" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12h3l2-5 3 10 2.5-7 1.5 2H21" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -145,7 +151,7 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
 
   <!-- ============================== stage =============================== -->
   <div class="stage" id="stage">
-    <div class="devtap" id="devtap" title="Click to continue"></div>
+    <div class="devtap" id="devtap"></div>
 
     <div class="devwrap" id="devwrap">
       <div class="mock phone" id="mockPhone">
@@ -184,8 +190,10 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
 
   <!-- ============================ controls ============================= -->
   <div class="ctrls">
+    <button class="cbtn" id="btnPrev" type="button" aria-label="Previous step">← Back</button>
     <button class="cbtn" id="btnRestart" type="button">↻ Restart</button>
     <button class="cbtn primary" id="btnAuto" type="button">▶ Autoplay</button>
+    <button class="cbtn" id="btnNext" type="button" aria-label="Next step">Next →</button>
   </div>
 </div>
 
@@ -193,6 +201,7 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
 <script src="assets/charts.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/bus.js"></script>
+<script src="assets/audio/manifest.js"></script>
 <script src="assets/voice.js"></script>
 <script src="assets/ui.js"></script>
 
@@ -211,7 +220,7 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
   Bus.on('SMS_FIRE', function (pl) {
     if (!UI || !UI.showToast) return;
     var who = (pl && pl.patient) ? esc(pl.patient) : 'the patient';
-    UI.showToast('<strong>⚠️ Secure alert sent — ' + who + '</strong><br>New fever with a warmer, more swollen knee · texted to the care team.', { danger: true, timeout: 6500 });
+    UI.showToast('<strong>⚠️ Secure alert sent — ' + who + '</strong><br>New fever with a warm, swollen knee — care team notified.', { danger: true, timeout: 6500 });
   });
 
   var stage = $('stage'), devwrap = $('devwrap'), narrCol = $('narrCol'), narr = $('narr');
@@ -233,158 +242,147 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
    * ===================================================================== */
   var STEPS = [
     /* -------- INTRO / BACKSTORY -------- */
-    { intro: true, where: 'MedPull · Recovery Copilot', title: 'Recovery doesn’t stop at discharge.',
-      body: 'It happens at home, between visits — mostly unseen.',
-      speak: 'Recovery doesn’t stop at discharge. It happens at home, between visits — mostly unseen.',
+    { intro: true, where: 'MedPull · Recovery Copilot', title: 'Recovery continues after discharge.',
+      body: 'At home, between visits — largely unobserved.',
+      speak: 'Post-surgical recovery continues long after discharge — at home, between visits, and largely unobserved.',
       dwell: 7000 },
 
-    { intro: true, where: 'MedPull · Recovery Copilot', title: 'Meet Recovery Copilot.',
-      body: 'The patient just talks. We turn it into signals the care team can act on.',
-      speak: 'Meet Recovery Copilot. The patient just talks, and we turn it into monitored signals the care team can act on. Here’s the whole loop.',
+    { intro: true, where: 'MedPull · Recovery Copilot', title: 'Recovery Copilot.',
+      body: 'Patient check-ins become monitored clinical signals.',
+      speak: 'Recovery Copilot converts routine patient check-ins into monitored clinical signals for the care team. This is the complete workflow.',
       dwell: 8000 },
 
     /* -------- PATIENT PHONE (kiosk-style voice check-in) -------- */
-    { device: 'phone', title: 'The patient’s app',
-      body: 'Calm and voice-first. No numbers, ever.',
-      speak: 'This is the patient’s app — calm, voice-first, and no numbers, ever.',
-      at: 0.5, cmds: [['patient', 'reset']], dwell: 6500 },
+    { device: 'phone', title: 'The patient application',
+      body: 'Voice-first, by design. No raw metrics.',
+      speak: 'This is the patient-facing application. It is calm, voice-first, and it never displays raw metrics.',
+      at: 0.5, cmds: [['patient', 'reset']], dwell: 7000 },
 
-    { device: 'phone', title: 'Just talk',
-      body: 'The copilot asks one question. Marcus answers out loud.',
-      speak: 'The copilot asks one simple question, and Marcus answers out loud.',
+    { device: 'phone', title: 'A conversational check-in',
+      body: 'One question at a time, answered verbally.',
+      speak: 'The copilot administers the check-in one question at a time, and Marcus responds verbally.',
       at: 0.5, cmds: [['patient', 'start']], dwell: 9000 },
 
     { device: 'phone', title: 'In his own words',
-      body: 'Pain climbing for days — worse at night.',
-      speak: 'In his own words — his knee pain has climbed for days, and it’s worse at night.',
+      body: 'Progressive knee pain over several days — worse at night.',
       at: 0.5, cmds: [['patient', 'answer']], dwell: 11000 },
 
-    { device: 'phone', title: 'A red flag',
-      body: 'Feverish. Warm, swollen knee. His care team is texted.',
-      speak: 'A red flag — feverish, with a warm, swollen knee. A secure alert is texted to his care team.',
+    { device: 'phone', title: 'A clinical red flag',
+      body: 'Fever with a warm, swollen knee. The care team is alerted.',
+      speak: 'A fever with a warm, swollen knee is a clinical red flag, so a secure alert is sent to the care team immediately.',
       at: 0.5, cmds: [['patient', 'fever']], dwell: 12000 },
 
-    { device: 'phone', title: 'Seen sooner',
-      body: 'The copilot books him an earlier visit.',
-      speak: 'He asks to be seen sooner, and the copilot books an earlier visit.',
+    { device: 'phone', title: 'An earlier appointment',
+      body: 'The copilot brings the visit forward.',
+      speak: 'He requests to be seen sooner, and the copilot moves his appointment forward.',
       at: 0.5, cmds: [['patient', 'sooner']], dwell: 11000 },
 
-    { device: 'phone', title: 'His tasks',
-      body: 'Five gentle to-dos. Qualitative only.',
-      speak: 'And his tasks — five gentle to-dos, qualitative only, never a number.',
-      at: 0.5, cmds: [['patient', 'tasks']], dwell: 8000 },
+    { device: 'phone', title: 'The care plan',
+      body: 'Five low-burden tasks — qualitative by design.',
+      speak: 'His care plan contains five low-burden tasks, and every task is qualitative by design.',
+      at: 0.5, cmds: [['patient', 'tasks']], dwell: 8500 },
 
-    /* -------- CLINICIAN TABLET -------- */
-    { device: 'tablet', title: 'The triage board',
-      body: 'Patients ranked by risk. Marcus is now on top.',
-      speak: 'The clinician’s triage board ranks patients by risk. Marcus jumped to the top when he crossed into high.',
-      at: 0.34, cmds: [['tablet', 'triage'], ['tablet', 'hlList']], dwell: 8500 },
+    /* -------- CLINICIAN DASHBOARD (the admin web console — shown in full) -------- */
+    { device: 'dashboard', title: 'The patient roster',
+      body: 'Every patient, listed and triaged by risk.',
+      speak: 'The care team works from the clinician web dashboard. It opens on the patient roster, where every patient under remote monitoring is listed and triaged by risk.',
+      at: 0.4, cmds: [['dashboard', 'roster']], dwell: 11000 },
 
-    { device: 'tablet', title: 'Reading a row',
-      body: 'Risk · why it flagged · data confidence · last check-in.',
-      speak: 'Each row: the risk, why it flagged, a data-confidence tag, and the last check-in.',
-      at: 0.3, cmds: [['tablet', 'hlList']], dwell: 8000 },
-
-    { device: 'tablet', title: 'Opening Marcus',
-      body: 'His summary is pinned right at the top.',
-      speak: 'Opening Marcus — the appointment summary is pinned right at the top.',
-      at: 0.42, cmds: [['tablet', 'openMarcus'], ['tablet', 'hlSummary']], dwell: 9000 },
-
-    { device: 'tablet', title: 'Monitoring, not diagnosis',
-      body: 'Signals to review — never a diagnosis.',
-      speak: 'Every clinician view carries the guardrail — monitoring signals for review, not a diagnosis.',
-      at: 0.28, cmds: [['tablet', 'hlBanner']], dwell: 7500 },
-
-    { device: 'tablet', title: 'Act on the spot',
-      body: 'Message · escalate · bring the visit forward.',
-      speak: 'She can act on the spot — message him, escalate to nurse triage, or bring the visit forward.',
-      at: 0.5, cmds: [['tablet', 'hlActions']], dwell: 8000 },
-
-    { device: 'tablet', title: 'Assign the plan',
-      body: 'Five tasks — pushed to his phone.',
-      speak: 'She assigns his five tasks, and they push straight to his phone.',
-      at: 0.5, cmds: [['tablet', 'assign']], dwell: 8500 },
-
-    { device: 'tablet', title: 'The full record',
-      body: 'Grouped by clinical profile.',
-      speak: 'And below, the full record — grouped by clinical profile.',
-      at: 0.5, cmds: [['tablet', 'hlProfiles']], dwell: 8000 },
-
-    /* -------- CLINICIAN DASHBOARD -------- */
     { device: 'dashboard', title: 'The exception queue',
       body: 'Needs review · drifting · missing data · stable.',
-      speak: 'At the clinic, the dashboard opens on the exception queue — needs review, drifting, missing data, and stable.',
-      at: 0.32, cmds: [['dashboard', 'selectMarcus'], ['dashboard', 'hlQueue']], dwell: 8500 },
+      speak: 'Alongside the roster, the exception queue groups the panel into needs review, drifting, missing data, and stable. Marcus is now flagged for review.',
+      at: 0.32, cmds: [['dashboard', 'hlQueue']], dwell: 10000 },
 
-    { device: 'dashboard', title: 'When data is thin',
-      body: 'Priya’s low wear-time gates every metric — shown honestly.',
-      speak: 'When data is thin — Priya’s low watch wear gates every metric, shown honestly instead of guessed.',
+    { device: 'dashboard', title: 'When data is sparse',
+      body: 'Low wear-time gates every metric — reported, not guessed.',
+      speak: 'When a patient’s device wear-time is low, every affected metric is gated and reported honestly rather than estimated.',
       at: 0.3, cmds: [['dashboard', 'selectPriya'], ['dashboard', 'hlBucket', 'missing']], dwell: 9000 },
 
     { device: 'dashboard', title: 'What the surgeon reads first',
-      body: 'The whole record — summary on top.',
-      speak: 'Back to Marcus — the whole record, with the summary on top, what the surgeon reads first.',
-      at: 0.34, cmds: [['dashboard', 'selectMarcus'], ['dashboard', 'hlSummary']], dwell: 8500 },
+      body: 'The complete record — summary on top.',
+      speak: 'Returning to Marcus, the dashboard opens his complete record, and the summary the surgeon reads first sits at the top.',
+      at: 0.34, cmds: [['dashboard', 'selectMarcus'], ['dashboard', 'hlSummary']], dwell: 9000 },
 
-    { device: 'dashboard', title: 'The headline read',
+    { device: 'dashboard', title: 'Monitoring, not diagnosis',
+      body: 'Signals for clinical review — never a diagnosis.',
+      speak: 'Every clinician view carries the same guardrail: these are monitoring signals for clinical review, and never a diagnosis.',
+      at: 0.24, cmds: [['dashboard', 'hlBanner']], dwell: 8000 },
+
+    { device: 'dashboard', title: 'The headline view',
       body: 'Deviation index · trajectory · confidence · adherence.',
-      speak: 'The headline read — a composite deviation index, his trajectory, the data confidence, and verified adherence.',
+      speak: 'The headline view presents a composite deviation index, the recovery trajectory, data confidence, and verified adherence.',
       at: 0.4, cmds: [['dashboard', 'hl', 'index']], dwell: 9000 },
 
     { device: 'dashboard', title: 'Anatomy of a report object',
-      body: 'Status · finding · graph · confidence · next step.',
-      speak: 'Every metric is a report object — status versus baseline, a finding, a graph, a confidence chip, and a next step.',
+      body: 'Status · finding · trend · confidence · next step.',
+      speak: 'Each metric is a structured report object, showing status against baseline, a finding, a trend, a confidence rating, and a recommended next step.',
       at: 0.5, cmds: [['dashboard', 'hl', 'profiles']], dwell: 9500 },
 
-    { device: 'dashboard', title: 'One signal, many lenses',
-      body: 'Eight ways to analyze the same stream.',
-      speak: 'One signal, many lenses — eight ways to analyze the same wearable stream.',
+    { device: 'dashboard', title: 'One signal, many analyses',
+      body: 'Eight analytical views of the same stream.',
+      speak: 'One signal supports many analyses. The dashboard offers eight analytical views of the same wearable data stream.',
       at: 0.5, cmds: [['dashboard', 'hl', 'analytics']], dwell: 9500 },
 
     { device: 'dashboard', title: 'Recovery trajectory',
-      body: 'On track, behind, or ahead — vs. the expected curve.',
-      speak: 'His recovery trajectory — on track, behind, or ahead of the expected curve, with a confidence band.',
+      body: 'Against the expected curve, with a confidence interval.',
+      speak: 'The recovery trajectory shows whether he is on track, behind, or ahead of the expected curve, with a confidence interval.',
       at: 0.5, cmds: [['dashboard', 'hl', 'trajectory']], dwell: 8500 },
 
     { device: 'dashboard', title: 'Complication surveillance',
-      body: 'Temp + HR + HRV, fused. Deviating — recommend review.',
-      speak: 'Complication surveillance fuses temperature, heart rate and HRV — signals deviating from baseline, recommend review.',
+      body: 'Temperature + heart rate + variability, fused.',
+      speak: 'Complication surveillance fuses temperature, heart rate, and heart-rate variability, and deviations from baseline prompt a review recommendation.',
       at: 0.5, cmds: [['dashboard', 'hl', 'surveillance']], dwell: 9500 },
 
     { device: 'dashboard', title: 'Movement & biomechanics',
       body: 'Gait, load, cadence, endurance, transfers.',
-      speak: 'The orthopedic movement panel — gait symmetry, load, cadence, endurance, transfers, and the complication watch.',
+      speak: 'The orthopedic movement panel covers gait symmetry, load tolerance, cadence, endurance, and transfers.',
       at: 0.5, cmds: [['dashboard', 'hl', 'biomechanics']], dwell: 10000 },
 
     { device: 'dashboard', title: 'Advanced',
       body: 'The model provenance behind each signal.',
-      speak: 'Advanced depth reveals the model provenance behind each signal.',
+      speak: 'The advanced tier documents the model provenance behind each signal.',
       at: 0.5, cmds: [['dashboard', 'tier', '2'], ['dashboard', 'hlAdvanced']], dwell: 8000 },
 
     { device: 'dashboard', title: 'Clinical',
-      body: 'Deep autonomic evidence — with methods and limits.',
-      speak: 'Clinical depth surfaces the deep autonomic evidence — Poincaré, spectrum and scalogram — with methods and limits.',
+      body: 'Deep autonomic evidence — with methods and limitations.',
+      speak: 'The clinical tier surfaces the underlying autonomic evidence, including phase-space, spectral, and time-frequency analyses, together with methods and limitations.',
       at: 0.55, cmds: [['dashboard', 'tier', '3'], ['dashboard', 'hl', 'clinical']], dwell: 9500 },
 
-    { device: 'dashboard', title: 'Adherence & RTM',
+    { device: 'dashboard', title: 'Adherence & documentation',
       body: 'Objective device-days — not self-report.',
-      speak: 'Verified adherence and an auditable RTM summary — objective device-days, not self-report.',
-      at: 0.5, cmds: [['dashboard', 'tier', '1'], ['dashboard', 'hl', 'adherence']], dwell: 8500 },
+      speak: 'Verified adherence feeds an auditable remote therapeutic monitoring summary, based on objective device-days rather than self-report.',
+      at: 0.5, cmds: [['dashboard', 'tier', '1'], ['dashboard', 'hl', 'adherence']], dwell: 9000 },
 
     { device: 'dashboard', title: 'The check-in history',
-      body: 'Every check-in, ready to review.',
-      speak: 'And the full check-in history, ready for the team to review any time.',
+      body: 'Every check-in, available for review.',
+      speak: 'The complete check-in history remains available for the care team to review at any time.',
       at: 0.5, cmds: [['dashboard', 'hl', 'conversation']], dwell: 8000 },
 
-    { device: 'dashboard', title: 'That’s the loop',
-      body: 'The patient talks. The team acts early.',
-      speak: 'That’s the loop. The patient just talks, and the team acts early.',
+    { device: 'dashboard', title: 'Direct clinical action',
+      body: 'Message · escalate · assign — from the record.',
+      speak: 'The clinician can act directly from the record. She can message the patient, escalate to nurse triage, or assign the care plan.',
+      at: 0.08, cmds: [['dashboard', 'hlActions']], dwell: 9000 },
+
+    { device: 'dashboard', title: 'Assigning the plan',
+      body: 'Five tasks — delivered to his phone.',
+      speak: 'She assigns the five-task care plan, and it is delivered directly to his phone.',
+      at: 0.08, cmds: [['dashboard', 'assign']], dwell: 8500 },
+
+    /* -------- TABLET (compatibility mention — same console, smaller screen) -------- */
+    { device: 'tablet', title: 'Tablet-ready',
+      body: 'The same console, on the clinician’s iPad.',
+      speak: 'The same console also runs on the clinician’s tablet, with identical records and guardrails for rounds and on-the-go triage.',
+      at: 0.4, cmds: [['tablet', 'openMarcus'], ['tablet', 'hlSummary']], dwell: 9500 },
+
+    { device: 'dashboard', title: 'The complete loop',
+      body: 'The patient speaks. The team intervenes early.',
+      speak: 'That is the complete loop. The patient simply speaks, and the care team intervenes early.',
       at: 0.34, cmds: [['dashboard', 'tier', '1'], ['dashboard', 'selectMarcus'], ['dashboard', 'hlSummary']], dwell: 9000 }
   ];
   var N = STEPS.length;
 
   /* ---- state ------------------------------------------------------------ */
-  var current = 0, activeDev = 'phone', userActed = false, playing = false, apTimer = null, cmdTimers = [];
+  var current = 0, activeDev = 'phone', userActed = false, playing = false, apTimer = null, cmdTimers = [], narrTimer = null;
   var Voice = window.Voice || { speak: function () {}, cancel: function () {}, available: function () { return false; } };
 
   function speak(text) {
@@ -476,9 +474,18 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
     hotspot.style.top = (toY - 20) + 'px';
   }
 
+  /* patient cmds that make the kiosk SPEAK — on those steps the conversation
+     plays FIRST and the narrator comments after it (see the BEATS handler) */
+  var SPEAKY = { start: 1, answer: 1, fever: 1, sooner: 1 };
+  function hasSpeaky(cmds) {
+    return (cmds || []).some(function (c) { return c[0] === 'patient' && SPEAKY[c[1]]; });
+  }
+
   function fireCmds(cmds) {
     cmdTimers.forEach(clearTimeout); cmdTimers = [];
-    (cmds || []).forEach(function (c, i) { cmdTimers.push(setTimeout(function () { emit(c[0], c[1], c[2]); }, i * 380)); });
+    (cmds || []).forEach(function (c, i) {
+      cmdTimers.push(setTimeout(function () { emit(c[0], c[1], c[2]); }, i * 380));
+    });
   }
 
   function enterStep(n) {
@@ -494,9 +501,18 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
       : 'Click the device or press <span class="kbd">→</span> to continue';
     progBar.style.width = ((current + 1) / N * 100).toFixed(1) + '%';
     layout();
+    emit('patient', 'hush');                 /* stop any in-flight kiosk speech */
+    clearTimeout(narrTimer);
     fireCmds(step.cmds);
     setTimeout(drawArrow, 260 + (step.cmds ? step.cmds.length * 380 : 0));
-    speak(step.speak);
+    if (hasSpeaky(step.cmds)) {
+      /* kiosk conversation first; narrator comments after it — the BEATS
+         handler re-times this, the 900ms fallback covers already-played beats */
+      Voice.cancel();
+      narrTimer = setTimeout(function () { speak(step.speak); }, 900);
+    } else {
+      speak(step.speak);
+    }
     if (playing) scheduleNext();
   }
 
@@ -506,21 +522,43 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
   function restart() {
     userActed = true;
     stopAutoplay();
+    clearTimeout(narrTimer);
     Voice.cancel();
     Object.keys(iframes).forEach(function (k) { try { iframes[k].contentWindow.location.reload(); } catch (e) { iframes[k].src = iframes[k].src; } });
     current = 0;
     setTimeout(function () { enterStep(0); }, 360);
   }
 
-  function scheduleNext() {
+  function scheduleNext(ms) {
     clearTimeout(apTimer);
-    var dwell = (STEPS[current] && STEPS[current].dwell) || 7500;
+    var step = STEPS[current] || {};
+    var dwell = ms;
+    if (dwell == null) {
+      dwell = step.dwell || 7500;
+      var narrMs = (Voice.duration && Voice.duration(step.speak, 'narrator')) || 0;
+      if (narrMs) dwell = Math.max(dwell, narrMs + 800);   /* never cut narration short */
+    }
     apTimer = setTimeout(function () { if (!playing) return; if (current >= N - 1) { stopAutoplay(); return; } enterStep(current + 1); }, dwell);
   }
+  /* the kiosk reports how long its scripted beats will run — narrate right
+     after the conversation ends, and stretch autoplay past both voices */
+  Bus.on('BEATS', function (pl) {
+    if (!pl || !pl.ms) return;
+    var step = STEPS[current] || {};
+    if (!hasSpeaky(step.cmds)) return;
+    clearTimeout(narrTimer);
+    narrTimer = setTimeout(function () { speak(step.speak); }, pl.ms + 400);
+    if (playing) {
+      var narrMs = (Voice.duration && Voice.duration(step.speak, 'narrator')) || 0;
+      scheduleNext(pl.ms + 400 + narrMs + 900);
+    }
+  });
   function startAutoplay() {
     userActed = true; playing = true;
     $('btnAuto').textContent = '❙❙ Pause'; $('btnAuto').classList.add('playing');
-    if (current >= N - 1) { restart(); } else { speak(STEPS[current].speak); scheduleNext(); }
+    /* re-enter the step so the full hush → defer → narrate → schedule path runs
+       (resuming mid-conversation must not overlap the kiosk or cut beats short) */
+    if (current >= N - 1) { restart(); } else { enterStep(current); }
   }
   function stopAutoplay() { playing = false; clearTimeout(apTimer); var b = $('btnAuto'); b.textContent = '▶ Autoplay'; b.classList.remove('playing'); }
   function toggleAutoplay() { if (playing) stopAutoplay(); else startAutoplay(); }
@@ -529,6 +567,21 @@ body.demo{overflow:hidden; padding:0; min-height:100vh; color:var(--ink);
   /* ---- wiring ----------------------------------------------------------- */
   $('btnRestart').addEventListener('click', restart);
   $('btnAuto').addEventListener('click', toggleAutoplay);
+  $('btnPrev').addEventListener('click', function () { stopIfManual(); prev(); });
+  $('btnNext').addEventListener('click', function () { stopIfManual(); next(); });
+  $('btnMute').addEventListener('click', function () {
+    var b = $('btnMute');
+    var muted = !(Voice.isMuted && Voice.isMuted());
+    if (Voice.setMuted) Voice.setMuted(muted);
+    /* broadcast over the Bus so every framed surface's Voice instance
+       (patient kiosk etc.) mutes/unmutes with the shell. */
+    Bus.emit('MUTE', { muted: muted });
+    b.textContent = muted ? '🔇' : '🔊';
+    b.classList.toggle('muted', muted);
+    b.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    b.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute all sound');
+    b.title = muted ? 'Unmute sound' : 'Mute all sound';
+  });
   $('devtap').addEventListener('click', function () { stopIfManual(); next(); });
   narrCol.addEventListener('click', function () { stopIfManual(); next(); });
   hotspot.addEventListener('click', function (e) { e.stopPropagation(); stopIfManual(); next(); });

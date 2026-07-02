@@ -97,6 +97,21 @@
 
     @media(max-width:1099px){ .dash-top .segment{min-width:204px;} .kpi-strip{grid-template-columns:1fr 1fr;} }
     @media(max-width:900px){ .dash-cols,.deep-grid,.bio-grid{grid-template-columns:1fr;} .scope-n{min-width:0;} }
+
+    /* roster landing page — the site opens on the full patient list */
+    .roster-page{max-width:960px;margin:0 auto;}
+    .roster-hero{border-radius:18px;padding:18px 20px 16px;margin-bottom:14px;
+      background:var(--glass-strong);backdrop-filter:saturate(1.5) blur(18px);-webkit-backdrop-filter:saturate(1.5) blur(18px);
+      border:1px solid var(--glass-border);box-shadow:var(--glass-shadow);}
+    .roster-hero .rh-brand{display:flex;align-items:center;gap:10px;}
+    .roster-hero h2{margin:14px 0 4px;font-size:24px;letter-spacing:-.02em;}
+    .roster-hero p{margin:0 0 12px;font-size:12.5px;font-weight:700;color:var(--muted);}
+    .roster-legend{display:flex;gap:8px;flex-wrap:wrap;}
+
+    /* thin, subtle page scrollbar (the default one looks heavy in the demo shell) */
+    ::-webkit-scrollbar{width:9px;height:9px}
+    ::-webkit-scrollbar-thumb{background:rgba(120,132,158,.32);border-radius:9px;border:2px solid transparent;background-clip:padding-box}
+    ::-webkit-scrollbar-track{background:transparent}
   </style>
 </head>
 <body class="fluid tier-1">
@@ -424,7 +439,32 @@
       state.current = p.id;
       renderMain(p);
       markSelected(p.id);
+      var row = rail.querySelector('.triage-row.selected');
+      if (row && row.scrollIntoView) { try { row.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
       if (!opts || !opts.keepScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* --------------------------------------------- roster landing page ----- */
+    function showRoster() {
+      state.current = null;
+      var rank = { high: 0, medium: 1, missing: 2, low: 3 };
+      var pts = MP.PATIENTS.slice().sort(function (a, b) {
+        return (rank[a.risk] != null ? rank[a.risk] : 9) - (rank[b.risk] != null ? rank[b.risk] : 9);
+      });
+      main.innerHTML =
+        '<div class="roster-page" data-demo="roster">' +
+          '<div class="roster-hero">' +
+            '<div class="rh-brand"><span class="brand-dot" aria-hidden="true"></span>' +
+              '<div><div class="brand-t">MedPull Recovery Copilot</div>' +
+              '<div class="brand-s">Clinician dashboard · Orthopedic RTM</div></div></div>' +
+            '<h2>Patient roster</h2>' +
+            '<p>' + MP.PATIENTS.length + ' patients under remote monitoring · sorted by risk · select a patient to open the full record</p>' +
+            '<div class="roster-legend">' + ['high', 'medium', 'missing', 'low'].map(function (k) { return UI.riskPill(k); }).join('') + '</div>' +
+          '</div>' +
+          pts.map(function (p) { return UI.triageRow(p); }).join('') +
+        '</div>';
+      markSelected(null);
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
     }
 
     function flashRow(id) {
@@ -451,6 +491,10 @@
     /* ------------------------------------------------------- interactions -- */
     rail.addEventListener('click', function (e) {
       var row = e.target && e.target.closest ? e.target.closest('.triage-row') : null;
+      if (row && row.getAttribute('data-pid')) select(row.getAttribute('data-pid'));
+    });
+    main.addEventListener('click', function (e) {          /* roster rows open the record */
+      var row = e.target && e.target.closest ? e.target.closest('.roster-page .triage-row') : null;
       if (row && row.getAttribute('data-pid')) select(row.getAttribute('data-pid'));
     });
 
@@ -489,6 +533,7 @@
       if (!pl || pl.surface !== 'dashboard') return;
       try {
         switch (pl.cmd) {
+          case 'roster':       showRoster(); break;
           case 'selectMarcus': select('marcus'); break;
           case 'selectPriya':  select('priya'); break;
           case 'select':       select(pl.arg); break;
@@ -496,6 +541,8 @@
           case 'hlQueue':      demoHL('.rail-head'); break;
           case 'hlBucket':     demoHL(rail.querySelector('.queue-bucket[data-bucket="' + (pl.arg || 'review') + '"]')); break;
           case 'hlBanner':     demoHL('.mon-banner'); break;
+          case 'hlActions':    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} demoHL('.dash-actions'); break;
+          case 'assign':       var ab = main.querySelector('[data-act="assign"]'); if (ab) ab.click(); break;
           case 'hlSummary':    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} demoHL('.quick-sum', true); break;
           case 'hlAdvanced':   demoHL('.gate.t2'); break;
           case 'hl':           demoHL('[data-demo="' + pl.arg + '"]'); break;
@@ -506,8 +553,7 @@
 
     /* -------------------------------------------------------------- boot --- */
     renderRail();
-    var hero = MP.PATIENTS.filter(function (p) { return p.hero; })[0] || MP.PATIENTS[0];
-    select((hero && hero.id) || 'marcus', { keepScroll: true });
+    showRoster();                       /* the site opens on the full patient list */
   })();
   </script>
 </body>

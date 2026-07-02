@@ -281,19 +281,23 @@ body.tier-2 .t1only, body.tier-3 .t1only{display:none!important}
 .profile-head .pf-blurb{margin:3px 0 0;font-size:12px;color:var(--muted);font-weight:600;}
 
 /* Triage row -------------------------------------------------------------- */
-/* structure: .triage-row > .tr-id(.tr-name + .tr-proc) · .rpill · .tr-why · .confchip · .tr-time */
+/* structure: .triage-row > .tr-id(.tr-name + .tr-proc) · .rpill · .tr-why · .confchip · .tr-time
+   every column can SHRINK (minmax(0,…)) so rows never overflow their container */
 .triage-row{display:grid;
- grid-template-columns:minmax(140px,1.35fr) auto minmax(150px,1.75fr) auto minmax(88px,auto);
+ grid-template-columns:minmax(150px,1.35fr) auto minmax(170px,1.75fr) minmax(0,auto) minmax(0,auto);
  align-items:center;gap:7px 14px;padding:13px 15px;margin-bottom:9px;
  background:#fff;border:1px solid var(--line);border-radius:16px;cursor:pointer;
  box-shadow:0 6px 16px rgba(20,30,60,.05);transition:transform .16s,box-shadow .16s;}
+.triage-row > .confchip{display:block;justify-self:start;min-width:0;max-width:100%;
+ overflow:hidden;text-overflow:ellipsis;}
 .triage-row:last-child{margin-bottom:0;}
 .triage-row:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(20,30,60,.12);}
 .tr-id{display:flex;flex-direction:column;gap:2px;min-width:0;}
 .tr-name{font-size:14px;font-weight:900;letter-spacing:-.01em;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tr-proc{font-size:11px;font-weight:700;color:#8a93a8;}
 .tr-why{font-size:12px;font-weight:600;line-height:1.35;color:#4b5570;}
-.tr-time{font-size:11px;font-weight:700;color:#8a93a8;justify-self:end;text-align:right;white-space:nowrap;}
+.tr-time{font-size:11px;font-weight:700;color:#8a93a8;justify-self:end;text-align:right;white-space:nowrap;
+ min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
 /* high-risk rows are the loudest */
 .triage-row.high{position:relative;background:linear-gradient(180deg,#fff,var(--risk-high-bg));
  border-color:rgba(229,72,77,.3);box-shadow:0 8px 22px rgba(229,72,77,.16);}
@@ -315,12 +319,14 @@ body.tier-2 .t1only, body.tier-3 .t1only{display:none!important}
 .queue-count.drifting{background:var(--risk-med-bg);color:var(--risk-med);}
 .queue-count.missing{background:var(--risk-missing-bg);color:var(--risk-missing);}
 .queue-count.stable{background:var(--risk-low-bg);color:var(--risk-low);}
-/* compact triage rows when nested inside the narrow rail */
-.queue-rail .triage-row{grid-template-columns:1fr auto;padding:11px 12px;gap:5px 10px;}
+/* compact triage rows when nested inside the narrow rail — every cell must be
+   able to SHRINK (minmax(0,…) + ellipsis) so nothing overflows the card */
+.queue-rail .triage-row{grid-template-columns:minmax(0,1fr) auto;padding:11px 12px;gap:5px 10px;}
 .queue-rail .triage-row .tr-id{grid-column:1;grid-row:1;}
 .queue-rail .triage-row .rpill{grid-column:2;grid-row:1;justify-self:end;}
 .queue-rail .triage-row .tr-why{grid-column:1 / -1;grid-row:2;}
-.queue-rail .triage-row .confchip{grid-column:1;grid-row:3;justify-self:start;}
+.queue-rail .triage-row .confchip{grid-column:1;grid-row:3;justify-self:start;
+ display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
 .queue-rail .triage-row .tr-time{grid-column:2;grid-row:3;justify-self:end;}
 
 /* Dashboard shell (fluid; two-column at ≥1100px) ------------------------- */
@@ -328,10 +334,10 @@ body.tier-2 .t1only, body.tier-3 .t1only{display:none!important}
 .dash-rail{min-width:0;}
 .dash-main{min-width:0;}
 @media(min-width:1100px){
- .dash{grid-template-columns:360px minmax(0,1fr);align-items:start;}
- .dash-rail{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;padding-right:4px;}
+ .dash{grid-template-columns:384px minmax(0,1fr);align-items:start;}
+ .dash-rail{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding-right:4px;}
  .dash-rail::-webkit-scrollbar{width:6px}
- .dash-rail::-webkit-scrollbar-thumb{background:rgba(120,132,158,.35);border-radius:6px}
+ .dash-rail::-webkit-scrollbar-thumb{background:rgba(120,132,158,.35);border-radius:6px;border:1px solid transparent;background-clip:padding-box}
 }
 
 /* Chat bubbles ------------------------------------------------------------ */
