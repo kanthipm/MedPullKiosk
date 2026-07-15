@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "recovery-copilot",
+      "runtimeExecutable": "/Users/steve/.local/bin/uv",
+      "runtimeArgs": [
+        "run",
+        "--directory",
+        "recovery-copilot/backend",
+        "uvicorn",
+        "app.main:app",
+        "--port",
+        "8000"
+      ],
+      "port": 8000
+    }
+  ]
+}

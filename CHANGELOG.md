@@ -1,5 +1,33 @@
 # Changelog
 
+## [recovery-copilot 1.2.0] - 2026-07-11
+
+### Added
+- **Live LLM connection via local Ollama** — auto-detected at :11434 (native API, JSON-constrained, thinking disabled); provider priority Groq → Ollama → deterministic fallback; every narrative now genuinely regenerates on refresh
+- **Ask bar** — natural-language questions over the roster with a retrieve → per-patient verify → compose pipeline (prevents cross-patient fact attribution by small local models); answers cite and filter to matching patients
+- **Draft with AI** — grounded, editable patient-message drafts in the Message modal
+- **Startup insight warmer** — caches generate in a background thread so first loads never block on a cold model; stable patients keep deterministic worklist reasons for speed
+
+## [recovery-copilot 1.1.0] - 2026-07-11
+
+### Changed
+- **Console redesigned onto the orthopedic-demo design system** — liquid-glass chrome, gradient canvas, demo risk tokens (rpills, status accents, triage rows), Inter with the demo's weight hierarchy
+- **Care action bar restored** — Assign tasks (persists to the patient plan), Message (queued stub until SMS integration), Escalate (in-app care-team notification), each with glass modals and toasts
+- **Everyday / Advanced / Clinical tier toggle restored** — gates supporting-signal depth per the original demo
+- **Refresh analysis now performs a true refresh** — engine rerun + narrative-cache bust (fresh LLM generation) with shimmer loading overlays across every card
+- Micro-animations throughout: staggered card entrances, hover lifts, modal/toast transitions, animated disclosure — all gated by prefers-reduced-motion
+
+## [recovery-copilot 1.0.0] - 2026-07-11
+
+### Added
+- **Recovery Copilot Provider Console** (`recovery-copilot/`) — the production-track provider web app for post-surgical recovery monitoring, replacing the orthopedic-demo dashboard a physician flagged as too cluttered
+- **Recovery Intelligence Engine** — real statistics in Python (EWMA control charts, CUSUM drift, per-procedure expected recovery curves, trajectory + change-point detection, multi-signal composite index, data-confidence gate, risk tiers with typed reason codes)
+- **AI narrative layer** — Groq (free tier, optional) with deterministic fallback; strict JSON contracts, banned diagnostic-language validation, guardrail-sentence enforcement, input-hash caching
+- **Provider Worklist + Patient Detail UI** — AI daily briefing, prioritized roster, summary-first patient pages with progressive disclosure (React 19 + Vite + Tailwind)
+- **Wearable integration scaffolding** — provider-agnostic connector interface, idempotent webhook ingestion (`/api/webhooks/wearables/{provider}`), normalized observation store, per-provider capability map (Apple-only gait metrics), documented Terra/Junction/HealthKit stubs
+- **RTM coverage tracking** (16-of-30 monitoring-day windows), in-app high-priority notifications with SMS/email channel stubs
+- **Deterministic 10-patient seed** with golden-tier tests (44-test backend suite)
+
 ## [1.2.0] - 2026-05-05
 
 ### Added
