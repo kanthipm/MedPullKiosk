@@ -77,3 +77,17 @@ def test_banned_regex_shape():
     assert re.search(BANNED, "Detected a problem")
     assert re.search(BANNED, "possible diagnosis")
     assert not re.search(BANNED, "signals for clinician review")
+
+
+def test_groq_cooldown_prevents_hammering(monkeypatch):
+    """A failed Groq call trips a cooldown so subsequent requests skip its
+    retry budget entirely instead of hanging every page load on a dead key."""
+    from app.llm import provider
+
+    monkeypatch.setattr(provider.settings, "groq_api_key", "test-key")
+    assert provider.provider_name() == "groq"
+    provider.note_groq_failure()
+    # cooling down: no Ollama in tests, so the deterministic renderer takes over
+    assert provider.provider_name() == "fallback"
+    provider._groq_cooldown["until"] = 0.0  # expire — Groq is probed again
+    assert provider.provider_name() == "groq"

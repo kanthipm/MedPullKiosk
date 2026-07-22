@@ -30,6 +30,7 @@ def _get_patient(db: Session, patient_id: str) -> Patient:
 @router.get("/{patient_id}")
 def patient_detail(patient_id: str, db: Session = Depends(get_db)) -> dict:
     from app.llm.insights import get_patient_insight
+    from app.models.rtm import EnrollmentStatus
     from app.rtm.coverage import get_current
 
     patient = _get_patient(db, patient_id)
@@ -47,6 +48,7 @@ def patient_detail(patient_id: str, db: Session = Depends(get_db)) -> dict:
     )
     device = patient.devices[0] if patient.devices else None
     rtm = get_current(db, patient_id)
+    enrollment = db.get(EnrollmentStatus, patient_id)
 
     return {
         "id": patient.id,
@@ -92,6 +94,7 @@ def patient_detail(patient_id: str, db: Session = Depends(get_db)) -> dict:
             "days_with_data": rtm.days_with_data if rtm else 0,
             "window_days": 30,
             "qualifies": bool(rtm.qualifies_16_of_30) if rtm else False,
+            "enrolled": bool(enrollment and enrollment.complete),
         },
         "last_checkin_at": last_checkin.isoformat() if last_checkin else None,
     }
@@ -158,6 +161,8 @@ def patient_timeline(patient_id: str, db: Session = Depends(get_db)) -> dict:
 
 @router.get("/{patient_id}/checkins")
 def patient_checkins(patient_id: str, db: Session = Depends(get_db)) -> dict:
+    from app.engine.checkin_digest import digest
+
     _get_patient(db, patient_id)
     checkins = db.scalars(
         select(Checkin)
@@ -171,6 +176,7 @@ def patient_checkins(patient_id: str, db: Session = Depends(get_db)) -> dict:
                 "occurred_at": c.occurred_at.isoformat(),
                 "channel": c.channel,
                 "messages": [{"who": m.who, "text": m.text} for m in c.messages],
+                "digest": digest([{"who": m.who, "text": m.text} for m in c.messages]),
             }
             for c in checkins
         ]
@@ -244,7 +250,10 @@ class MessageBody(BaseModel):
 
 @router.post("/{patient_id}/actions/assign-task")
 def assign_task(patient_id: str, body: AssignTaskBody, db: Session = Depends(get_db)) -> dict:
-    _get_patient(db, patient_id)
+    from app.api.rtm import _log
+    from app.models.enums import InteractionKind, TimeLogActivity
+
+    patient = _get_patient(db, patient_id)
     title = body.title.strip()
     if not title:
         raise HTTPException(status_code=422, detail="Task title is required")
@@ -255,6 +264,10 @@ def assign_task(patient_id: str, body: AssignTaskBody, db: Session = Depends(get
         verified_by="self-report",
     )
     db.add(task)
+    _log(
+        db, patient, InteractionKind.ASSIGN_TASK, f"Task assigned: {title}",
+        TimeLogActivity.CARE_COORDINATION, seconds=60,
+    )
     db.commit()
     return {"ok": True, "task": {"id": task.id, "title": task.title}}
 
@@ -263,11 +276,19 @@ def assign_task(patient_id: str, body: AssignTaskBody, db: Session = Depends(get
 def message_patient(patient_id: str, body: MessageBody, db: Session = Depends(get_db)) -> dict:
     """Stub channel — queues intent only. Real delivery arrives with the SMS
     integration; the UI is honest about that."""
+    from app.api.rtm import _log
+    from app.models.enums import InteractionKind, TimeLogActivity
+
     patient = _get_patient(db, patient_id)
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Message text is required")
     logger.info("Message stub -> %s: %s", patient.id, text[:120])
+    _log(
+        db, patient, InteractionKind.MESSAGE, f"Message queued: {text[:120]}",
+        TimeLogActivity.MESSAGING, seconds=120,
+    )
+    db.commit()
     return {"status": "queued_stub"}
 
 
@@ -286,7 +307,9 @@ def draft_message(patient_id: str, db: Session = Depends(get_db)) -> dict:
 
 @router.post("/{patient_id}/actions/escalate")
 def escalate(patient_id: str, db: Session = Depends(get_db)) -> dict:
+    from app.api.rtm import _log
     from app.engine.pipeline import latest_assessment
+    from app.models.enums import InteractionKind, TimeLogActivity
 
     patient = _get_patient(db, patient_id)
     assessment = latest_assessment(db, patient_id)
@@ -304,5 +327,9 @@ def escalate(patient_id: str, db: Session = Depends(get_db)) -> dict:
         channel=NotificationChannel.IN_APP,
     )
     db.add(notification)
+    _log(
+        db, patient, InteractionKind.ESCALATE, f"Escalated: {top_reason}",
+        TimeLogActivity.CARE_COORDINATION, seconds=120,
+    )
     db.commit()
     return {"ok": True}

@@ -8,11 +8,11 @@ import Sparkline from '../../components/charts/Sparkline'
 import TrajectoryChart from '../../components/charts/TrajectoryChart'
 import SectionCard from '../../components/SectionCard'
 import { RefreshOverlay, SkeletonCard } from '../../components/Skeleton'
-import { METRIC_STATUS, TIERS, type Tier } from '../../lib/risk'
+import { METRIC_STATUS } from '../../lib/risk'
 
-/** Demo report-card: left status accent, uppercase status pill, finding, and
- *  (clinical tier) the suggested next step + coverage detail. */
-function MetricCard({ m, tier, index }: { m: MetricInsight; tier: Tier; index: number }) {
+/** Demo report-card: left status accent, uppercase status pill, finding,
+ *  suggested next step, and coverage detail. */
+function MetricCard({ m, index }: { m: MetricInsight; index: number }) {
   const s = METRIC_STATUS[m.status]
   return (
     <div
@@ -32,14 +32,14 @@ function MetricCard({ m, tier, index }: { m: MetricInsight; tier: Tier; index: n
         <Sparkline series={m.series} baseline={m.baseline_mean} unit={m.unit} />
       </div>
       <p className="mt-2 text-[12px] font-semibold leading-relaxed text-body">{m.finding}</p>
-      {tier >= 3 && m.next_step && (
+      {m.next_step && (
         <p className="mt-2 flex items-start gap-1.5 text-[12px] font-extrabold text-oxy">
           <span aria-hidden>→</span> {m.next_step}
         </p>
       )}
       <p className="mt-1.5 text-[10.5px] font-bold text-faint">
         {m.coverage_text}
-        {tier >= 3 && m.guarded && ' · guarded phrasing'}
+        {m.guarded && ' · guarded phrasing'}
       </p>
     </div>
   )
@@ -48,17 +48,12 @@ function MetricCard({ m, tier, index }: { m: MetricInsight; tier: Tier; index: n
 function SignalsBody({
   data,
   rtm,
-  tier,
   refreshing,
 }: {
   data: PatientMetrics
-  rtm: { days_with_data: number; window_days: number; qualifies: boolean }
-  tier: Tier
+  rtm: { days_with_data: number; window_days: number; qualifies: boolean; enrolled: boolean }
   refreshing: boolean
 }) {
-  const showComposite =
-    tier >= 3 ? data.composite.drivers.length > 0 : data.composite.level !== 'normal' && data.composite.drivers.length > 0
-
   return (
     <div className="space-y-4">
       <SectionCard title="Recovery trajectory">
@@ -70,7 +65,7 @@ function SignalsBody({
         />
       </SectionCard>
 
-      {showComposite && (
+      {data.composite.drivers.length > 0 && (
         <SectionCard
           title="Multi-signal deviation"
           aside={
@@ -116,7 +111,7 @@ function SignalsBody({
 
       <div className="grid gap-3.5 sm:grid-cols-2">
         {data.metrics.map((m, i) => (
-          <MetricCard key={m.metric_key} m={m} tier={tier} index={i} />
+          <MetricCard key={m.metric_key} m={m} index={i} />
         ))}
       </div>
 
@@ -136,12 +131,20 @@ function SignalsBody({
             ) : (
               <CircleDashed size={16} className="text-faint" />
             )}
-            <span className="tabular-nums">
-              {rtm.days_with_data} of {rtm.window_days} monitoring days
-            </span>
-            <span className="text-[11px] font-bold text-faint">
-              {rtm.qualifies ? '· meets 16-day threshold' : '· below 16-day threshold'}
-            </span>
+            {rtm.enrolled ? (
+              <>
+                <span className="tabular-nums">
+                  {rtm.days_with_data} of {rtm.window_days} monitoring days
+                </span>
+                <span className="text-[11px] font-bold text-faint">
+                  {rtm.qualifies ? '· meets 16-day threshold' : '· below 16-day threshold'}
+                </span>
+              </>
+            ) : (
+              <span className="text-[12px] font-bold text-faint">
+                Monitoring begins at RTM enrollment
+              </span>
+            )}
           </div>
         </div>
       </SectionCard>
@@ -149,69 +152,47 @@ function SignalsBody({
   )
 }
 
-/** Supporting evidence, gated by the demo's Everyday / Advanced / Clinical
- *  tiers: Everyday keeps it collapsed; Advanced opens the evidence; Clinical
- *  adds next steps, guarded markers, and the full deviation panel. */
+/** Supporting evidence behind one toggle: collapsed to a summary line, or
+ *  open with everything in full detail — trajectory, deviation drivers,
+ *  metric cards with next steps, adherence & monitoring. */
 export default function SignalsSection({
   patientId,
   rtm,
-  tier,
-  onTierChange,
   refreshing,
 }: {
   patientId: string
-  rtm: { days_with_data: number; window_days: number; qualifies: boolean }
-  tier: Tier
-  onTierChange: (tier: Tier) => void
+  rtm: { days_with_data: number; window_days: number; qualifies: boolean; enrolled: boolean }
   refreshing: boolean
 }) {
-  const [manuallyOpen, setManuallyOpen] = useState(false)
-  const open = tier >= 2 || manuallyOpen
+  const [open, setOpen] = useState(false)
   const { data, isLoading } = usePatientMetrics(patientId, open)
 
   const flaggedCount = data?.metrics.filter((m) => m.status === 'flag').length
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => setManuallyOpen((o) => !o)}
-          aria-expanded={open}
-          disabled={tier >= 2}
-          className="group flex cursor-pointer items-center gap-2 rounded-lg px-1 py-2 text-left text-[13px] font-extrabold text-body transition-colors duration-150 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-oxy disabled:cursor-default"
-        >
-          <ChevronRight
-            size={16}
-            className={`text-faint transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
-          />
-          Supporting signals
-          {!open && (
-            <span className="text-xs font-semibold text-faint">
-              trajectory · wearable trends · adherence
-              {flaggedCount ? ` · ${flaggedCount} flagged` : ''}
-            </span>
-          )}
-        </button>
-        <div className="segment w-auto flex-none" role="group" aria-label="Signal depth">
-          {TIERS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => onTierChange(t.value)}
-              className={tier === t.value ? 'on px-4' : 'px-4'}
-              aria-pressed={tier === t.value}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="group flex w-full cursor-pointer items-center gap-2 rounded-lg px-1 py-2 text-left text-[13px] font-extrabold text-body transition-colors duration-150 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-oxy"
+      >
+        <ChevronRight
+          size={16}
+          className={`text-faint transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
+        />
+        Supporting signals
+        <span className="text-xs font-semibold text-faint">
+          {open
+            ? 'full detail'
+            : `trajectory · wearable trends · adherence${flaggedCount ? ` · ${flaggedCount} flagged` : ''}`}
+        </span>
+      </button>
 
       {open && (
         <div className="mt-2 animate-fadeIn">
           {isLoading && <SkeletonCard lines={4} />}
-          {data && <SignalsBody data={data} rtm={rtm} tier={tier} refreshing={refreshing} />}
+          {data && <SignalsBody data={data} rtm={rtm} refreshing={refreshing} />}
         </div>
       )}
     </div>

@@ -10,6 +10,9 @@ progressive disclosure. Every narrative on screen carries the product
 guardrail — *monitoring signals for clinician review, not a diagnosis* — and
 that phrasing is enforced in code, not just in prompts.
 
+Product direction: **[SPEC.md](SPEC.md)** — the P1 Remote Therapeutic
+Monitoring (RTM) spec that this console is the foundation for.
+
 ## Quickstart
 
 Requirements: [uv](https://docs.astral.sh/uv/) and Node 20+.
@@ -31,22 +34,36 @@ guardrail enforcement, API contracts, connector idempotency).
 
 ### LLM setup
 
-Provider priority: **Groq → local Ollama → deterministic fallback.**
+Provider priority (cloud-first): **Groq → deterministic fallback**, with
+local Ollama available strictly as an opt-in middle tier. Selection happens
+per call from what's configured and reachable (`app/llm/provider.py`); there
+is no other provider — no OpenAI, Anthropic, or xAI code path anywhere.
 
-- **Ollama (zero-config default):** if Ollama is running on the machine with
-  the configured model pulled (`qwen3-vl-agent:latest` by default — override
-  with `OLLAMA_MODEL`), the app uses it automatically. Calls go through
-  Ollama's native API with `format: json` and thinking disabled — the same
-  local-LLM architecture as the MedPull kiosk.
-- **Groq:** set `GROQ_API_KEY` in `.env` (free tier at console.groq.com) for
-  faster cloud generation.
+- **Groq (the cloud model):** set `GROQ_API_KEY` in `.env` (free tier at
+  console.groq.com). Model: `llama-3.3-70b-versatile` by default — override
+  with `GROQ_MODEL`. Calls go to Groq's OpenAI-compatible chat-completions
+  endpoint with JSON response format and retry-after-aware 429 handling.
 - **No LLM at all:** the deterministic engine renders narratives from typed
   reason codes; the UI labels them "rules-based".
+- **Ollama (opt-in, off by default):** set `OLLAMA_URL` explicitly (e.g.
+  `http://127.0.0.1:11434`) to slot a local model between Groq and the
+  deterministic fallback — model `qwen3-vl-agent:latest` by default, override
+  with `OLLAMA_MODEL`. Availability is probed via `/api/tags` (cached 60s);
+  calls use Ollama's native API with `format: json` and thinking disabled.
+
+Error handling: a failed Groq call (rate-limit exhaustion, outage) falls back
+to the deterministic renderer for that request AND trips a 3-minute Groq
+cooldown with a hard per-call deadline, so no request ever hangs on a
+provider that just proved unavailable. After the cooldown one probe call
+rediscovers Groq automatically. (With Ollama opted in, the cooldown routes to
+it instead of the deterministic renderer.)
 
 All LLM output is validated (JSON contracts, banned diagnostic language,
 guardrail sentence) and silently replaced by the deterministic version on any
-violation. Insight caches warm in a background thread at startup so the first
-page load never waits on a cold model.
+violation. Results are cached by input hash (fallback-provider rows are
+retried once a real LLM becomes available), and insight caches warm in a
+background thread at startup so the first page load never waits on a cold
+model.
 
 ### AI features
 
@@ -72,8 +89,8 @@ page load never waits on a cold model.
                     │   composite index · confidence gate ·      │
                     │   adherence · risk tiers + reason codes    │
                     │            │                               │
-                    │   LLM layer (llm/): Groq or deterministic  │
-                    │   fallback · validated · cached            │
+                    │   LLM layer (llm/): Groq → Ollama →        │
+                    │   deterministic fallback·validated·cached  │
                     │            │                               │
                     │   REST API (api/) ──► React console        │
                     └────────────────────────────────────────────┘
@@ -92,10 +109,10 @@ page load never waits on a cold model.
   - **Care actions** — Assign tasks (persists to the patient's plan), Message
     (queued until SMS goes live), and Escalate (notifies the care team) live
     in a glass action bar on every patient record.
-  - **Signal depth tiers** — the demo's Everyday / Advanced / Clinical toggle
-    controls how much evidence renders: Everyday keeps signals collapsed,
-    Advanced opens trajectory + metric cards, Clinical adds next steps and the
-    full deviation panel.
+  - **Supporting signals** — all evidence lives behind one dropdown:
+    collapsed to a summary line by default, or open with everything in full
+    detail (trajectory chart, deviation drivers, metric cards with next
+    steps, adherence & monitoring). Metric data loads lazily on first open.
   - **Refresh analysis** — reruns the engine, busts the narrative caches so
     the LLM genuinely regenerates every summary, and covers each card with
     shimmer loading bars until the new analysis lands.
@@ -140,11 +157,28 @@ Recommended production path (researched mid-2026): one aggregator — **Terra**
 Avoid: Human API (absorbed into LexisNexis), Metriport (exited wearables),
 Google Fit (shut down; Fitbit moves to the Google Health API in 2026).
 
-### RTM scaffolding
+### RTM platform (P1)
 
-`app/rtm/` tracks measurement-days per rolling 30-day window
-(CPT 99454-style ≥16-day threshold). It surfaces as one quiet line on the
-patient page — an architectural capability, not another dashboard.
+The **[SPEC.md](SPEC.md)** P1 workflows are implemented end to end:
+
+- **Compliance engine** (`app/rtm/readiness.py`) — deterministic, never the
+  LLM: enrollment (CPT 98975), monitoring-day thresholds (98985/98977 via
+  `app/rtm/coverage.py`'s 16-of-30 window), treatment-management time +
+  live-interaction requirements (98979/98980/98981), per-CPT billing
+  eligibility, a suggested next action, and an automatic **Ready to Bill**
+  state.
+- **Treatment management** — Call / Follow-up / Update plan join the action
+  bar; every action auto-logs an interaction and treatment-management time,
+  and time on a patient record is quietly tracked as chart review.
+- **AI documentation** (`app/llm/documentation.py`) — encounter notes and
+  monthly RTM summaries, drafted by the LLM under the same validation +
+  deterministic-fallback discipline as insights; providers review and
+  approve, and approved documents are never regenerated.
+- **UI** — an RTM readiness card on every patient page (monitoring progress,
+  enrollment checklist, billing chips, documentation behind a disclosure), a
+  monitoring-days chip per worklist row, and a five-number practice overview
+  strip (patients, needing review, ready to bill, adherence, estimated
+  revenue — demo rates, clearly labeled).
 
 ## Demo roster
 

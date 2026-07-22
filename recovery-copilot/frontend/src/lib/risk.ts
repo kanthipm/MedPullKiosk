@@ -63,11 +63,3 @@ export const METRIC_STATUS = {
   ok: { label: 'OK', pill: 'bg-risk-low-bg text-risk-low', spine: 'bg-risk-low' },
   nodata: { label: 'No data', pill: 'bg-risk-missing-bg text-risk-missing', spine: 'bg-line' },
 } as const satisfies Record<MetricStatus, unknown>
-
-/** Signal-depth tiers, ported from the demo's Everyday/Advanced/Clinical toggle. */
-export type Tier = 1 | 2 | 3
-export const TIERS: { value: Tier; label: string }[] = [
-  { value: 1, label: 'Everyday' },
-  { value: 2, label: 'Advanced' },
-  { value: 3, label: 'Clinical' },
-]

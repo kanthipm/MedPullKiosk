@@ -1,5 +1,42 @@
 # Changelog
 
+## [recovery-copilot 1.3.2] - 2026-07-21
+
+### Changed
+- **Everyday/Advanced/Clinical tier toggle removed** — supporting evidence is now one "Supporting signals" dropdown: collapsed to a summary line (trajectory · wearable trends · adherence · N flagged), or open with everything in full detail (trajectory chart, deviation drivers, metric cards with next steps and guarded markers, adherence & monitoring); metric data still loads lazily on first open
+- **Check-in history redesigned** — the card no longer floats the last patient line as a context-free quote ("Okay, I will."). Each check-in is now a timeline row with a deterministic digest (`app/engine/checkin_digest.py`): the patient's most informative quote (acknowledgments are never selected), topic chips (pain, swelling, fever/chills, sleep, exercises, …), and a reported-trend marker (worse / better / about the same) taken from the patient's own words. Rows expand individually to the full chat transcript; long histories collapse to the 4 most recent (6 new tests, 78 total)
+
+## [recovery-copilot 1.3.1] - 2026-07-21
+
+### Fixed
+- **Monitoring days now accrue from RTM enrollment** (the CPT 98975 setup event), not from pre-op device wear — pre-enrollment data still feeds engine baselines but never counts toward 98985/98977 thresholds; unenrolled patients show "monitoring starts after enrollment" instead of a misleading count (this is what made "19/16 days" appear for a day-8 patient)
+- **Suggested next action prefers provider-actionable steps** (call, log minutes, approve docs) over passive monitoring-day accrual
+- **Review-time tracker counts only engaged time** — pauses while the tab is hidden, stops after 2 minutes without interaction; a chart left open in a background tab no longer accrues billable review minutes
+- **Groq failure cooldown** — a failed cloud call (quota exhaustion, outage) trips a 3-minute cooldown with a hard 15s per-call deadline, so pages render instantly on the deterministic fallback instead of hanging for minutes of retries
+- **Practice overview "need review" now matches the worklist headline** (high tier only; it previously also counted medium)
+
+### Changed
+- **Cloud-first provider chain**: local Ollama is now opt-in (`OLLAMA_URL` empty by default) — the default chain is Groq → deterministic fallback
+
+## [recovery-copilot 1.3.0] - 2026-07-21
+
+### Added
+- **P1 RTM platform** (per `recovery-copilot/SPEC.md`): deterministic compliance engine (`app/rtm/readiness.py`) computing per-CPT billing eligibility (98975/98985/98977/98979/98980/98981), suggested next action, and automatic Ready-to-Bill; enrollment tracking (education/consent/baseline); provider time ledger with live-interaction flag; treatment-management actions (call, schedule follow-up, update plan) auto-logged from the action bar; quiet chart-review time tracking from the patient page
+- **AI documentation** — encounter notes + monthly RTM summaries with the same validate-or-fallback guardrail pipeline as insights; provider review/approve flow; approved documents pinned against regeneration
+- **RTM readiness card** on patient detail, monitoring-days chip per worklist row, and a five-stat practice overview strip (RTM patients, needing review, ready to bill, adherence, estimated revenue)
+- Seeded RTM demo states across all 10 patients (Marcus reproduces the spec's "98980 — 6 minutes remaining" card; David/James are Ready to Bill); 15 new tests (69 total), golden tiers untouched
+
+### Changed
+- `make seed` required after pulling this change (new tables: rtm_enrollment, rtm_time_logs, rtm_interactions, rtm_documents)
+
+## [recovery-copilot 1.2.1] - 2026-07-21
+
+### Added
+- **P1 RTM spec** (`recovery-copilot/SPEC.md`) — Remote Therapeutic Monitoring product spec: enrollment (CPT 98975), daily therapeutic monitoring (98985/98977), provider treatment management with time tracking (98979/98980/98981), AI documentation, compliance engine, billing readiness
+
+### Changed
+- **README LLM section corrected** — architecture diagram now shows the full Groq → Ollama → deterministic chain; documented Groq model default (`llama-3.3-70b-versatile`, `GROQ_MODEL`), `OLLAMA_URL` override, the 60s-cached availability probe, and that provider selection is configuration-priority (a failed Groq call falls back to deterministic, not to Ollama)
+
 ## [recovery-copilot 1.2.0] - 2026-07-11
 
 ### Added

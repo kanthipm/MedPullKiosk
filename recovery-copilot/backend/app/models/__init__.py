@@ -6,7 +6,13 @@ from app.models.insight import Insight, RiskAssessment
 from app.models.notification import Notification, NotificationPreference
 from app.models.observation import Observation, WebhookEvent
 from app.models.patient import CareTeamMember, Device, Patient
-from app.models.rtm import MonitoringWindow
+from app.models.rtm import (
+    EnrollmentStatus,
+    MonitoringWindow,
+    ProviderTimeLog,
+    RtmDocument,
+    RtmInteraction,
+)
 
 __all__ = [
     "AdherenceRecord",
@@ -23,4 +29,8 @@ __all__ = [
     "Device",
     "Patient",
     "MonitoringWindow",
+    "EnrollmentStatus",
+    "ProviderTimeLog",
+    "RtmDocument",
+    "RtmInteraction",
 ]

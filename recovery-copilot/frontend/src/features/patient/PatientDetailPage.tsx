@@ -1,6 +1,6 @@
 import { useIsFetching } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePatient, useRecompute } from '../../api/queries'
@@ -13,11 +13,13 @@ import SectionCard from '../../components/SectionCard'
 import { RefreshOverlay, SkeletonCard } from '../../components/Skeleton'
 import { useToast } from '../../components/Toast'
 import { relativeTime } from '../../lib/format'
-import { PRIORITY, URGENCY, type Tier } from '../../lib/risk'
+import { PRIORITY, URGENCY } from '../../lib/risk'
 import ActionBar from './ActionBar'
 import CheckinHistory from './CheckinHistory'
 import RecoveryTimeline from './RecoveryTimeline'
+import RtmReadinessCard from './RtmReadinessCard'
 import SignalsSection from './SignalsSection'
+import useReviewTimeTracker from './useReviewTimeTracker'
 
 function rise(index: number) {
   return { className: 'rise', style: { '--rise-delay': `${index * 55}ms` } as CSSProperties }
@@ -26,6 +28,7 @@ function rise(index: number) {
 export default function PatientDetailPage() {
   const { id = '' } = useParams()
   const { data: p, isLoading, isError } = usePatient(id)
+  useReviewTimeTracker(id)
   const recompute = useRecompute(id)
   const toast = useToast()
   const fetchingPatient = useIsFetching({ queryKey: ['patient', id] })
@@ -33,14 +36,6 @@ export default function PatientDetailPage() {
   // when the fallback engine answers instantly (LLM calls naturally run longer).
   const [minHold, setMinHold] = useState(false)
   const refreshing = recompute.isPending || minHold || (!!p && fetchingPatient > 0)
-
-  const [tier, setTier] = useState<Tier>(() => {
-    const saved = Number(localStorage.getItem('rc-tier'))
-    return saved === 2 || saved === 3 ? (saved as Tier) : 1
-  })
-  useEffect(() => {
-    localStorage.setItem('rc-tier', String(tier))
-  }, [tier])
 
   if (isLoading) {
     return (
@@ -159,15 +154,19 @@ export default function PatientDetailPage() {
         )}
 
         <div {...rise(4)}>
-          <RecoveryTimeline patientId={p.id} trajectory={p.trajectory} refreshing={refreshing} />
+          <RtmReadinessCard patientId={p.id} refreshing={refreshing} />
         </div>
 
         <div {...rise(5)}>
-          <CheckinHistory patientId={p.id} />
+          <RecoveryTimeline patientId={p.id} trajectory={p.trajectory} refreshing={refreshing} />
         </div>
 
         <div {...rise(6)}>
-          <SignalsSection patientId={p.id} rtm={p.rtm} tier={tier} onTierChange={setTier} refreshing={refreshing} />
+          <CheckinHistory patientId={p.id} />
+        </div>
+
+        <div {...rise(7)}>
+          <SignalsSection patientId={p.id} rtm={p.rtm} refreshing={refreshing} />
         </div>
       </div>
 

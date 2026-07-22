@@ -15,9 +15,10 @@ class Settings(BaseSettings):
 
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
-    # Local Ollama (used when no Groq key is set and the server is reachable) —
-    # same local-LLM architecture as the MedPull kiosk's intake copilot.
-    ollama_url: str = "http://127.0.0.1:11434"
+    # Local Ollama is OPT-IN (cloud-first product direction): leave the URL
+    # empty and the chain is Groq -> deterministic fallback. Set OLLAMA_URL
+    # explicitly to use a local model as the middle tier.
+    ollama_url: str = ""
     ollama_model: str = "qwen3-vl-agent:latest"
     database_url: str = f"sqlite:///{BACKEND_DIR / 'data' / 'recovery.db'}"
 

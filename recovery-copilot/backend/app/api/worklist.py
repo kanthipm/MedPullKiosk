@@ -27,14 +27,27 @@ def ensure_fresh_assessment(db: Session, patient_id: str):
 @router.get("/worklist")
 def worklist(db: Session = Depends(get_db)) -> dict:
     from app.llm.insights import get_daily_briefing, get_patient_insight
+    from app.models.rtm import EnrollmentStatus, MonitoringWindow
+    from app.rtm.coverage import QUALIFY_DAYS
 
     patients = db.scalars(select(Patient)).all()
+    enrolled_ids = set(
+        db.scalars(
+            select(EnrollmentStatus.patient_id).where(EnrollmentStatus.complete.is_(True))
+        )
+    )
 
     last_checkins = dict(
         db.execute(
             select(Checkin.patient_id, func.max(Checkin.occurred_at)).group_by(Checkin.patient_id)
         ).all()
     )
+    # latest monitoring window per patient, one query
+    monitoring: dict[str, int] = {}
+    for window in db.scalars(
+        select(MonitoringWindow).order_by(MonitoringWindow.window_end, MonitoringWindow.id)
+    ):
+        monitoring[window.patient_id] = window.days_with_data
 
     rows = []
     stats = {"total": len(patients), "high": 0, "medium": 0, "missing": 0, "low": 0}
@@ -68,6 +81,12 @@ def worklist(db: Session = Depends(get_db)) -> dict:
                 "trajectory": {
                     "state": analytics["trajectory"]["state"],
                     "pct": analytics["trajectory"]["pct"],
+                },
+                "rtm": {
+                    "days": monitoring.get(patient.id, 0),
+                    "target": QUALIFY_DAYS,
+                    "eligible": monitoring.get(patient.id, 0) >= QUALIFY_DAYS,
+                    "enrolled": patient.id in enrolled_ids,
                 },
             }
         )

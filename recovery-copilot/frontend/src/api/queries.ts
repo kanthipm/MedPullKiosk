@@ -7,6 +7,9 @@ import type {
   NotificationPreference,
   PatientDetail,
   PatientMetrics,
+  PracticeOverview,
+  RtmDocument,
+  RtmReadiness,
   TimelineEvent,
   WorklistResponse,
 } from './types'
@@ -147,6 +150,98 @@ export function useEscalate(id: string) {
     mutationFn: () =>
       fetchJson<{ ok: boolean }>(`/api/patients/${id}/actions/escalate`, { method: 'POST' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+}
+
+export function useRtmStatus(id: string) {
+  return useQuery({
+    queryKey: ['patient', id, 'rtm'],
+    queryFn: () => fetchJson<RtmReadiness>(`/api/patients/${id}/rtm`),
+  })
+}
+
+export function useRtmDocuments(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ['patient', id, 'rtm-documents'],
+    queryFn: () => fetchJson<{ documents: RtmDocument[] }>(`/api/patients/${id}/rtm/documents`),
+    enabled,
+  })
+}
+
+export function usePracticeOverview() {
+  return useQuery({
+    queryKey: ['practice-overview'],
+    queryFn: () => fetchJson<PracticeOverview>('/api/practice/overview'),
+  })
+}
+
+function useRtmInvalidation(id: string) {
+  const qc = useQueryClient()
+  return () => {
+    qc.invalidateQueries({ queryKey: ['patient', id, 'rtm'] })
+    qc.invalidateQueries({ queryKey: ['practice-overview'] })
+  }
+}
+
+export function useLogCall(id: string) {
+  const invalidate = useRtmInvalidation(id)
+  return useMutation({
+    mutationFn: (call: { minutes: number; note: string }) =>
+      fetchJson<{ ok: boolean; logged_minutes: number }>(`/api/patients/${id}/actions/call`, {
+        method: 'POST',
+        body: JSON.stringify(call),
+      }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useScheduleFollowup(id: string) {
+  const invalidate = useRtmInvalidation(id)
+  return useMutation({
+    mutationFn: (followup: { when: string; note: string }) =>
+      fetchJson<{ ok: boolean }>(`/api/patients/${id}/actions/schedule-followup`, {
+        method: 'POST',
+        body: JSON.stringify(followup),
+      }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdatePlan(id: string) {
+  const invalidate = useRtmInvalidation(id)
+  return useMutation({
+    mutationFn: (summary: string) =>
+      fetchJson<{ ok: boolean }>(`/api/patients/${id}/actions/update-plan`, {
+        method: 'POST',
+        body: JSON.stringify({ summary }),
+      }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useApproveDocument(id: string) {
+  const qc = useQueryClient()
+  const invalidate = useRtmInvalidation(id)
+  return useMutation({
+    mutationFn: (documentId: number) =>
+      fetchJson<{ ok: boolean }>(`/api/patients/${id}/rtm/documents/${documentId}/approve`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['patient', id, 'rtm-documents'] })
+      invalidate()
+    },
+  })
+}
+
+export function useRegenerateDocument(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (documentId: number) =>
+      fetchJson<{ ok: boolean }>(`/api/patients/${id}/rtm/documents/${documentId}/regenerate`, {
+        method: 'POST',
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['patient', id, 'rtm-documents'] }),
   })
 }
 

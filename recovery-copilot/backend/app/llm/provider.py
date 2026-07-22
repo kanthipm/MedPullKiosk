@@ -1,8 +1,11 @@
 """LLM provider selection and dispatch.
 
-Priority: Groq (when a key is configured) → local Ollama (when reachable and
-the configured model is present) → deterministic fallback. The Ollama probe is
-cached briefly so worklist rendering doesn't ping the socket per patient.
+Priority: Groq (when a key is configured and not cooling down) → local Ollama
+(when reachable and the configured model is present) → deterministic fallback.
+The Ollama probe is cached briefly so worklist rendering doesn't ping the
+socket per patient, and a failing Groq (exhausted rate limit, outage) trips a
+cooldown so requests stop paying its retry budget and drop to the next tier
+immediately instead of hanging every page load.
 """
 
 import logging
@@ -21,6 +24,21 @@ class LLMError(Exception):
 
 _ollama_probe: dict = {"at": 0.0, "ok": False}
 _PROBE_TTL = 60.0
+
+_groq_cooldown: dict = {"until": 0.0}
+_GROQ_COOLDOWN_S = 180.0
+
+
+def note_groq_failure() -> None:
+    """Called by the Groq client after a call fails despite retries. For the
+    cooldown window every insight renders via Ollama/fallback instantly; one
+    probe call after expiry rediscovers Groq on its own."""
+    _groq_cooldown["until"] = time.monotonic() + _GROQ_COOLDOWN_S
+    logger.warning("Groq unavailable — cooling down for %.0fs", _GROQ_COOLDOWN_S)
+
+
+def _groq_available() -> bool:
+    return bool(settings.groq_api_key) and time.monotonic() >= _groq_cooldown["until"]
 
 
 def _ollama_available() -> bool:
@@ -47,7 +65,7 @@ def _ollama_available() -> bool:
 
 
 def provider_name() -> str:
-    if settings.groq_api_key:
+    if _groq_available():
         return "groq"
     if _ollama_available():
         return "ollama"

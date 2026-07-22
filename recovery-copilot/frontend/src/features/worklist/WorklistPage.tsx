@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useWorklist, type AskResult } from '../../api/queries'
 import type { WorklistPatient } from '../../api/types'
 import AskBar from './AskBar'
+import PracticeOverviewStrip from './PracticeOverviewStrip'
 import AIAttribution from '../../components/AIAttribution'
 import ConfidenceChip from '../../components/ConfidenceChip'
 import GuardrailFootnote from '../../components/GuardrailFootnote'
@@ -76,6 +77,10 @@ export default function WorklistPage() {
           {data.stats.high === 1 ? 'needs' : 'need'} review · {data.stats.missing} missing data ·{' '}
           {data.stats.low} stable
         </p>
+      </div>
+
+      <div className="rise mt-5" style={{ '--rise-delay': '40ms' } as CSSProperties}>
+        <PracticeOverviewStrip />
       </div>
 
       <SectionCard
@@ -194,6 +199,22 @@ function WorklistRow({ patient: p, index }: { patient: WorklistPatient; index: n
           {p.reason}
         </span>
         <ConfidenceChip level={p.data_confidence.level} />
+      </span>
+      <span
+        className="hidden w-24 shrink-0 text-right md:block"
+        title={
+          p.rtm.enrolled
+            ? 'RTM monitoring days since enrollment (16-of-30 target)'
+            : 'RTM enrollment in progress — monitoring days accrue after enrollment'
+        }
+      >
+        <span
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-black tabular-nums leading-none ${
+            p.rtm.eligible ? 'bg-risk-low-bg text-risk-low' : 'bg-line/50 text-muted'
+          }`}
+        >
+          {p.rtm.enrolled ? `${Math.min(p.rtm.days, p.rtm.target)}/${p.rtm.target} d` : 'enrolling'}
+        </span>
       </span>
       <span className="hidden w-32 shrink-0 text-right sm:block">
         <span className="block text-[11px] font-bold tabular-nums text-faint">

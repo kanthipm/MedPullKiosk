@@ -128,6 +128,11 @@ def seed_core(db: Session, today: date) -> dict[str, int]:
         db.add(NotificationPreference(recipient_id=ct.id, channel=NotificationChannel.SMS, enabled=False))
         db.add(NotificationPreference(recipient_id=ct.id, channel=NotificationChannel.EMAIL, enabled=False))
     db.commit()
+
+    # RTM state (new tables only — never observations; golden tiers depend on them)
+    from app.seed.rtm import seed_rtm
+
+    counts.update(seed_rtm(db, today))
     return counts
 
 

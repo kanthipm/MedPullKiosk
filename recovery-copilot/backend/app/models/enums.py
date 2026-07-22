@@ -90,6 +90,33 @@ class InsightKind(StrEnum):
     ASK = "ask"  # roster-level natural-language Q&A (cached per question)
 
 
+class TimeLogActivity(StrEnum):
+    CHART_REVIEW = "chart_review"
+    MESSAGING = "messaging"
+    CALL = "call"
+    DOCUMENTATION = "documentation"
+    CARE_COORDINATION = "care_coordination"
+
+
+class InteractionKind(StrEnum):
+    MESSAGE = "message"
+    CALL = "call"
+    SCHEDULE_FOLLOWUP = "schedule_followup"
+    ESCALATE = "escalate"
+    UPDATE_PLAN = "update_plan"
+    ASSIGN_TASK = "assign_task"
+
+
+class DocumentKind(StrEnum):
+    ENCOUNTER_NOTE = "encounter_note"
+    MONTHLY_SUMMARY = "monthly_summary"
+
+
+class DocumentStatus(StrEnum):
+    DRAFT = "draft"
+    APPROVED = "approved"
+
+
 class NotificationChannel(StrEnum):
     IN_APP = "in_app"
     SMS = "sms"
