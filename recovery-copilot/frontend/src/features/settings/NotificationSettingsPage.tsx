@@ -1,4 +1,5 @@
 import { Bell, Mail, MessageSquare } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '../../api/queries'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
@@ -26,17 +27,35 @@ export default function NotificationSettingsPage() {
   const { data: prefs, isLoading, isError } = useNotificationPreferences()
   const update = useUpdateNotificationPreferences()
 
-  if (isLoading) return <SkeletonCard lines={4} />
+  const header = (
+    <div className="rise" style={{ '--rise-delay': '0ms' } as CSSProperties}>
+      <h1 className="text-[26px] font-semibold tracking-[-.03em] text-ink">Notifications</h1>
+      <p className="mt-1 text-[13px] font-medium text-muted">
+        How the care team is alerted when a patient reaches high recovery priority.
+      </p>
+    </div>
+  )
+
+  if (isLoading)
+    return (
+      <div>
+        {header}
+        <div className="mt-6">
+          <SkeletonCard lines={4} />
+        </div>
+      </div>
+    )
   if (isError || !prefs) return <EmptyState title="Settings couldn't be loaded." />
 
   return (
     <div>
-      <h1 className="text-2xl font-black tracking-tight text-ink">Notifications</h1>
-      <p className="mt-1 text-sm text-faint">
-        How the care team is alerted when a patient reaches high recovery priority.
-      </p>
+      {header}
 
-      <SectionCard className="mt-6">
+      <SectionCard
+        className="rise mt-6"
+        style={{ '--rise-delay': '60ms' } as CSSProperties}
+        eyebrow={<span className="micro mb-1 block">Alert channels</span>}
+      >
         <ul className="divide-y divide-line">
           {prefs.map((pref) => {
             const meta = CHANNEL_META[pref.channel] ?? {
@@ -45,26 +64,31 @@ export default function NotificationSettingsPage() {
               icon: Bell,
             }
             const Icon = meta.icon
+            const on = pref.enabled && pref.available
             return (
               <li key={pref.channel} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-soft text-muted">
-                  <Icon size={16} />
+                <span
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-btn ${
+                    on ? 'bg-brand-tint text-brand' : 'bg-soft text-faint'
+                  }`}
+                >
+                  <Icon size={15} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-ink">
+                  <span className="flex items-center gap-2 text-[13.5px] font-semibold tracking-[-.01em] text-ink">
                     {meta.label}
                     {!pref.available && (
-                      <span className="ml-2 rounded-full bg-soft px-2 py-0.5 text-[11px] font-medium text-faint ring-1 ring-inset ring-ink/[.06]">
-                        Coming soon
-                      </span>
+                      <span className="chip bg-risk-missing-bg text-risk-missing">Coming soon</span>
                     )}
                   </span>
-                  <span className="block text-sm text-faint">{meta.description}</span>
+                  <span className="mt-0.5 block text-[12px] font-medium text-muted">
+                    {meta.description}
+                  </span>
                 </span>
                 <button
                   type="button"
                   role="switch"
-                  aria-checked={pref.enabled && pref.available}
+                  aria-checked={on}
                   disabled={!pref.available || update.isPending}
                   onClick={() =>
                     update.mutate([
@@ -75,13 +99,13 @@ export default function NotificationSettingsPage() {
                       },
                     ])
                   }
-                  className={`relative h-6 w-10 shrink-0 rounded-full transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-oxy ${
-                    pref.enabled && pref.available ? 'bg-oxy' : 'bg-[#dbe1ee]'
+                  className={`relative h-6 w-10 shrink-0 cursor-pointer rounded-full transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${
+                    on ? 'bg-brand' : 'bg-line'
                   } ${!pref.available ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-card transition-all duration-150 ${
-                      pref.enabled && pref.available ? 'left-[18px]' : 'left-0.5'
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-[#fff] shadow-segment transition-all duration-150 ${
+                      on ? 'left-[18px]' : 'left-0.5'
                     }`}
                   />
                 </button>
@@ -91,7 +115,7 @@ export default function NotificationSettingsPage() {
         </ul>
       </SectionCard>
 
-      <p className="mt-4 text-xs text-faint">
+      <p className="mt-4 border-t border-line pt-2 text-[11px] font-medium leading-[1.5] text-faint">
         Alerts include the patient, the new priority, and the most important reason — with a
         link straight to their record.
       </p>

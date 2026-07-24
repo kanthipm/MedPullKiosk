@@ -40,11 +40,11 @@ export default function NotificationsPopover() {
         aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="relative grid h-9 w-9 cursor-pointer place-items-center rounded-[13px] border border-line bg-white text-muted transition-[transform,box-shadow,color] duration-150 hover:-translate-y-px hover:text-ink hover:shadow-lift active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-oxy"
+        className="relative grid h-8 w-8 cursor-pointer place-items-center rounded-btn border border-line bg-panel text-muted transition-colors duration-150 hover:bg-soft hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
       >
-        <Bell size={16} />
+        <Bell size={15} />
         {unread > 0 && (
-          <span className="absolute right-2 top-2 h-[7px] w-[7px] rounded-full bg-risk-high ring-2 ring-white" />
+          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-risk-high ring-2 ring-white" />
         )}
       </button>
       {open && (
@@ -53,15 +53,15 @@ export default function NotificationsPopover() {
           <div
             role="dialog"
             aria-label="Notifications"
-            className="glass-strong absolute right-0 z-40 mt-2 w-96 animate-modalIn overflow-hidden rounded-card shadow-glass"
+            className="absolute right-0 z-40 mt-2 w-96 animate-modalIn overflow-hidden rounded-card border border-line bg-panel shadow-glass"
           >
-            <div className="flex items-center justify-between border-b border-line/70 px-4 py-3">
-              <span className="text-[13px] font-black tracking-tight text-ink">Notifications</span>
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+              <span className="micro">Notifications</span>
               {unread > 0 && (
                 <button
                   type="button"
                   onClick={() => markAll.mutate()}
-                  className="cursor-pointer text-xs font-extrabold text-oxy hover:underline"
+                  className="cursor-pointer text-[12px] font-medium text-brand hover:underline"
                 >
                   Mark all read
                 </button>
@@ -69,7 +69,7 @@ export default function NotificationsPopover() {
             </div>
             <div className="max-h-96 overflow-y-auto">
               {notifications.length === 0 && (
-                <p className="px-4 py-8 text-center text-[13px] font-semibold text-faint">
+                <p className="px-4 py-8 text-center text-[13px] font-medium text-faint">
                   Nothing needs your attention right now.
                 </p>
               )}
@@ -82,17 +82,19 @@ export default function NotificationsPopover() {
                     setOpen(false)
                     navigate(`/patients/${n.patient_id}`)
                   }}
-                  className="flex w-full cursor-pointer items-start gap-3 border-b border-line/70 px-4 py-3 text-left transition-colors duration-150 last:border-0 hover:bg-white/80"
+                  className="flex w-full cursor-pointer items-start gap-3 border-b border-line px-4 py-3 text-left transition-colors duration-150 last:border-0 hover:bg-soft/70"
                 >
                   <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                    className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
                       n.status === 'unread' ? 'bg-risk-high' : 'bg-line'
                     }`}
                   />
                   <span>
-                    <span className="block text-[13px] font-extrabold text-ink">{n.title}</span>
-                    <span className="block text-[12.5px] font-semibold text-muted">{n.body}</span>
-                    <span className="mt-0.5 block text-[11px] font-bold text-faint">
+                    <span className="block text-[13px] font-semibold tracking-[-.01em] text-ink">
+                      {n.title}
+                    </span>
+                    <span className="block text-[12.5px] font-medium text-muted">{n.body}</span>
+                    <span className="mt-0.5 block font-mono text-[11px] font-medium text-faint">
                       {relativeTime(n.created_at)}
                     </span>
                   </span>

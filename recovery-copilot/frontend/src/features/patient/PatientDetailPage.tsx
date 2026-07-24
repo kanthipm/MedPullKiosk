@@ -8,12 +8,13 @@ import AIAttribution from '../../components/AIAttribution'
 import ConfidenceChip from '../../components/ConfidenceChip'
 import EmptyState from '../../components/EmptyState'
 import GuardrailFootnote from '../../components/GuardrailFootnote'
+import MetricCluster from '../../components/MetricCluster'
 import PriorityBadge from '../../components/PriorityBadge'
 import SectionCard from '../../components/SectionCard'
 import { RefreshOverlay, SkeletonCard } from '../../components/Skeleton'
 import { useToast } from '../../components/Toast'
-import { relativeTime } from '../../lib/format'
-import { PRIORITY, URGENCY } from '../../lib/risk'
+import { relativeTime, signedPct } from '../../lib/format'
+import { PRIORITY, TRAJECTORY_LABEL, URGENCY } from '../../lib/risk'
 import ActionBar from './ActionBar'
 import CheckinHistory from './CheckinHistory'
 import RecoveryTimeline from './RecoveryTimeline'
@@ -32,8 +33,6 @@ export default function PatientDetailPage() {
   const recompute = useRecompute(id)
   const toast = useToast()
   const fetchingPatient = useIsFetching({ queryKey: ['patient', id] })
-  // Hold the shimmer for a minimum beat: a sub-200ms overlay reads as flicker
-  // when the fallback engine answers instantly (LLM calls naturally run longer).
   const [minHold, setMinHold] = useState(false)
   const refreshing = recompute.isPending || minHold || (!!p && fetchingPatient > 0)
 
@@ -49,7 +48,7 @@ export default function PatientDetailPage() {
   if (isError || !p) {
     return (
       <EmptyState title="This patient couldn't be loaded.">
-        <Link to="/" className="font-bold text-oxy hover:underline">
+        <Link to="/" className="font-semibold text-brand hover:underline">
           Back to the worklist
         </Link>
       </EmptyState>
@@ -65,12 +64,22 @@ export default function PatientDetailPage() {
     })
   }
 
+  const rtmValue = p.rtm.enrolled
+    ? `${p.rtm.days_with_data}/${p.rtm.window_days}d`
+    : 'Enrolling'
+  const trajValue =
+    p.trajectory.pct != null && p.trajectory.state !== 'on'
+      ? signedPct(p.trajectory.pct)
+      : p.trajectory.state === 'on'
+        ? 'On curve'
+        : '—'
+
   return (
     <div>
       <div {...rise(0)}>
         <Link
           to="/"
-          className="inline-flex items-center gap-1 text-[13px] font-extrabold text-muted transition-colors duration-150 hover:text-ink"
+          className="inline-flex items-center gap-1 text-[13px] font-medium text-brand transition-opacity duration-150 hover:opacity-75"
         >
           <ArrowLeft size={15} /> Worklist
         </Link>
@@ -78,26 +87,57 @@ export default function PatientDetailPage() {
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <span
             aria-hidden
-            className={`grid h-11 w-11 place-items-center rounded-[14px] text-[14px] font-black text-white shadow-lift ${
-              p.risk.level === 'high'
-                ? 'bg-gradient-to-br from-risk-high to-[#ff7a59]'
-                : 'bg-gradient-to-br from-[#7c9cff] to-[#6c5ce7]'
+            className={`grid h-10 w-10 place-items-center rounded-full font-mono text-[13px] font-medium text-white ${
+              p.risk.level === 'high' ? 'bg-risk-high' : 'bg-brand'
             }`}
           >
             {p.initials}
           </span>
-          <h1 className="text-[26px] font-black tracking-tight text-ink">{p.name}</h1>
-          <PriorityBadge priority={p.risk.level} />
-          <ConfidenceChip level={p.data_confidence.level} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-[26px] font-semibold tracking-[-.03em] text-ink">{p.name}</h1>
+              <PriorityBadge priority={p.risk.level} />
+              <ConfidenceChip level={p.data_confidence.level} />
+            </div>
+            <p className="mt-1 text-[12.5px] font-medium text-muted">
+              {p.age} {p.sex} · {p.procedure_display} · {p.surgeon}
+              {p.device && <> · {p.device.model}</>}
+            </p>
+          </div>
         </div>
-        <p className="mt-1.5 text-[13px] font-bold text-faint">
-          {p.age} {p.sex} · {p.procedure_display} · Post-op day{' '}
-          <span className="tabular-nums">{p.postop_day}</span> · {p.surgeon}
-          {p.device && <> · {p.device.model}</>} ·{' '}
-          {p.last_checkin_at
-            ? `Last check-in ${relativeTime(p.last_checkin_at).toLowerCase()}`
-            : 'No check-in yet'}
-        </p>
+
+        <MetricCluster
+          className="mt-4"
+          items={[
+            { key: 'day', label: 'Post-op day', value: `D${p.postop_day}` },
+            {
+              key: 'rtm',
+              label: 'RTM monitoring',
+              value: rtmValue,
+              tone: p.rtm.qualifies ? 'low' : undefined,
+            },
+            {
+              key: 'traj',
+              label: 'Trajectory',
+              value: trajValue,
+              tone:
+                p.trajectory.state === 'behind'
+                  ? 'med'
+                  : p.trajectory.state === 'on' || p.trajectory.state === 'ahead'
+                    ? 'low'
+                    : undefined,
+              hint:
+                p.trajectory.state !== 'on' && p.trajectory.state !== 'unknown'
+                  ? TRAJECTORY_LABEL[p.trajectory.state].replace(/ expected curve| of expected curve/i, '')
+                  : undefined,
+            },
+            {
+              key: 'checkin',
+              label: 'Last check-in',
+              value: p.last_checkin_at ? relativeTime(p.last_checkin_at) : 'None yet',
+            },
+          ]}
+        />
       </div>
 
       <div {...rise(1)}>
@@ -111,7 +151,7 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      <div className="mt-5 space-y-4">
+      <div className="mt-5 space-y-3.5">
         <SectionCard
           sum
           spine={PRIORITY[p.risk.level].spine}
@@ -125,7 +165,7 @@ export default function PatientDetailPage() {
           }
         >
           <RefreshOverlay show={refreshing} />
-          <p className="text-[13.5px] font-semibold leading-[1.6] text-body">{p.summary.text}</p>
+          <p className="text-[13.5px] font-medium leading-[1.6] text-body">{p.summary.text}</p>
         </SectionCard>
 
         {p.actions.length > 0 && (
@@ -135,14 +175,14 @@ export default function PatientDetailPage() {
               {p.actions.map((a, i) => (
                 <li key={i} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
                   <span
-                    className={`mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-black leading-none ${URGENCY[a.urgency]?.pill ?? URGENCY.routine.pill}`}
+                    className={`chip mt-0.5 shrink-0 uppercase tracking-[.03em] ${URGENCY[a.urgency]?.pill ?? URGENCY.routine.pill}`}
                   >
                     {URGENCY[a.urgency]?.label ?? 'Routine'}
                   </span>
                   <span>
-                    <span className="block text-[13.5px] font-extrabold text-ink">{a.title}</span>
+                    <span className="block text-[13.5px] font-semibold text-ink">{a.title}</span>
                     {a.detail && (
-                      <span className="block text-[12.5px] font-semibold leading-snug text-muted">
+                      <span className="mt-0.5 block text-[12.5px] font-medium leading-snug text-muted">
                         {a.detail}
                       </span>
                     )}

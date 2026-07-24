@@ -1,47 +1,51 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { longDate } from '../../lib/format'
 import NotificationsPopover from '../NotificationsPopover'
+import { NavSegmentedControl } from '../SegmentedControl'
+import ThemeToggle from '../ThemeToggle'
 
-const navLink = ({ isActive }: { isActive: boolean }) =>
-  `rounded-[10px] px-3 py-1.5 text-[13px] font-extrabold transition-all duration-200 ${
-    isActive ? 'bg-white text-ink shadow-segment' : 'text-muted hover:text-ink'
-  }`
+const NAV = [
+  {
+    key: 'worklist',
+    label: 'Worklist',
+    to: '/',
+    end: true,
+    match: (pathname: string) => pathname === '/' || pathname.startsWith('/patients/'),
+  },
+  {
+    key: 'integrations',
+    label: 'Integrations',
+    to: '/integrations',
+  },
+  {
+    key: 'settings',
+    label: 'Settings',
+    to: '/settings/notifications',
+    match: (pathname: string) => pathname.startsWith('/settings'),
+  },
+]
 
 export default function AppShell() {
   return (
     <div className="min-h-screen">
-      <header className="glass sticky top-0 z-20 border-x-0 border-t-0 shadow-none">
-        <div className="mx-auto flex h-[58px] max-w-5xl items-center gap-5 px-6">
-          <NavLink to="/" className="flex items-center gap-2.5">
-            <span
-              aria-hidden
-              className="grid h-8 w-8 place-items-center rounded-[11px] bg-gradient-to-br from-oxy to-oxy-light text-[15px] font-black leading-none text-white shadow-[0_6px_16px_rgba(47,128,237,.35)]"
-            >
-              +
-            </span>
-            <span className="text-sm font-black tracking-tight text-ink">
-              MedPull
-              <span className="ml-2 font-bold text-muted">Recovery Copilot</span>
+      <header className="glass sticky top-0 z-20 border-b border-line">
+        <div className="mx-auto flex h-[56px] w-full items-center gap-3 px-[clamp(14px,3vw,44px)] sm:gap-5">
+          <NavLink to="/" className="flex shrink-0 items-center gap-2.5">
+            <img src="/medpull-logo.svg" alt="" aria-hidden className="h-[28px] w-auto" />
+            <span className="hidden flex-col leading-none md:flex">
+              <span className="text-[14px] font-semibold tracking-[-.02em] text-ink">MedPull</span>
+              <span className="mt-1 text-[10px] font-medium uppercase tracking-[.14em] text-faint">
+                Recovery Copilot
+              </span>
             </span>
           </NavLink>
-          <nav className="ml-1 flex items-center gap-1 rounded-[13px] bg-[#e9edf6]/70 p-[3px]">
-            <NavLink to="/" end className={navLink}>
-              Worklist
-            </NavLink>
-            <NavLink to="/integrations" className={navLink}>
-              Integrations
-            </NavLink>
-            <NavLink to="/settings/notifications" className={navLink}>
-              Settings
-            </NavLink>
-          </nav>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-xs font-bold text-faint sm:block">{longDate()}</span>
+          <NavSegmentedControl options={NAV} className="md:ml-1" />
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+            <ThemeToggle />
             <NotificationsPopover />
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto w-full px-[clamp(14px,3vw,44px)] py-[clamp(20px,3vh,34px)]">
         <Outlet />
       </main>
     </div>

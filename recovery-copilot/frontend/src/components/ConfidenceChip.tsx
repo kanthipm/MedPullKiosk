@@ -6,21 +6,23 @@ const STYLES: Record<ConfidenceLevel, string> = {
   low: 'bg-risk-missing-bg text-risk-missing',
 }
 
-/** Demo-style confidence chip (.confchip). High confidence is the norm, so it
- *  renders nothing unless asked — the chip flags reduced trust, not normalcy. */
+/** Confidence chip. High confidence is the norm, so it renders nothing unless
+ *  asked — the chip flags reduced trust, not normalcy. */
 export default function ConfidenceChip({
   level,
   showHigh = false,
+  className = '',
 }: {
   level: ConfidenceLevel
   showHigh?: boolean
+  className?: string
 }) {
   if (level === 'high' && !showHigh) return null
   return (
     <span
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[10.5px] font-extrabold leading-none ${STYLES[level]}`}
+      className={`inline-flex max-w-full items-center gap-1 overflow-hidden whitespace-nowrap rounded-md px-2 py-[3px] text-[10.5px] font-medium leading-none ${STYLES[level]} ${className}`}
     >
-      {CONFIDENCE_LABEL[level]}
+      <span className="truncate">{CONFIDENCE_LABEL[level]}</span>
     </span>
   )
 }

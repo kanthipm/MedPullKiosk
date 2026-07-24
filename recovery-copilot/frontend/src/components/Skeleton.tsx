@@ -1,12 +1,12 @@
 /** Silver shimmer loading bars — the app's only loading treatment. */
 
 export function SkeletonLine({ className = '' }: { className?: string }) {
-  return <div className={`shimmer rounded-lg ${className}`} />
+  return <div className={`shimmer rounded-md ${className}`} />
 }
 
 export function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
-    <div className="rounded-card border border-ink/[.04] bg-white p-5 shadow-card">
+    <div className="rounded-card border border-line bg-panel p-4">
       <div className="space-y-3">
         {Array.from({ length: lines }).map((_, i) => (
           <SkeletonLine key={i} className={`h-3.5 ${i === 0 ? 'w-1/4' : i % 2 ? 'w-full' : 'w-2/3'}`} />
@@ -16,9 +16,7 @@ export function SkeletonCard({ lines = 3 }: { lines?: number }) {
   )
 }
 
-/** Absolute overlay dropped over a live card during a full refresh: one
- *  conjoined silver rectangle shimmering as a single block, fully opaque so
- *  nothing underneath shows through, z-raised above any in-card layering. */
+/** Absolute overlay during a full refresh — opaque shimmer so nothing underneath shows. */
 export function RefreshOverlay({ show }: { show: boolean }) {
   if (!show) return null
   return (

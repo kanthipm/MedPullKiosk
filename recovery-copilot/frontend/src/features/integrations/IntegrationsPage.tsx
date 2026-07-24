@@ -1,11 +1,11 @@
-import { CircleCheck, Footprints } from 'lucide-react'
+import { CircleCheck, Footprints, Plug } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { useIntegrations } from '../../api/queries'
 import type { IntegrationProvider } from '../../api/types'
 import EmptyState from '../../components/EmptyState'
 import SectionCard from '../../components/SectionCard'
 import { SkeletonCard } from '../../components/Skeleton'
 
-/** Friendly labels for capability chips; gait metrics collapse into one chip. */
 const CAPABILITY_LABELS: [string, string[]][] = [
   ['Steps', ['steps']],
   ['Heart rate', ['resting_hr', 'hr_sample']],
@@ -18,65 +18,73 @@ const CAPABILITY_LABELS: [string, string[]][] = [
 ]
 
 function capabilityChips(p: IntegrationProvider): string[] {
-  const chips = CAPABILITY_LABELS.filter(([, keys]) =>
+  return CAPABILITY_LABELS.filter(([, keys]) =>
     keys.some((k) => p.capabilities.includes(k)),
   ).map(([label]) => label)
-  return chips
 }
 
-function ProviderCard({ p }: { p: IntegrationProvider }) {
+function ProviderCard({ p, index }: { p: IntegrationProvider; index: number }) {
   const connected = p.status === 'mock_connected'
   return (
-    <div className="flex flex-col rounded-card border border-ink/[.04] bg-white p-5 shadow-card">
+    <div
+      style={{ '--rise-delay': `${120 + index * 45}ms` } as CSSProperties}
+      className={`rise relative flex flex-col overflow-hidden rounded-card border border-line bg-panel p-4 ${
+        connected ? 'pl-[18px]' : ''
+      }`}
+    >
+      {connected && <span aria-hidden className="absolute inset-y-0 left-0 w-[2px] bg-risk-low" />}
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-ink">{p.name}</h3>
-          {p.connected_patients > 0 && (
-            <p className="mt-0.5 text-xs text-faint">
-              {p.connected_patients} patient{p.connected_patients === 1 ? '' : 's'} using this
-              device type
-            </p>
-          )}
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-btn ${
+              connected ? 'bg-brand text-white' : 'bg-soft text-faint'
+            }`}
+          >
+            <Plug size={14} />
+          </span>
+          <div>
+            <h3 className="text-[14px] font-semibold tracking-[-.01em] text-ink">{p.name}</h3>
+            {p.connected_patients > 0 && (
+              <p className="mt-0.5 font-mono text-[11px] font-medium text-faint">
+                {p.connected_patients} patient{p.connected_patients === 1 ? '' : 's'} on this
+                device
+              </p>
+            )}
+          </div>
         </div>
         {connected ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-risk-low-bg px-2 py-0.5 text-[11px] font-medium text-risk-low ring-1 ring-inset ring-risk-low/25">
-            <CircleCheck size={11} /> Connected (demo)
+          <span className="chip bg-risk-low-bg text-risk-low">
+            <CircleCheck size={11} /> Connected
           </span>
         ) : (
-          <span className="rounded-full bg-soft px-2 py-0.5 text-[11px] font-medium text-muted ring-1 ring-inset ring-ink/[.06]">
-            Coming soon
-          </span>
+          <span className="chip bg-risk-missing-bg text-risk-missing">Coming soon</span>
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-3.5 flex flex-wrap gap-1.5">
         {capabilityChips(p).map((label) => (
-          <span
-            key={label}
-            className="rounded-md bg-soft px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-inset ring-ink/[.06]"
-          >
+          <span key={label} className="chip bg-soft text-muted">
             {label}
           </span>
         ))}
         {p.gait_capable && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-[#e8f1ff] px-1.5 py-0.5 text-[11px] font-medium text-oxy ring-1 ring-inset ring-oxy/20">
+          <span className="chip bg-brand-tint text-brand">
             <Footprints size={11} /> Gait & mobility
           </span>
         )}
       </div>
 
       <div className="mt-auto pt-4">
-        <button
-          type="button"
-          disabled={!connected}
-          className={`w-full rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
-            connected
-              ? 'bg-soft text-muted'
-              : 'cursor-not-allowed bg-soft text-faint'
-          }`}
-        >
-          {connected ? 'Manage connection' : 'Connect'}
-        </button>
+        {connected ? (
+          <button type="button" className="qa-btn w-full">
+            Manage connection
+          </button>
+        ) : (
+          <button type="button" disabled className="qa-btn w-full opacity-50">
+            Connect
+          </button>
+        )}
       </div>
     </div>
   )
@@ -85,12 +93,25 @@ function ProviderCard({ p }: { p: IntegrationProvider }) {
 export default function IntegrationsPage() {
   const { data, isLoading, isError } = useIntegrations()
 
+  const header = (
+    <div className="rise" style={{ '--rise-delay': '0ms' } as CSSProperties}>
+      <h1 className="text-[26px] font-semibold tracking-[-.03em] text-ink">Integrations</h1>
+      <p className="mt-1 max-w-2xl text-[13px] font-medium text-muted">
+        Every source feeds the same Recovery Intelligence Engine through one normalized data
+        store — connecting a new provider never changes what you see on the worklist.
+      </p>
+    </div>
+  )
+
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <SkeletonCard lines={3} />
-        <SkeletonCard lines={3} />
-        <SkeletonCard lines={3} />
+      <div>
+        {header}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={3} />
+        </div>
       </div>
     )
   }
@@ -104,28 +125,31 @@ export default function IntegrationsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-black tracking-tight text-ink">Integrations</h1>
-      <p className="mt-1 max-w-2xl text-sm text-faint">
-        Every source feeds the same Recovery Intelligence Engine through one normalized data
-        store — connecting a new provider never changes what you see on the worklist.
-      </p>
+      {header}
 
-      <SectionCard sum spine="bg-oxy" className="mt-6">
-        <p className="text-sm leading-relaxed text-body">
-          This workspace is running on the <span className="font-medium text-ink">demo
-          data source</span>. Production connections go live through a wearable aggregator
-          (Terra or Junction) plus Apple Health for gait metrics — the connector scaffolding,
-          webhook endpoint, and normalized observation store are already in place.
+      <SectionCard
+        sum
+        spine="bg-brand"
+        className="rise mt-6"
+        style={{ '--rise-delay': '60ms' } as CSSProperties}
+      >
+        <p className="micro mb-1.5">Data pipeline</p>
+        <p className="text-[13.5px] font-medium leading-[1.55] text-body">
+          This workspace is running on the{' '}
+          <span className="font-semibold text-ink">demo data source</span>. Production connections
+          go live through a wearable aggregator (Terra or Junction) plus Apple Health for gait
+          metrics — the connector scaffolding, webhook endpoint, and normalized observation
+          store are already in place.
         </p>
       </SectionCard>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {providers.map((p) => (
-          <ProviderCard key={p.key} p={p} />
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {providers.map((p, i) => (
+          <ProviderCard key={p.key} p={p} index={i} />
         ))}
       </div>
 
-      <p className="mt-6 text-xs text-faint">
+      <p className="mt-6 border-t border-line pt-2 text-[11px] font-medium leading-[1.5] text-faint">
         Gait &amp; mobility metrics (walking speed, asymmetry, steadiness) are measured only by
         Apple devices — patient charts adapt automatically to what each device can provide.
       </p>

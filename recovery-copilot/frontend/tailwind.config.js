@@ -1,43 +1,59 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Geist', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Inter', 'Roboto', 'sans-serif'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
-      // Design tokens ported from orthopedic-demo/assets/styles.css
       colors: {
-        ink: '#0f1830',
-        body: '#39435c',
-        muted: '#6b7793',
-        faint: '#8a93a8',
-        line: '#eef1f7',
-        soft: '#f5f7fc',
+        // Semantic tokens → CSS variables (light/dark flip in index.css).
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        body: 'rgb(var(--body) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        faint: 'rgb(var(--faint) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        hairline: 'rgb(var(--hairline) / <alpha-value>)',
+        canvas: 'rgb(var(--canvas) / <alpha-value>)',
+        soft: 'rgb(var(--soft) / <alpha-value>)',
+        panel: 'rgb(var(--panel) / <alpha-value>)',
+        track: 'rgb(var(--track) / <alpha-value>)',
         oxy: { DEFAULT: '#2f80ed', light: '#56ccf2' },
+        brand: {
+          DEFAULT: 'rgb(var(--brand) / <alpha-value>)',
+          deep: 'rgb(var(--brand-deep) / <alpha-value>)',
+          light: 'rgb(var(--brand-light) / <alpha-value>)',
+          cyan: 'rgb(var(--brand-cyan) / <alpha-value>)',
+          tint: 'rgb(var(--brand-tint) / <alpha-value>)',
+          lavender: '#e6e9fb',
+          mint: '#a5e6d7',
+          periwinkle: '#a6ace6',
+        },
         risk: {
-          high: '#e5484d',
-          'high-bg': '#fdecec',
-          med: '#e07b00',
-          'med-bg': '#fff4e5',
-          missing: '#7c879e',
-          'missing-bg': '#f0f2f7',
-          low: '#0a9d57',
-          'low-bg': '#e7f8ef',
+          high: 'rgb(var(--risk-high) / <alpha-value>)',
+          'high-bg': 'rgb(var(--risk-high-bg) / <alpha-value>)',
+          med: 'rgb(var(--risk-med) / <alpha-value>)',
+          'med-bg': 'rgb(var(--risk-med-bg) / <alpha-value>)',
+          missing: 'rgb(var(--risk-missing) / <alpha-value>)',
+          'missing-bg': 'rgb(var(--risk-missing-bg) / <alpha-value>)',
+          low: 'rgb(var(--risk-low) / <alpha-value>)',
+          'low-bg': 'rgb(var(--risk-low-bg) / <alpha-value>)',
         },
       },
       borderRadius: {
-        card: '22px',
-        row: '16px',
-        btn: '14px',
+        card: '12px',
+        row: '10px',
+        btn: '9px',
       },
       boxShadow: {
-        card: '0 10px 26px rgba(20,30,60,.06)',
-        row: '0 6px 16px rgba(20,30,60,.05)',
-        lift: '0 12px 26px rgba(20,30,60,.12)',
-        glass: '0 14px 34px rgba(20,30,60,.16)',
-        'high-row': '0 8px 22px rgba(229,72,77,.16)',
-        segment: '0 3px 10px rgba(20,30,60,.12)',
+        card: 'none',
+        row: 'none',
+        lift: '0 8px 24px rgb(var(--shadow) / 0.18)',
+        glass: '0 12px 32px rgb(var(--shadow) / 0.22)',
+        'high-row': 'none',
+        segment: '0 1px 2px rgb(var(--shadow) / 0.12)',
       },
       keyframes: {
         rise: {
@@ -49,8 +65,8 @@ export default {
           to: { backgroundPosition: '900px 0' },
         },
         toastIn: {
-          from: { opacity: '0', transform: 'translateY(14px) scale(.97)' },
-          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+          from: { opacity: '0', transform: 'translateX(34px) translateY(-6px)' },
+          to: { opacity: '1', transform: 'none' },
         },
         modalIn: {
           from: { opacity: '0', transform: 'translateY(8px) scale(.97)' },
@@ -61,13 +77,15 @@ export default {
           to: { opacity: '1' },
         },
       },
+      transitionTimingFunction: {
+        spring: 'cubic-bezier(.34,1.56,.64,1)',
+        smooth: 'cubic-bezier(.22,.61,.36,1)',
+      },
       animation: {
-        // 'backwards' (not 'both'): a lingering identity transform would turn
-        // every risen card into a containing block for fixed-position children.
-        rise: 'rise .4s cubic-bezier(.22,.9,.35,1) backwards',
+        rise: 'rise .5s cubic-bezier(.22,.61,.36,1) backwards',
         shimmer: 'shimmer 1.6s linear infinite',
-        toastIn: 'toastIn .25s cubic-bezier(.22,.9,.35,1) both',
-        modalIn: 'modalIn .2s cubic-bezier(.22,.9,.35,1) both',
+        toastIn: 'toastIn .42s cubic-bezier(.34,1.56,.64,1) both',
+        modalIn: 'modalIn .22s cubic-bezier(.34,1.56,.64,1) both',
         fadeIn: 'fadeIn .2s ease-out both',
       },
     },

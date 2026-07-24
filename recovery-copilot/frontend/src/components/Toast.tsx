@@ -17,31 +17,43 @@ export function useToast() {
 
 const ICON: Record<ToastKind, ReactNode> = {
   success: <CircleCheck size={15} className="text-risk-low" />,
-  info: <Info size={15} className="text-oxy" />,
-  warning: <TriangleAlert size={15} className="text-risk-med" />,
+  info: <Info size={15} className="text-brand" />,
+  warning: <TriangleAlert size={15} className="text-risk-high" />,
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const nextId = useRef(1)
 
-  const push = useCallback((text: string, kind: ToastKind = 'success') => {
-    const id = nextId.current++
-    setToasts((t) => [...t, { id, kind, text }])
-    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800)
+  const dismiss = useCallback((id: number) => {
+    setToasts((t) => t.filter((x) => x.id !== id))
   }, [])
+
+  const push = useCallback(
+    (text: string, kind: ToastKind = 'success') => {
+      const id = nextId.current++
+      setToasts((t) => [...t, { id, kind, text }])
+      window.setTimeout(() => dismiss(id), 3800)
+    },
+    [dismiss],
+  )
 
   return (
     <ToastContext.Provider value={push}>
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed bottom-6 left-1/2 z-[100] flex w-full max-w-sm -translate-x-1/2 flex-col items-center gap-2 px-4"
+        className="pointer-events-none fixed right-[18px] top-[18px] z-[100] flex w-full max-w-[340px] flex-col items-end gap-2.5"
       >
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="glass pointer-events-auto flex w-auto animate-toastIn items-center gap-2.5 rounded-2xl px-4 py-2.5 text-[13px] font-bold text-ink shadow-glass"
+            onClick={() => dismiss(toast.id)}
+            className={`pointer-events-auto flex w-auto animate-toastIn cursor-pointer items-center gap-2.5 rounded-card border bg-panel px-4 py-3 text-[13px] font-medium leading-[1.4] shadow-glass ${
+              toast.kind === 'warning'
+                ? 'border-risk-high/30 text-risk-high'
+                : 'border-line text-ink'
+            }`}
           >
             {ICON[toast.kind]}
             {toast.text}

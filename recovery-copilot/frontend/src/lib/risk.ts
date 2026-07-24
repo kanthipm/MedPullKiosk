@@ -9,7 +9,7 @@ export const PRIORITY = {
   high: {
     label: 'Needs review',
     dot: 'bg-risk-high',
-    pill: 'bg-risk-high-bg text-risk-high shadow-[0_0_0_1.5px_rgba(229,72,77,.28),0_6px_16px_rgba(229,72,77,.2)]',
+    pill: 'bg-risk-high-bg text-risk-high',
     spine: 'bg-risk-high',
     order: 0,
   },
@@ -46,7 +46,7 @@ export const TRAJECTORY_LABEL: Record<TrajectoryState, string> = {
 export const URGENCY = {
   today: { label: 'Today', pill: 'bg-risk-high-bg text-risk-high' },
   this_week: { label: 'This week', pill: 'bg-risk-med-bg text-risk-med' },
-  routine: { label: 'Routine', pill: 'bg-risk-missing-bg text-muted' },
+  routine: { label: 'Routine', pill: 'bg-risk-missing-bg text-risk-missing' },
 } as const satisfies Record<Urgency, unknown>
 
 export const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
@@ -61,5 +61,5 @@ export const METRIC_STATUS = {
   flag: { label: 'Flag', pill: 'bg-risk-high-bg text-risk-high', spine: 'bg-risk-high' },
   watch: { label: 'Watch', pill: 'bg-risk-med-bg text-risk-med', spine: 'bg-risk-med' },
   ok: { label: 'OK', pill: 'bg-risk-low-bg text-risk-low', spine: 'bg-risk-low' },
-  nodata: { label: 'No data', pill: 'bg-risk-missing-bg text-risk-missing', spine: 'bg-line' },
+  nodata: { label: 'No data', pill: 'bg-risk-missing-bg text-risk-missing', spine: 'bg-risk-missing' },
 } as const satisfies Record<MetricStatus, unknown>

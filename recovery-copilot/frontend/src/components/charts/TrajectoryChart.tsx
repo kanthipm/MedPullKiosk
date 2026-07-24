@@ -31,12 +31,12 @@ export default function TrajectoryChart({ actual, expected, changePointDay }: Pr
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-4 text-xs text-muted">
+      <div className="mb-2 flex items-center gap-4 text-[11.5px] font-medium text-muted">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded bg-blue-600" /> Actual
+          <span className="h-0.5 w-4 rounded bg-brand" /> Actual
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-4 rounded-sm bg-slate-200" /> Expected range
+          <span className="h-2.5 w-4 rounded-sm bg-line" /> Expected range
         </span>
       </div>
       <div className="h-40">
@@ -46,7 +46,7 @@ export default function TrajectoryChart({ actual, expected, changePointDay }: Pr
               dataKey="day"
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 11, fill: '#8a93a8' }}
+              tick={{ fontSize: 11, fill: 'rgb(var(--faint))' }}
               tickFormatter={(d: number) => `Day ${d}`}
               interval="preserveStartEnd"
             />
@@ -54,14 +54,14 @@ export default function TrajectoryChart({ actual, expected, changePointDay }: Pr
             <Area
               dataKey="band"
               stroke="none"
-              fill="#e4e9f4"
-              fillOpacity={0.6}
+              fill="rgb(var(--line))"
+              fillOpacity={0.85}
               isAnimationActive={false}
               connectNulls
             />
             <Line
               dataKey="mid"
-              stroke="#8a93a8"
+              stroke="rgb(var(--faint))"
               strokeWidth={1}
               strokeDasharray="4 3"
               dot={false}
@@ -70,7 +70,7 @@ export default function TrajectoryChart({ actual, expected, changePointDay }: Pr
             />
             <Line
               dataKey="actual"
-              stroke="#2f80ed"
+              stroke="rgb(var(--brand))"
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}
@@ -79,26 +79,32 @@ export default function TrajectoryChart({ actual, expected, changePointDay }: Pr
             {changePointDay != null && (
               <ReferenceLine
                 x={changePointDay}
-                stroke="#e07b00"
+                stroke="rgb(var(--risk-med))"
                 strokeDasharray="4 3"
-                label={{ value: 'Change', position: 'top', fontSize: 10, fill: '#e07b00' }}
+                label={{
+                  value: 'Change',
+                  position: 'top',
+                  fontSize: 10,
+                  fontWeight: 500,
+                  fill: 'rgb(var(--risk-med))',
+                }}
               />
             )}
             <Tooltip
-              cursor={{ stroke: '#c8d0e0', strokeWidth: 1 }}
+              cursor={{ stroke: 'rgb(var(--line))', strokeWidth: 1 }}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null
                 const row = payload[0].payload as { actual: number | null; mid: number | null }
                 return (
-                  <div className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs shadow-card">
-                    <div className="text-faint">Post-op day {label}</div>
+                  <div className="rounded-btn border border-line bg-panel px-2.5 py-1.5 text-xs shadow-lift">
+                    <div className="text-[11px] font-medium text-faint">Post-op day {label}</div>
                     {row.actual != null && (
-                      <div className="font-medium tabular-nums text-body">
+                      <div className="font-mono font-medium tabular-nums text-ink">
                         Actual {Math.round(row.actual * 100)}%
                       </div>
                     )}
                     {row.mid != null && (
-                      <div className="tabular-nums text-muted">
+                      <div className="font-mono font-medium tabular-nums text-muted">
                         Expected {Math.round(row.mid * 100)}%
                       </div>
                     )}

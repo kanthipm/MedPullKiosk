@@ -14,6 +14,18 @@
         "8000"
       ],
       "port": 8000
+    },
+    {
+      "name": "recovery-copilot-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "recovery-copilot/frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "orthopedic-demo",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8901", "--directory", "orthopedic-demo"],
+      "port": 8901
     }
   ]
 }

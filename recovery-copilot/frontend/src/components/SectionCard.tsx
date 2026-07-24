@@ -1,8 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 
-/** White card in the demo house style: 22px radius, soft layered shadow, and
- *  an optional colored spine — the one place color enters a card. `sum` swaps
- *  to the demo's gradient "quick summary" treatment for AI narrative cards. */
+/** Instrument panel — hairline border, flat panel surface, theme-aware.
+ *  `sum` keeps a quiet brand tint for AI narrative panels. */
 export default function SectionCard({
   spine,
   title,
@@ -13,7 +12,7 @@ export default function SectionCard({
   className = '',
   style,
 }: {
-  spine?: string // tailwind bg-* class
+  spine?: string
   title?: string
   eyebrow?: ReactNode
   aside?: ReactNode
@@ -23,21 +22,21 @@ export default function SectionCard({
   style?: CSSProperties
 }) {
   const surface = sum
-    ? 'bg-gradient-to-br from-white to-[#f3f7ff] shadow-[0_12px_30px_rgba(20,30,60,.09)]'
-    : 'bg-white shadow-card'
+    ? 'bg-gradient-to-b from-panel to-[rgb(var(--sum-end))]'
+    : 'bg-panel'
   return (
     <section
       style={style}
-      className={`relative overflow-hidden rounded-card border border-ink/[.04] ${surface} ${className}`}
+      className={`relative overflow-hidden rounded-card border border-line ${surface} ${className}`}
     >
-      {spine && <span aria-hidden className={`absolute inset-y-0 left-0 w-[5px] ${spine}`} />}
-      <div className={`p-5 ${spine ? 'pl-6' : ''}`}>
+      {spine && <span aria-hidden className={`absolute inset-y-0 left-0 w-[2px] ${spine}`} />}
+      <div className={`p-4 ${spine ? 'pl-[18px]' : ''}`}>
         {(title || eyebrow || aside) && (
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <div>
               {eyebrow}
               {title && (
-                <h2 className="text-[15px] font-black tracking-tight text-ink">{title}</h2>
+                <h2 className="text-[13px] font-semibold tracking-[-.01em] text-ink">{title}</h2>
               )}
             </div>
             {aside}
