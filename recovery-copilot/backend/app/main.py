@@ -6,6 +6,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import api_router
+from app.aws import storage
+from app.aws.config import aws_settings
+from app.aws.middleware import S3SqliteMiddleware
 from app.config import PROJECT_DIR
 
 app = FastAPI(title="MedPull Recovery Copilot", version="1.0.0")
@@ -17,6 +20,12 @@ def warm_caches() -> None:
     first page load doesn't wait on a cold LLM."""
     import logging
     import threading
+
+    if not aws_settings.warm_caches_on_startup:
+        # Off on Lambda: it would re-run per cold start and race other
+        # instances. The deploy seeds and warms the database once instead.
+        logging.getLogger(__name__).info("Startup cache warming disabled")
+        return
 
     def _warm() -> None:
         try:
@@ -47,12 +56,20 @@ def warm_caches() -> None:
     threading.Thread(target=_warm, name="insight-warmer", daemon=True).start()
 
 # Dev convenience: the Vite dev server proxies /api, but allow direct calls too.
+# On AWS, CloudFront serves the SPA and the API from one origin, so no request
+# is ever cross-origin and this middleware never fires.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Keeps the SQLite file in /tmp in sync with the durable copy in S3. Inert
+# unless S3_BUCKET is set, so a local run is unaffected.
+if storage.enabled():
+    storage.install_change_tracking()
+    app.add_middleware(S3SqliteMiddleware)
 
 app.include_router(api_router)
 

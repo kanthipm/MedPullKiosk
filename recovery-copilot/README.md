@@ -30,7 +30,20 @@ make build && make run     # everything on http://localhost:8000
 ```
 
 `make test` runs the backend suite (seed determinism, engine golden tiers,
-guardrail enforcement, API contracts, connector idempotency).
+guardrail enforcement, API contracts, connector idempotency, AWS persistence).
+
+## Deploying
+
+```bash
+make deploy      # or: ./infra/deploy.sh
+```
+
+Puts the backend on AWS Lambda behind CloudFront, sized to sit inside the
+always-free tier — steady-state cost is a few cents a month. Runbook, cost
+breakdown and the write-concurrency design: **[infra/README.md](infra/README.md)**.
+
+The application code is unchanged by this: `app/aws/` disables itself when
+`S3_BUCKET` is unset, so `make dev` behaves exactly as it always did.
 
 ### LLM setup
 
@@ -96,6 +109,9 @@ model.
                     └────────────────────────────────────────────┘
 ```
 
+- **infra/** — the AWS deployment: one CloudFormation stack (Lambda + Function
+  URL + CloudFront + S3 + Parameter Store) and the scripts that build and ship
+  it. The Lambda adapters live in `backend/app/aws/`.
 - **backend/** — FastAPI + SQLAlchemy 2 + SQLite. numpy/scipy/pandas power the
   analytics; the engine stores one `RiskAssessment` per run and recomputes
   lazily when the observation set changes (input-hash staleness check).
