@@ -1,4 +1,5 @@
-.PHONY: setup seed dev dev-backend dev-frontend build run test lint clean
+.PHONY: setup seed dev dev-backend dev-frontend build run test lint clean \
+        deploy deploy-backend reseed destroy
 
 setup: ## Install backend (uv) and frontend (npm) dependencies
 	cd backend && uv sync
@@ -30,5 +31,17 @@ test: ## Backend test suite
 lint:
 	cd frontend && npm run lint
 
+deploy: ## Deploy to AWS (see infra/README.md)
+	./infra/deploy.sh
+
+deploy-backend: ## Deploy the API only, skipping the frontend build
+	./infra/deploy.sh --backend-only
+
+reseed: ## Rebuild the demo database on AWS (dates shift to today)
+	./infra/deploy.sh --reseed
+
+destroy: ## Tear the AWS stack down
+	./infra/destroy.sh
+
 clean:
-	rm -rf backend/data/*.db frontend/dist
+	rm -rf backend/data/*.db frontend/dist infra/.build

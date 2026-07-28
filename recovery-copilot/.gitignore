@@ -9,3 +9,4 @@ backend/data/*.db
 backend/data/*.db-journal
 .env
 .DS_Store
+infra/.build/

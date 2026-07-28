@@ -19,6 +19,13 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "ruff>=0.8",
+    {include-group = "aws"},
+]
+# Only needed to run on Lambda. boto3 is *not* bundled into the deployment
+# artifact — the Python runtime already ships it — but the tests need it here.
+aws = [
+    "mangum>=0.19",
+    "boto3>=1.35",
 ]
 
 [tool.pytest.ini_options]

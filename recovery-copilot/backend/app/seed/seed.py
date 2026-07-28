@@ -156,11 +156,12 @@ def warm_engine_and_insights(db: Session) -> None:
     print("  insights: caches warmed")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--reset", action="store_true", help="drop and recreate the schema first")
-    args = parser.parse_args()
+def run_seed(reset: bool = False) -> dict[str, int]:
+    """Seed the configured database and warm its caches. Returns the row counts.
 
+    Split out of main() so the Lambda seed action can drive it directly instead
+    of faking command-line arguments.
+    """
     if settings.database_url.startswith("sqlite:///"):
         from pathlib import Path
 
@@ -168,7 +169,7 @@ def main() -> None:
             parents=True, exist_ok=True
         )
 
-    if args.reset:
+    if reset:
         Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
@@ -183,8 +184,16 @@ def main() -> None:
         except ImportError as e:
             print(f"  (engine/insights not available yet: {e})")
         print("Seed complete.")
+        return counts
     finally:
         db.close()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--reset", action="store_true", help="drop and recreate the schema first")
+    args = parser.parse_args()
+    run_seed(reset=args.reset)
 
 
 if __name__ == "__main__":
