@@ -7,7 +7,9 @@ patched environment rather than relying on module state from another test.
 
 import importlib
 import json
+import sqlite3
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -18,19 +20,31 @@ from tests.test_aws_storage import FakeS3
 
 
 def _import_handler(monkeypatch, tmp_path, *, db_dir="/tmp", secret=""):
-    """Import app.lambda_handler with AWS wiring pointed at a fake S3."""
+    """Import app.lambda_handler with AWS wiring pointed at a fake S3.
+
+    app.main and app.database are rebuilt too, not just app.lambda_handler:
+    both are import-time wiring (the middleware guard, the engine binding), and
+    an earlier test importing them without S3 configured would otherwise leave
+    a middleware-less app cached in sys.modules — these tests would then pass
+    against an app that never touches the persistence layer at all.
+    """
     fake = FakeS3()
     db_path = f"{db_dir}/recovery-copilot-handler-test.db"
+    if db_dir == "/tmp":  # a leftover from a previous run must not fake a hydrate
+        Path(db_path).unlink(missing_ok=True)
 
     monkeypatch.setattr(settings, "database_url", f"sqlite:///{db_path}")
     monkeypatch.setattr(aws_settings, "s3_bucket", "test-bucket")
     monkeypatch.setattr(aws_settings, "origin_verify_secret", secret)
     monkeypatch.setattr(storage, "client", lambda: fake)
     monkeypatch.setattr(storage, "_client", fake)
-    monkeypatch.setattr(storage, "_dispose_engine", lambda: None)
     monkeypatch.setattr(storage, "_state", {"etag": None, "checked_at": 0.0, "dirty": False})
+    # Change tracking must re-hook onto the freshly bound sessionmaker below,
+    # not skip because an earlier test hooked the suite-wide one.
+    monkeypatch.delattr(storage.install_change_tracking, "_installed", raising=False)
 
-    sys.modules.pop("app.lambda_handler", None)
+    for mod in ("app.lambda_handler", "app.main", "app.database"):
+        sys.modules.pop(mod, None)
     module = importlib.import_module("app.lambda_handler")
     return module, fake
 
@@ -79,7 +93,8 @@ def test_serves_an_http_event(monkeypatch, tmp_path):
     handler, fake = _import_handler(monkeypatch, tmp_path)
     # The cold-start hydrate found no object; seed the bucket the way the deploy
     # does, then serve a request off it.
-    fake.objects[aws_settings.s3_db_key] = _seeded_db_bytes()
+    seeded = _seeded_db_bytes()
+    fake.objects[aws_settings.s3_db_key] = seeded
     fake.etags[aws_settings.s3_db_key] = '"seeded"'
 
     response = handler.handler(_url_event(), None)
@@ -90,6 +105,54 @@ def test_serves_an_http_event(monkeypatch, tmp_path):
     assert payload["db_ok"] is True
     # No key configured in the test env, so the deterministic renderer is active.
     assert payload["llm_provider"] == "fallback"
+    # And the request really was served off the hydrated copy: the read-path
+    # hydrate downloaded the seeded bytes into the path the engine is bound to.
+    assert aws_settings.local_db_path.read_bytes() == seeded
+    conn = sqlite3.connect(aws_settings.local_db_path)
+    try:
+        assert conn.execute("SELECT v FROM hydrate_marker").fetchone()[0] == "from-s3"
+    finally:
+        conn.close()
+
+
+def test_app_builds_with_the_s3_middleware_wired(monkeypatch, tmp_path):
+    """The whole persistence design hangs on app.main installing the middleware
+    when storage is enabled. A refactor that drops or reorders that guard must
+    not ship behind a green suite."""
+    handler, _ = _import_handler(monkeypatch, tmp_path)
+    from app.aws.middleware import S3SqliteMiddleware
+
+    assert any(m.cls is S3SqliteMiddleware for m in handler.app.user_middleware)
+
+
+def test_mutating_request_locks_and_uploads_through_the_real_app(monkeypatch, tmp_path):
+    """A POST through the real Mangum+FastAPI stack must take the S3 write lock,
+    release it, and land its commit durably in the bucket — the property the
+    whole deployment exists to provide."""
+    handler, fake = _import_handler(monkeypatch, tmp_path)
+    seeded = _seeded_db_bytes()
+    fake.objects[aws_settings.s3_db_key] = seeded
+    fake.etags[aws_settings.s3_db_key] = '"seeded"'
+
+    lock_taken = {"during_request": False}
+    orig_put = fake.put_object
+
+    def spying_put(Bucket, Key, Body, **kwargs):  # noqa: N803 — boto3 casing
+        if Key == aws_settings.s3_lock_key:
+            lock_taken["during_request"] = True
+        return orig_put(Bucket=Bucket, Key=Key, Body=Body, **kwargs)
+
+    monkeypatch.setattr(fake, "put_object", spying_put)
+
+    response = handler.handler(
+        _url_event(method="POST", path="/api/notifications/read-all"), None
+    )
+
+    assert response["statusCode"] == 200
+    assert lock_taken["during_request"], "mutating request never took the write lock"
+    assert aws_settings.s3_lock_key not in fake.objects  # and released it
+    # The commit was uploaded: the object was rewritten under the lock.
+    assert fake.etags[aws_settings.s3_db_key] != '"seeded"'
 
 
 def test_origin_verification_rejects_a_direct_caller(monkeypatch, tmp_path):
@@ -140,12 +203,27 @@ def test_unknown_admin_action_is_reported(monkeypatch, tmp_path):
 
 
 def _seeded_db_bytes() -> bytes:
-    """Bytes of a real SQLite file with the app's schema, for /api/health."""
-    import sqlite3
+    """Bytes of a real SQLite file with the app's schema plus a marker row that
+    lets a test prove the hydrated copy is what actually got served."""
     import tempfile
-    from pathlib import Path
+
+    from sqlalchemy import create_engine
+
+    # The metadata hangs off the models, which registered on the Base that was
+    # live at conftest import — reaching it through a model class keeps this
+    # correct even after app.database has been rebuilt by _import_handler.
+    from app.models.patient import Patient
 
     with tempfile.TemporaryDirectory() as d:
         path = Path(d) / "seed.db"
-        sqlite3.connect(path).close()
+        engine = create_engine(f"sqlite:///{path}")
+        Patient.metadata.create_all(engine)
+        engine.dispose()
+        conn = sqlite3.connect(path)
+        try:
+            conn.execute("CREATE TABLE hydrate_marker (v TEXT)")
+            conn.execute("INSERT INTO hydrate_marker VALUES ('from-s3')")
+            conn.commit()
+        finally:
+            conn.close()
         return path.read_bytes()

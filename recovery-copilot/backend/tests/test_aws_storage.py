@@ -314,6 +314,19 @@ def _app_with_middleware():
         _commit(b"partial-work")
         raise RuntimeError("committed, then blew up")
 
+    @app.post("/write-with-interloper")
+    def write_with_interloper() -> dict:
+        # Simulates a read path on another instance landing its derived
+        # write-back between this request's locked hydrate and its upload —
+        # GETs never take the lock, so this interleaving is legal.
+        storage.client().put_object(
+            Bucket="test-bucket",
+            Key=aws_settings.s3_db_key,
+            Body=b"interloper-derived-write",
+        )
+        _commit(b"the-provider-mutation")
+        return {"ok": True}
+
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -364,6 +377,48 @@ def test_middleware_returns_503_when_the_lock_is_held(s3, monkeypatch):
 def test_middleware_is_bypassed_entirely_when_disabled(monkeypatch):
     monkeypatch.setattr(aws_settings, "s3_bucket", "")
     assert _app_with_middleware().get("/read").status_code == 200
+
+
+def test_middleware_read_write_back_must_lose_to_a_newer_mutation(s3):
+    """Pins conditional=True on the read path. A derived write-back computed
+    from a stale base must never clobber a mutation another instance committed
+    in the meantime — flipping the flag to an unconditional upload is silent
+    loss of provider-authored data, and this test is what catches it."""
+    s3.put_object("test-bucket", aws_settings.s3_db_key, b"v1")
+    storage.hydrate()
+    client = _app_with_middleware()
+    # Another instance commits a provider mutation after our hydrate.
+    s3.put_object("test-bucket", aws_settings.s3_db_key, b"provider-mutation")
+
+    assert client.get("/read-that-writes").status_code == 200
+    assert s3.objects[aws_settings.s3_db_key] == b"provider-mutation"
+
+
+def test_middleware_write_upload_must_beat_an_interleaved_derived_write(s3):
+    """Pins conditional=False on the mutation path. The locked upload must win
+    over a read path's write-back that slipped in mid-request — a conditional
+    upload here would 412, be silently discarded, and hand the client a 200
+    for a mutation that never became durable."""
+    s3.put_object("test-bucket", aws_settings.s3_db_key, b"v1")
+
+    assert _app_with_middleware().post("/write-with-interloper").status_code == 200
+    assert s3.objects[aws_settings.s3_db_key] == b"the-provider-mutation"
+    assert aws_settings.s3_lock_key not in s3.objects  # released
+
+
+def test_middleware_read_serves_the_response_despite_a_failed_write_back(s3, monkeypatch):
+    """Pins the try/except around the read path's persist: a transient S3
+    error while writing back regenerable rows must never turn an
+    already-computed 200 into a 500."""
+    s3.put_object("test-bucket", aws_settings.s3_db_key, b"v1")
+    storage.hydrate()
+    client = _app_with_middleware()
+
+    def boom(**kwargs):
+        raise FakeS3._error("AccessDenied", 403, "PutObject")
+
+    monkeypatch.setattr(s3, "put_object", boom)
+    assert client.get("/read-that-writes").status_code == 200
 
 
 # --------------------------------------------------------------------------
