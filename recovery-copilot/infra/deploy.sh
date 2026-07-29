@@ -90,9 +90,11 @@ else
   aws_ s3api put-public-access-block --bucket "$ARTIFACT_BUCKET" \
     --public-access-block-configuration \
     "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-  # Old zips are pure cost; nothing reads them once the function is updated.
+  # Old zips are near-pure cost — but a stack rollback re-points the function
+  # at the previous zip, so keep 90 days of them (a few cents) rather than 30
+  # and risk UPDATE_ROLLBACK_FAILED on a stack that hasn't shipped in a month.
   aws_ s3api put-bucket-lifecycle-configuration --bucket "$ARTIFACT_BUCKET" \
-    --lifecycle-configuration '{"Rules":[{"ID":"expire-old-artifacts","Status":"Enabled","Prefix":"lambda/","Expiration":{"Days":30}}]}'
+    --lifecycle-configuration '{"Rules":[{"ID":"expire-old-artifacts","Status":"Enabled","Prefix":"lambda/","Expiration":{"Days":90}}]}'
 fi
 
 # --------------------------------------------------------------------------
@@ -206,18 +208,32 @@ aws_ s3api head-object --bucket "$DATA_BUCKET" --key db/recovery.db >/dev/null 2
 if ! $DB_EXISTS || $RESEED; then
   $DB_EXISTS && info "reseeding on request" || info "no database yet — seeding"
   info "this warms every insight through Groq and takes a few minutes"
-  RESPONSE="$HERE/.build/seed-response.json"
+  # Async invoke + polling, not a synchronous wait: holding one HTTP response
+  # open for minutes can hang the CLI long past its read timeout on some
+  # networks, and the seed's outcome is visible in S3 anyway — the function's
+  # last act is uploading the database.
+  BEFORE_MODIFIED="$(aws_ s3api head-object --bucket "$DATA_BUCKET" --key db/recovery.db \
+    --query 'LastModified' --output text 2>/dev/null || true)"
   aws_ lambda invoke \
     --function-name "$SEED_FN" \
-    --cli-read-timeout 900 \
+    --invocation-type Event \
     --payload '{"action":"seed","reset":true}' \
     --cli-binary-format raw-in-base64-out \
-    "$RESPONSE" >/dev/null
-  if grep -q '"ok": *true' "$RESPONSE"; then
-    info "seeded: $(cat "$RESPONSE")"
-  else
-    die "seeding failed: $(cat "$RESPONSE")"
-  fi
+    /dev/null >/dev/null
+  SEED_OK=false
+  for _ in $(seq 1 60); do  # up to 15 minutes — the seed function's timeout
+    sleep 15
+    NOW_MODIFIED="$(aws_ s3api head-object --bucket "$DATA_BUCKET" --key db/recovery.db \
+      --query 'LastModified' --output text 2>/dev/null || true)"
+    if [ -n "$NOW_MODIFIED" ] && [ "$NOW_MODIFIED" != "$BEFORE_MODIFIED" ]; then
+      SEED_OK=true
+      break
+    fi
+    printf '.'
+  done
+  echo
+  $SEED_OK && info "seeded — the database object landed in S3" \
+    || die "seed did not finish in 15 minutes. Check: aws logs tail /aws/lambda/$SEED_FN"
 else
   info "database already present — pass --reseed to rebuild it"
 fi

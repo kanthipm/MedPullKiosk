@@ -217,9 +217,16 @@ and `backend/tests/test_lambda_handler.py`.
 
 ## Troubleshooting
 
-**`/api/health` returns 403.** CloudFront and the function disagree about the
-origin secret. Redeploy — `deploy.sh` reads it from Parameter Store, so both
-sides end up consistent.
+**`/api/health` returns 403.** Two different 403s, told apart by the body:
+
+- *Lambda's own* `{"Message":"Forbidden..."}` (an `x-amzn-ErrorType` header is
+  present): the Function URL's resource policy is incomplete. URLs created
+  since October 2025 need `lambda:InvokeFunction` (scoped by
+  `lambda:InvokedViaFunctionUrl`) **in addition to** `lambda:InvokeFunctionUrl`;
+  the template grants both. Redeploying the stack restores them.
+- *The app's* `{"detail":"Direct access is not permitted."}`: CloudFront and
+  the function disagree about the origin secret. Redeploy — `deploy.sh` reads
+  it from Parameter Store, so both sides end up consistent.
 
 **`/api/health` reports `db_ok: false`.** The database object is missing. Run
 `./infra/deploy.sh --reseed`.

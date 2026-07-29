@@ -98,6 +98,13 @@ Resources:
             Prefix: db/
             NoncurrentVersionExpirationInDays: 7
             ExpiredObjectDeleteMarker: true
+          # Every SPA deploy replaces the previous build under web/; without
+          # this rule those old bundles pile up as noncurrent versions forever.
+          - Id: expire-old-spa-versions
+            Status: Enabled
+            Prefix: web/
+            NoncurrentVersionExpirationInDays: 7
+            ExpiredObjectDeleteMarker: true
           - Id: abort-incomplete-uploads
             Status: Enabled
             AbortIncompleteMultipartUpload:
@@ -279,6 +286,18 @@ Resources:
       Principal: "*"
       FunctionUrlAuthType: NONE
 
+  # Function URLs created since October 2025 also require lambda:InvokeFunction
+  # in the resource policy — InvokeFunctionUrl alone answers every request with
+  # the service's own 403 before the code ever runs. InvokedViaFunctionUrl
+  # scopes the grant to URL calls, so the Invoke API itself stays closed.
+  ApiFunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiFunction
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
   # ------------------------------------------------------------------
   # CloudFront: one origin for the SPA and the API, so nothing is cross-origin
   # ------------------------------------------------------------------
@@ -297,9 +316,10 @@ Resources:
           // not objects in the bucket. Rewriting here rather than using
           // CustomErrorResponses matters: those apply to every behaviour, so
           // they would also turn a genuine API 404 into a 200 page of HTML.
-          if (uri.endsWith('/')) {
-            event.request.uri = uri + 'index.html';
-          } else if (uri.split('/').pop().indexOf('.') === -1) {
+          // Trailing-slash routes (/worklist/) get the same treatment: the
+          // bucket holds exactly one index.html, at the root, so appending
+          // "index.html" to the path would 404 everywhere except /.
+          if (uri.endsWith('/') || uri.split('/').pop().indexOf('.') === -1) {
             event.request.uri = '/index.html';
           }
           return event.request;
@@ -376,7 +396,9 @@ Resources:
     Condition: HasBudgetEmail
     Properties:
       Budget:
-        BudgetName: !Sub "${AWS::StackName}-monthly"
+        # No explicit BudgetName: changing the alert email replaces the budget,
+        # and replacement of a fixed-name budget collides with itself (create
+        # runs before delete). A generated name lets the swap succeed.
         BudgetType: COST
         TimeUnit: MONTHLY
         BudgetLimit:
