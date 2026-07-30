@@ -132,9 +132,11 @@ export default function RtmReadinessCard({
         <div className="flex items-baseline justify-between">
           <span className="micro">Monitoring progress</span>
           <span className="font-mono text-[13px] font-medium tabular-nums text-ink">
-            {rtm.monitoring.enrolled
-              ? `${Math.min(rtm.monitoring.days, rtm.monitoring.target)} / ${rtm.monitoring.target} days`
-              : `— / ${rtm.monitoring.target} days`}
+            {!rtm.monitoring.enrolled
+              ? `— / ${rtm.monitoring.target} days`
+              : rtm.monitoring.eligible
+                ? 'Complete'
+                : `${Math.min(rtm.monitoring.days, rtm.monitoring.target)} / ${rtm.monitoring.target} days`}
           </span>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line">

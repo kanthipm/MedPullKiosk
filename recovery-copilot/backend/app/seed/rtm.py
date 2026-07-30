@@ -1,6 +1,8 @@
 """Deterministic RTM demo state (SPEC.md §1/§6/§8) — enrollment, provider
-time, interactions, documentation. New tables only: nothing here may touch
-observations, adherence, or anything else that feeds the pinned golden tiers.
+time, interactions, documentation. Nothing here may change observation VALUES,
+adherence, or anything else that feeds the pinned golden tiers — the one
+observation write allowed is flipping the qualifies_for_rtm flag (metadata the
+engine never reads) to paint each patient's hardcoded monitoring-day count.
 
 Every timestamp derives from `today`, so readiness is stable regardless of
 seed date. The roster deliberately covers every compliance stage:
@@ -50,6 +52,11 @@ class RtmSpec:
     pathway: str
     time_logs: list[TimeEntry] = field(default_factory=list)
     approve_docs: bool = False
+    # Hardcoded demo RTM monitoring days: how many of the most recent days are
+    # flagged qualifies_for_rtm. Mock data never qualifies on its own (that is
+    # the defect-#4 fix), so the demo paints each patient's billing progress
+    # explicitly here — varied, story-consistent, and capped by enrollment.
+    monitoring_days: int = 0
 
 
 RTM_STATES: dict[str, RtmSpec] = {
@@ -60,6 +67,7 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(3, TimeLogActivity.CHART_REVIEW, 6, note="Reviewed pain trend + PT adherence"),
             TimeEntry(1, TimeLogActivity.MESSAGING, 3, note="Message re: swelling protocol"),
         ],
+        monitoring_days=8,
     ),
     "linda": RtmSpec(
         11, 11, 10, "Rotator cuff standard recovery",
@@ -67,6 +75,7 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(4, TimeLogActivity.CHART_REVIEW, 5, note="Sleep disruption review"),
             TimeEntry(2, TimeLogActivity.MESSAGING, 3, note="Message re: sling positioning"),
         ],
+        monitoring_days=9,
     ),
     "robert": RtmSpec(
         7, 6, None, "Lumbar decompression recovery",
@@ -80,6 +89,7 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(4, TimeLogActivity.CHART_REVIEW, 6, note="Gait metrics review"),
             TimeEntry(1, TimeLogActivity.DOCUMENTATION, 4, note="Monthly documentation prep"),
         ],
+        monitoring_days=16,
     ),
     "aisha": RtmSpec(
         16, 16, 15, "THA standard recovery",
@@ -89,10 +99,14 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(3, TimeLogActivity.CHART_REVIEW, 6, note="Deviation follow-up"),
             TimeEntry(1, TimeLogActivity.CARE_COORDINATION, 4, note="PT coordination"),
         ],
+        monitoring_days=13,
     ),
     "priya": RtmSpec(
         10, 10, 9, "THA standard recovery",
         [TimeEntry(5, TimeLogActivity.CHART_REVIEW, 5, note="Missing-data outreach review")],
+        # Her generators leave a 9-day dead zone before yesterday — one lone
+        # qualifying day is the whole "device gap drives outreach" story.
+        monitoring_days=1,
     ),
     "grace": RtmSpec(
         3, None, None, "THA standard recovery",
@@ -108,6 +122,7 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(2, TimeLogActivity.DOCUMENTATION, 10, note="Monthly summary review"),
         ],
         approve_docs=True,
+        monitoring_days=16,
     ),
     "james": RtmSpec(
         29, 29, 28, "TKA standard recovery",
@@ -117,6 +132,7 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(4, TimeLogActivity.CHART_REVIEW, 8, note="Trend review"),
         ],
         approve_docs=True,
+        monitoring_days=16,
     ),
     "elena": RtmSpec(
         20, 20, 19, "Meniscus repair recovery",
@@ -124,6 +140,7 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(8, TimeLogActivity.CHART_REVIEW, 4, note="Early mobility review"),
             TimeEntry(3, TimeLogActivity.CALL, 8, interactive=True, note="Check-in call — progressing"),
         ],
+        monitoring_days=11,
     ),
 }
 
@@ -132,6 +149,42 @@ _INTERACTION_FOR = {
     TimeLogActivity.MESSAGING: InteractionKind.MESSAGE,
     TimeLogActivity.CARE_COORDINATION: InteractionKind.UPDATE_PLAN,
 }
+
+
+def _mark_qualifying_days(
+    db: Session, patient_id: str, today: date, enrolled_on: date, monitoring_days: int
+) -> None:
+    """Flag the N most recent days' observations as RTM-qualifying.
+
+    Demo paintwork only — in production, qualification is decided at
+    normalize() from the source (patient-reported / signed device data), and
+    mock rows are structurally non-qualifying. Touches only the boolean flag;
+    observation values are untouched, so the golden tiers cannot move.
+    """
+    from sqlalchemy import select, update
+
+    from app.models.observation import Observation
+    from app.rtm.coverage import WINDOW_DAYS
+
+    floor = max(today - timedelta(days=WINDOW_DAYS - 1), enrolled_on)
+    # The N most recent days the patient actually has data on — a sparse
+    # roster (priya's barely-worn device) still lands its exact target count.
+    days = list(
+        db.scalars(
+            select(Observation.local_date)
+            .where(Observation.patient_id == patient_id, Observation.local_date >= floor)
+            .distinct()
+            .order_by(Observation.local_date.desc())
+            .limit(monitoring_days)
+        )
+    )
+    if not days:
+        return
+    db.execute(
+        update(Observation)
+        .where(Observation.patient_id == patient_id, Observation.local_date.in_(days))
+        .values(qualifies_for_rtm=True)
+    )
 
 
 def seed_rtm(db: Session, today: date) -> dict[str, int]:
@@ -167,6 +220,11 @@ def seed_rtm(db: Session, today: date) -> dict[str, int]:
             )
         )
         counts["rtm_enrollment"] += 1
+
+        if complete and spec.monitoring_days > 0:
+            _mark_qualifying_days(
+                db, patient_id, today, baseline_at.date(), spec.monitoring_days
+            )
 
         surgeon_id = get_spec(patient_id).surgeon_id
         for entry in spec.time_logs:

@@ -162,7 +162,19 @@ def generate_patient_observations(
     surgery = today - timedelta(days=spec.postop_day)
     supported = set(CAPABILITIES.get(spec.provider, []))
 
-    metrics = [m for m in VITALS + FUNCTIONAL + GAIT_EXTRA if m in supported]
+    # The mock generates the canonical series the engine analyzes. A provider
+    # whose real capability is the variant statistic (Apple: SDNN, delta skin
+    # temp) still measures the underlying signal — in production normalize()
+    # would land it in its own metric type; the demo keeps emitting the
+    # canonical series so the pinned golden tiers stay meaningful.
+    equivalents: dict[M, set[M]] = {
+        M.SKIN_TEMP: {M.SKIN_TEMP, M.SKIN_TEMP_DELTA},
+        M.HRV_RMSSD: {M.HRV_RMSSD, M.HRV_SDNN},
+    }
+    metrics = [
+        m for m in VITALS + FUNCTIONAL + GAIT_EXTRA
+        if supported & equivalents.get(m, {m})
+    ]
     days = list(range(-PRE_OP_DAYS, spec.postop_day + 1))
 
     # Deterministic dropout: whole days where the device wasn't worn/synced.

@@ -254,14 +254,16 @@ function WorklistRow({ patient: p, index }: { patient: WorklistPatient; index: n
         }
       >
         {p.rtm.enrolled ? (
-          <span
-            className={`font-mono text-[12px] font-medium tabular-nums ${
-              p.rtm.eligible ? 'text-risk-low' : 'text-muted'
-            }`}
-          >
-            {Math.min(p.rtm.days, p.rtm.target)}
-            <span className="text-faint">/{p.rtm.target}d</span>
-          </span>
+          p.rtm.eligible ? (
+            <span className="text-[10.5px] font-semibold uppercase tracking-[.04em] text-risk-low">
+              Complete
+            </span>
+          ) : (
+            <span className="font-mono text-[12px] font-medium tabular-nums text-muted">
+              {Math.min(p.rtm.days, p.rtm.target)}
+              <span className="text-faint">/{p.rtm.target}d</span>
+            </span>
+          )
         ) : (
           <span className="text-[10.5px] font-medium uppercase tracking-[.04em] text-faint">
             Enrolling

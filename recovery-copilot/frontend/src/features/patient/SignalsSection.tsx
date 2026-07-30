@@ -47,7 +47,7 @@ function SignalsBody({
   refreshing,
 }: {
   data: PatientMetrics
-  rtm: { days_with_data: number; window_days: number; qualifies: boolean; enrolled: boolean }
+  rtm: { days_with_data: number; window_days: number; target: number; qualifies: boolean; enrolled: boolean }
   refreshing: boolean
 }) {
   return (
@@ -132,10 +132,12 @@ function SignalsBody({
             {rtm.enrolled ? (
               <>
                 <span className="font-mono tabular-nums">
-                  {rtm.days_with_data} of {rtm.window_days} monitoring days
+                  {rtm.qualifies
+                    ? 'Monitoring complete'
+                    : `${rtm.days_with_data} of ${rtm.target} monitoring days`}
                 </span>
                 <span className="text-[11px] font-medium text-faint">
-                  {rtm.qualifies ? '· meets 16-day threshold' : '· below 16-day threshold'}
+                  {rtm.qualifies ? '· 16-day threshold met' : '· below 16-day threshold'}
                 </span>
               </>
             ) : (
@@ -156,7 +158,7 @@ export default function SignalsSection({
   refreshing,
 }: {
   patientId: string
-  rtm: { days_with_data: number; window_days: number; qualifies: boolean; enrolled: boolean }
+  rtm: { days_with_data: number; window_days: number; target: number; qualifies: boolean; enrolled: boolean }
   refreshing: boolean
 }) {
   const [open, setOpen] = useState(false)

@@ -7,7 +7,7 @@ counts toward the 98985/98977 monitoring thresholds — a patient can't accrue
 billable monitoring days before they are enrolled in monitoring.
 """
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
@@ -38,10 +38,17 @@ def update_window(db: Session, patient_id: str, today: date | None = None) -> Mo
     if start is None:
         days = 0
     else:
+        # Only rows flagged at normalize() as RTM-qualifying count: mock/demo
+        # data and unsigned deliveries are structurally incapable of accruing
+        # a billable day. Days are the MATERIALIZED patient-local calendar
+        # date — func.date() on a naive instant puts a West Coast patient's
+        # evening activity on the wrong day, and 16-of-30 is a cliff.
         days = db.scalar(
-            select(func.count(distinct(func.date(Observation.start_time)))).where(
+            select(func.count(distinct(Observation.local_date))).where(
                 Observation.patient_id == patient_id,
-                Observation.start_time >= datetime.combine(start, time.min),
+                Observation.local_date >= start,
+                Observation.qualifies_for_rtm.is_(True),
+                Observation.deleted_at.is_(None),
             )
         ) or 0
 

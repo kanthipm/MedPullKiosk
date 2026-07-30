@@ -93,6 +93,7 @@ def patient_detail(patient_id: str, db: Session = Depends(get_db)) -> dict:
         "rtm": {
             "days_with_data": rtm.days_with_data if rtm else 0,
             "window_days": 30,
+            "target": 16,
             "qualifies": bool(rtm.qualifies_16_of_30) if rtm else False,
             "enrolled": bool(enrollment and enrollment.complete),
         },

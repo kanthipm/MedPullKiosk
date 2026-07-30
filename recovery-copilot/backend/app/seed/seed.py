@@ -75,7 +75,7 @@ def seed_core(db: Session, today: date) -> dict[str, int]:
     total_obs = 0
     for spec in PATIENTS:
         obs = generate_patient_observations(spec, get_scenario(spec.id), today)
-        ingested, _ = ingest_observations(db, obs)
+        ingested, _, _ = ingest_observations(db, obs)
         total_obs += ingested
     counts["observations"] = total_obs
 
