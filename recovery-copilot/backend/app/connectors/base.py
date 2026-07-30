@@ -15,10 +15,35 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone as dt_timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.models.enums import Granularity, MetricType, SourceProvider
+
+
+def local_date_of(start_time: datetime, tz_id: str) -> date:
+    """The patient-local calendar day an instant belongs to.
+
+    Aware datetimes are converted into the observation's zone; naive ones are
+    trusted as already-local wall time (the seed and mock paths). This is the
+    single definition the RTM day counter is allowed to use — func.date() on a
+    naive UTC instant moves a West Coast evening onto the next calendar day.
+    """
+    if start_time.tzinfo is not None:
+        return start_time.astimezone(ZoneInfo(tz_id)).date()
+    return start_time.date()
+
+
+def _utc_iso(t: datetime) -> str:
+    """Offset-stable instant for dedupe keys: aware → UTC; naive unchanged.
+
+    A naive isoformat() emits no offset, so across a DST fall-back two distinct
+    instants would collide (lost row) and a device timezone change would split
+    one instant into two keys (duplicate row)."""
+    if t.tzinfo is not None:
+        return t.astimezone(dt_timezone.utc).isoformat()
+    return t.isoformat()
 
 
 @dataclass
@@ -37,12 +62,45 @@ class CanonicalObservation:
     source_device_id: str | None = None
     timezone: str = "America/New_York"
     raw_payload: dict[str, Any] | None = None
+    # Restatement + provenance (Phase 0): the provider's stable record id, its
+    # own last-modified stamp, laterality, and the RTM/PRO flags.
+    external_id: str | None = None
+    source_updated_at: datetime | None = None
+    body_site: str | None = None
+    side: str | None = None
+    qualifies_for_rtm: bool = False
+    is_patient_reported: bool = False
+    deleted: bool = False  # provider-delivered tombstone (HealthKit deletedObjects)
+
+    @property
+    def local_date(self) -> date:
+        return local_date_of(self.start_time, self.timezone)
 
     @property
     def dedupe_key(self) -> str:
+        """Identity of the underlying measurement, not of one delivery of it.
+
+        Provider record ids win when they exist — a WHOOP sleep edit arrives
+        with the same UUID and different times, and must land on the same row.
+        Daily summaries key on the local calendar day so a restated total whose
+        window boundary shifted by a second cannot double-count the day.
+        Interval rows carry granularity, device and side: a daily summary and
+        an intraday bucket over the same window, an iPhone and a Watch, or two
+        wrists must never collide."""
+        if self.external_id:
+            return (
+                f"{self.source_provider}:{self.patient_id}:{self.metric_type}:"
+                f"{self.external_id}"
+            )
+        if self.granularity is Granularity.DAILY_SUMMARY:
+            return (
+                f"{self.source_provider}:{self.patient_id}:{self.metric_type}:daily:"
+                f"{self.local_date.isoformat()}:{self.side or 'na'}"
+            )
         return (
             f"{self.source_provider}:{self.patient_id}:{self.metric_type}:"
-            f"{self.start_time.isoformat()}:{self.end_time.isoformat()}"
+            f"{self.granularity}:{_utc_iso(self.start_time)}:{_utc_iso(self.end_time)}:"
+            f"{self.source_device_id or 'na'}:{self.side or 'na'}"
         )
 
 

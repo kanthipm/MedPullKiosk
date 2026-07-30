@@ -64,7 +64,7 @@ export interface PatientDetail {
   trajectory: Trajectory
   summary: { text: string; generated_at: string; provider: string }
   actions: SuggestedAction[]
-  rtm: { days_with_data: number; window_days: number; qualifies: boolean; enrolled: boolean }
+  rtm: { days_with_data: number; window_days: number; target: number; qualifies: boolean; enrolled: boolean }
   last_checkin_at: string | null
 }
 

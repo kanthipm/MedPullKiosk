@@ -24,6 +24,20 @@ class SourceProvider(StrEnum):
     POLAR = "polar"
     SAMSUNG = "samsung"
     MOCK = "mock"
+    # Aggregators are providers in their own right — an aggregator-delivered
+    # row must never masquerade as MOCK (or as the underlying device brand,
+    # which lands in value_json/raw_payload for provenance instead).
+    TERRA = "terra"
+    JUNCTION = "junction"
+    # The Fitbit app/API became Google Health (2026); non-transferable tokens,
+    # so FITBIT stays for historical rows and this is NOT a rename.
+    GOOGLE_HEALTH = "google_health"
+    # Samsung wearables are reachable only through Health Connect on-device.
+    HEALTH_CONNECT = "health_connect"
+    # The RTM-qualifying streams: pain/ROM/HEP adherence are patient-reported,
+    # in-clinic 6MWT/goniometry are clinician-entered.
+    PATIENT_REPORTED = "patient_reported"
+    CLINICIAN_ENTERED = "clinician_entered"
 
 
 class MetricType(StrEnum):
@@ -47,11 +61,33 @@ class MetricType(StrEnum):
     STAIR_SPEED_DOWN = "stair_speed_down"
     SIX_MIN_WALK = "six_min_walk"
     CALORIES = "calories"
+    # --- P0 correctness: separate statistics that must never share a series ---
+    # Apple ships SDNN only (heartRateVariabilitySDNN); there is no RMSSD
+    # identifier and no conversion constant between the two.
+    HRV_SDNN = "hrv_sdnn"
+    # Apple/Oura/Garmin/Health Connect skin temperature is a DELTA from a
+    # personal baseline (can be negative); WHOOP/Withings are ABSOLUTE degC.
+    # SKIN_TEMP keeps the absolute convention; deltas land here.
+    SKIN_TEMP_DELTA = "skin_temp_delta"
+    # Distinguishes "not worn" from "worn 40 minutes" from "not synced" — both
+    # the confidence gate's denominator and the evidence an RTM auditor asks
+    # for on each qualifying day.
+    WEAR_TIME_MINUTES = "wear_time_minutes"
+    # --- P0: the RTM-qualifying patient-reported stream ---
+    PAIN_NRS = "pain_nrs"                    # 0-10 numeric rating scale
+    RANGE_OF_MOTION = "range_of_motion"      # degrees; details in value_json
+    THERAPY_ADHERENCE = "therapy_adherence"  # HEP sessions completed per day
+    EXERCISE_REPS = "exercise_reps"          # count
+    PROM_SCORE = "prom_score"                # value_json {instrument, score, ceiling}
 
 
 class Granularity(StrEnum):
     INSTANT = "instant"
     INTERVAL = "interval"
+    # A bounded clinical event (sleep episode, workout, PT session) — distinct
+    # from INTERVAL's fixed-width buckets so dataload can tell a 15-minute
+    # activity bucket from an 8-hour sleep episode.
+    SESSION = "session"
     DAILY_SUMMARY = "daily_summary"
 
 

@@ -64,9 +64,11 @@ export default function PatientDetailPage() {
     })
   }
 
-  const rtmValue = p.rtm.enrolled
-    ? `${p.rtm.days_with_data}/${p.rtm.window_days}d`
-    : 'Enrolling'
+  const rtmValue = !p.rtm.enrolled
+    ? 'Enrolling'
+    : p.rtm.qualifies
+      ? 'Complete'
+      : `${Math.min(p.rtm.days_with_data, p.rtm.target)}/${p.rtm.target}d`
   const trajValue =
     p.trajectory.pct != null && p.trajectory.state !== 'on'
       ? signedPct(p.trajectory.pct)

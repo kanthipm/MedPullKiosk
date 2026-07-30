@@ -15,6 +15,10 @@ class Settings(BaseSettings):
 
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
+    # Webhook signing secrets — empty means that provider's deliveries are
+    # rejected (verification fails closed; the mock/demo path needs none).
+    terra_signing_secret: str = ""
+    junction_webhook_secret: str = ""
     # Local Ollama is OPT-IN (cloud-first product direction): leave the URL
     # empty and the chain is Groq -> deterministic fallback. Set OLLAMA_URL
     # explicitly to use a local model as the middle tier.

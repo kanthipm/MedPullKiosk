@@ -22,15 +22,21 @@ GAIT = [
 ]
 
 CAPABILITIES: dict[P, list[M]] = {
-    P.APPLE: CORE + GAIT + [M.HRV_RMSSD, M.SLEEP_STAGES, M.SPO2, M.RESPIRATORY_RATE,
-                            M.SKIN_TEMP, M.EXERCISE_SESSION],
+    # Apple ships SDNN only (heartRateVariabilitySDNN) — there is no RMSSD
+    # identifier, and writing SDNN into hrv_rmssd corrupts the EWMA baseline
+    # the moment a patient switches platforms. Apple skin temp is a DELTA.
+    P.APPLE: CORE + GAIT + [M.HRV_SDNN, M.SLEEP_STAGES, M.SPO2, M.RESPIRATORY_RATE,
+                            M.SKIN_TEMP_DELTA, M.EXERCISE_SESSION],
     P.FITBIT: CORE + [M.HRV_RMSSD, M.SLEEP_STAGES, M.SPO2, M.RESPIRATORY_RATE,
                       M.SKIN_TEMP, M.EXERCISE_SESSION],
     P.GARMIN: CORE + [M.HRV_RMSSD, M.SLEEP_STAGES, M.SPO2, M.RESPIRATORY_RATE,
                       M.EXERCISE_SESSION],
     P.OURA: [M.STEPS, M.RESTING_HR, M.HRV_RMSSD, M.SLEEP_DURATION, M.SLEEP_STAGES,
-             M.SPO2, M.RESPIRATORY_RATE, M.SKIN_TEMP, M.CALORIES],
-    P.WHOOP: [M.RESTING_HR, M.HR_SAMPLE, M.HRV_RMSSD, M.SLEEP_DURATION, M.SLEEP_STAGES,
+             M.SPO2, M.RESPIRATORY_RATE, M.SKIN_TEMP_DELTA, M.CALORIES],
+    # WHOOP exposes NO continuous-HR endpoint in the developer API (verified
+    # against two OpenAPI snapshots) — cycle/workout aggregates only. Its
+    # skin temperature is absolute Celsius.
+    P.WHOOP: [M.RESTING_HR, M.HRV_RMSSD, M.SLEEP_DURATION, M.SLEEP_STAGES,
               M.SPO2, M.RESPIRATORY_RATE, M.SKIN_TEMP, M.CALORIES],
     P.DEXCOM: [],  # CGM — glucose metrics arrive in a later metric_type expansion
     P.WITHINGS: [M.STEPS, M.RESTING_HR, M.SLEEP_DURATION, M.SLEEP_STAGES, M.SPO2,

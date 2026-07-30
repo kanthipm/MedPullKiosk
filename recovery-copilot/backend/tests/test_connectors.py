@@ -42,8 +42,8 @@ def test_ingest_is_idempotent(db):
     observations = MockConnector().normalize(_payload(day="2030-01-01"))
     first = ingest_observations(db, observations)
     second = ingest_observations(db, observations)
-    assert first == (2, 0)
-    assert second == (0, 2)
+    assert first == (2, 0, 0)   # (ingested, updated, duplicates)
+    assert second == (0, 0, 2)  # byte-identical redelivery is a duplicate, never an update
 
 
 def test_registry_shape():
