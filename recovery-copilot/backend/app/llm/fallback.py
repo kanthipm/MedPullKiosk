@@ -8,7 +8,7 @@ validation.
 
 from typing import Any
 
-from app.models.enums import GUARDRAIL_SENTENCE, InsightKind, RiskLevel
+from app.models.enums import GUARDRAIL_SENTENCE, RiskLevel
 
 _ACTION_LIBRARY: list[tuple[tuple[str, ...], dict[str, str]]] = [
     (("COMPOSITE_HIGH", "RHR_RISING", "TEMP_RISING", "SPO2_LOW", "RR_RISING"), {

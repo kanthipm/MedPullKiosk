@@ -54,8 +54,13 @@ def expected_curve(
     lo = np.clip(mid - CI_WIDTH, 0.0, 1.0)
     hi = np.clip(mid + CI_WIDTH, 0.0, 1.1)
     return [
-        {"day": int(d), "lo": round(float(l), 3), "mid": round(float(m), 3), "hi": round(float(h), 3)}
-        for d, l, m, h in zip(days, lo, mid, hi)
+        {
+            "day": int(day),
+            "lo": round(float(low), 3),
+            "mid": round(float(centre), 3),
+            "hi": round(float(high), 3),
+        }
+        for day, low, centre, high in zip(days, lo, mid, hi)
     ]
 
 

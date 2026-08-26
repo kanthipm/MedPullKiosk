@@ -19,7 +19,9 @@ class AwsSettings(BaseSettings):
 
     # Distributed write lock (an S3 object created with If-None-Match: *).
     # The TTL must stay comfortably under the Lambda timeout so a function that
-    # dies mid-request can never wedge the lock for longer than one request.
+    # dies mid-request can never wedge the lock for longer than one request:
+    # 25s against the API function's 45s, and 840s against the seed function's
+    # 900s, which overrides this default through LOCK_TTL_SECONDS.
     s3_lock_key: str = "db/recovery.db.lock"
     lock_ttl_seconds: float = 25.0
     lock_acquire_timeout_seconds: float = 12.0

@@ -7,7 +7,6 @@ functional with no LLM.
 """
 
 import hashlib
-import json
 import logging
 from typing import Any
 
@@ -221,6 +220,7 @@ def _ask_llm(
 
     # 2. Per-patient verification with single-patient context.
     verified: list[tuple[dict[str, Any], str]] = []
+    dropped_by_outage = 0
     for cid in candidate_ids:
         patient = by_id.get(cid)
         if patient is None:
@@ -233,10 +233,25 @@ def _ask_llm(
                 temperature=0.0,
             )
         except LLMError:
+            dropped_by_outage += 1
             continue
         evidence = str(check.get("evidence", "")).strip()
         if check.get("match") is True and evidence and not BANNED.search(evidence):
             verified.append((patient, evidence))
+
+    if dropped_by_outage:
+        # A candidate the outage dropped is a candidate nobody checked, and the
+        # answer that comes back is the shape of the outage, not a finding
+        # about the roster: "1 match: Marcus" when two other patients were
+        # never looked at reads as a complete answer and gets cached as one.
+        # Whether some candidates survived makes no difference to that — the
+        # claim "these are the patients who match" is false either way. The
+        # deterministic renderer answers instead, under a fallback cache key,
+        # so the next ask retries the provider.
+        raise LLMError(
+            f"verification unavailable — {dropped_by_outage} of "
+            f"{len(candidate_ids)} candidate checks failed"
+        )
 
     if not verified:
         return {"answer": "No patients on the roster match that right now.", "patient_ids": []}
@@ -283,25 +298,31 @@ def ask(db: Session, question: str) -> dict[str, Any]:
     roster = _roster_context(db)
     valid_ids = {p["id"] for p in roster}
 
+    provider = provider_name()
     roster_digest = hashlib.sha256(
         ";".join(f"{p['id']}:{p['_hash']}" for p in roster).encode()
     ).hexdigest()[:16]
     cache_hash = hashlib.sha256(
         f"ask:{question.strip().lower()}:{roster_digest}:{PROMPT_VERSION}."
-        f"{ASK_PROMPT_VERSION}:{provider_name()}".encode()
+        f"{ASK_PROMPT_VERSION}:{provider}".encode()
     ).hexdigest()
-    cached = _cached(db, None, InsightKind.ASK, cache_hash)
+    cached = _cached(db, None, InsightKind.ASK, cache_hash, provider)
     if cached is not None:
         return {**cached.content, "provider": cached.llm_provider,
                 "generated_at": cached.generated_at.isoformat()}
 
     content: dict[str, Any] | None = None
-    provider = provider_name()
     if provider != "fallback":
         try:
             content = _ask_llm(question, roster, valid_ids)
         except LLMError as e:
             logger.warning("Ask LLM call failed: %s", e)
+        if provider_name() != provider:
+            # The provider went into cooldown partway through: candidates were
+            # dropped by the outage rather than by the evidence, so whatever
+            # came back describes the outage. Re-render deterministically.
+            logger.warning("%s became unavailable mid-answer; using fallback", provider)
+            content = None
 
     if content is None:
         provider = "fallback"

@@ -43,7 +43,7 @@ function DocumentationList({ patientId }: { patientId: string }) {
         <div key={doc.id} className="rounded-row border border-line bg-soft/50 p-3.5">
           <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
             <AIAttribution
-              label={doc.kind === 'encounter_note' ? 'AI encounter note' : 'AI monthly summary'}
+              kind={doc.kind === 'encounter_note' ? 'encounter note' : 'monthly summary'}
               generatedAt={doc.created_at}
               provider={doc.provider}
             />

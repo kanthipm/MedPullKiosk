@@ -1,4 +1,3 @@
-import { useIsFetching } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
@@ -32,9 +31,11 @@ export default function PatientDetailPage() {
   useReviewTimeTracker(id)
   const recompute = useRecompute(id)
   const toast = useToast()
-  const fetchingPatient = useIsFetching({ queryKey: ['patient', id] })
   const [minHold, setMinHold] = useState(false)
-  const refreshing = recompute.isPending || minHold || (!!p && fetchingPatient > 0)
+  // Only an explicit Refresh shimmers. The recompute stays pending until its
+  // invalidated queries have refetched, so this covers the whole round trip
+  // without catching the background loads that share the ['patient', id] key.
+  const refreshing = recompute.isPending || minHold
 
   if (isLoading) {
     return (
@@ -160,7 +161,7 @@ export default function PatientDetailPage() {
           {...rise(2)}
           eyebrow={
             <AIAttribution
-              label="AI recovery summary"
+              kind="recovery summary"
               generatedAt={p.summary.generated_at}
               provider={p.summary.provider}
             />
@@ -204,7 +205,7 @@ export default function PatientDetailPage() {
         </div>
 
         <div {...rise(6)}>
-          <CheckinHistory patientId={p.id} />
+          <CheckinHistory patientId={p.id} refreshing={refreshing} />
         </div>
 
         <div {...rise(7)}>

@@ -4,17 +4,22 @@ export type ConfidenceLevel = 'high' | 'med' | 'low'
 export type Urgency = 'today' | 'this_week' | 'routine'
 
 /** Risk tokens ported from the orthopedic-demo design system. Color appears
- *  only in pills, spines, and status accents — everything else stays ink. */
+ *  only in pills, spines, and status accents — everything else stays ink.
+ *
+ *  Labels are SPEC.md's three recovery states — On Track, Needs Review, High
+ *  Risk — read onto the engine's four tiers, calm to urgent. `missing_data`
+ *  is not a recovery state but the absence of one, so it keeps its own label
+ *  rather than borrowing a verdict the coverage gate refused to make. */
 export const PRIORITY = {
   high: {
-    label: 'Needs review',
+    label: 'High risk',
     dot: 'bg-risk-high',
     pill: 'bg-risk-high-bg text-risk-high',
     spine: 'bg-risk-high',
     order: 0,
   },
   medium: {
-    label: 'Needs attention',
+    label: 'Needs review',
     dot: 'bg-risk-med',
     pill: 'bg-risk-med-bg text-risk-med',
     spine: 'bg-risk-med',
@@ -28,7 +33,7 @@ export const PRIORITY = {
     order: 2,
   },
   low: {
-    label: 'Stable',
+    label: 'On track',
     dot: 'bg-risk-low',
     pill: 'bg-risk-low-bg text-risk-low',
     spine: 'bg-risk-low',

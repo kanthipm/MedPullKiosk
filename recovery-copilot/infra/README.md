@@ -21,7 +21,7 @@ demo database, and prints a URL.
                     │  /*      ──► S3 web/  via OAC      (+ SPA-routing function)    │
                     └───────────────────────────────────────────────────────────────┘
                                             │
-                       Lambda · python3.12 · arm64 · 1024 MB · 30s
+                       Lambda · python3.12 · arm64 · 1024 MB · 45s
                        FastAPI (unchanged) behind Mangum
                          ├── SQLite in /tmp, hydrated from S3 per instance
                          │     writes: S3 distributed lock → serialized
@@ -32,6 +32,12 @@ demo database, and prints a URL.
                        S3 (private) · db/recovery.db + web/ (built SPA)
                        CloudWatch Logs · 14-day retention
 ```
+
+The two timeouts in that picture are deliberately unequal: CloudFront stops
+waiting at 30s while the function has 45s. On a slow request the edge gives up
+first, by 15 seconds, and the function keeps running long enough to finish its
+write-back and release the S3 lock instead of being killed mid-upload. So the
+ceiling a caller experiences is 30s, not 45.
 
 Nothing here runs when idle. There is no VPC, no NAT gateway, no API Gateway,
 no ECR repository, and no always-on database — between them, those are where an
@@ -48,7 +54,7 @@ no ECR repository, and no always-on database — between them, those are where a
 | CloudWatch Logs | 5 GB ingest + 5 GB storage | capped at 14-day retention |
 | AWS Budgets | first 2 budgets free | 1, optional |
 | S3 storage | 5 GB (first 12 months) | ~20 MB — about **$0.0005/month** after that |
-| S3 requests | — | one `HEAD` per API request → **~$0.04 per 100k requests** |
+| S3 requests | — | at most one `HEAD` per API request (a 5s freshness TTL coalesces bursts) → **~$0.04 per 100k requests** |
 
 **Realistic steady state: under $0.10/month.** The only line that is not
 free-forever is S3, and at these volumes it rounds to nothing.
@@ -68,10 +74,14 @@ Cost guardrails wired into the stack:
 - **14-day log retention** — the default is *never expire*, which is how a
   quiet demo silently outgrows the CloudWatch free tier.
 - **Lifecycle rules** expire old database versions after 7 days and old
-  deployment zips after 30.
+  deployment zips after 90. Ninety, not thirty: a stack rollback re-points the
+  function at the previous zip, and expiring those after a month would fail the
+  rollback of any stack that has not shipped since.
 - **An optional monthly budget alarm**: `BUDGET_EMAIL=you@example.com ./infra/deploy.sh`.
 
-Tear the whole thing down with `./infra/destroy.sh`.
+Tear the whole thing down with `./infra/destroy.sh`. It keeps the database
+bucket and the SSM parameters unless you ask for them: `--delete-data` and
+`--delete-secrets`.
 
 ## Deploying
 
@@ -143,8 +153,10 @@ New cold starts pick it up; force it immediately by redeploying the function.
 
 Ollama is explicitly disabled on Lambda (`OLLAMA_URL=""`) — there is no local
 model to reach. With no Groq key configured the app still works end to end and
-renders every narrative from the deterministic engine, labelled "rules-based"
-in the UI.
+renders every narrative from the deterministic engine. Four surfaces label that
+on screen (the recovery summary, the daily briefing, Ask answers and RTM
+documents); worklist reasons, suggested actions and AI drafts carry no
+provenance label either way. See the project README for why.
 
 ## How the database works
 
@@ -169,7 +181,7 @@ that dies mid-request cannot wedge writes for longer than its TTL.
 
 **Known limits, stated plainly.** This is a demo-scale design. Writes are
 serialized globally, so throughput is one mutation at a time, and each one
-uploads the whole database file (~1.4 MB). That is the right trade at ten
+uploads the whole database file (~1.7 MB seeded). That is the right trade at ten
 patients and a handful of providers, and the wrong one at a hundred clinics.
 The graduation path is to point `DATABASE_URL` at Postgres and delete
 `app/aws/` entirely — no other application code assumes SQLite.
@@ -180,12 +192,14 @@ The roster is generated relative to the seed date, so a database seeded in July
 shows drifting post-op days by September. `./infra/deploy.sh --reseed` rebuilds
 it (and discards anything entered through the UI). It runs on a separate
 `-seed` function because warming every insight through Groq takes minutes,
-well past the API function's 30-second timeout.
+well past the API function's 45-second timeout.
 
 ## Security posture
 
 The app ships **no authentication**, by design, for demos — that predates this
-deployment and is called out in the project README. What the stack does add:
+deployment and is called out in the project README. Anyone with the CloudFront
+URL can call all 30 API routes, the write paths among them. What the stack does
+add:
 
 - The S3 bucket is private. CloudFront reaches the SPA through an Origin Access
   Control; the `db/` prefix is not reachable through the distribution at all.
@@ -193,9 +207,18 @@ deployment and is called out in the project README. What the stack does add:
   origin signing, but CloudFront injects a 32-byte shared secret as
   `x-origin-verify` and the handler rejects anything without it. The origin is
   effectively unreachable directly.
+- Only `/api/*` is routed to the function. FastAPI's `/docs`, `/redoc` and
+  `/openapi.json` are open on a local run but are not reachable through the
+  distribution, because everything outside `/api/*` is served from the SPA
+  origin.
 - Bucket policy denies any non-TLS request.
-- The Lambda role is scoped to the `db/` prefix, the one SSM parameter, and
-  `kms:Decrypt` only via SSM.
+- The Lambda role reads and writes only the `db/` prefix, holds one SSM
+  parameter, and can `kms:Decrypt` only via SSM. Its `s3:ListBucket` grant is
+  the one bucket-wide permission and is deliberately unconditioned: S3 consults
+  it to decide whether a missing key is a 404 or a 403, and `s3:prefix` is
+  populated only for list requests, so conditioning on it would turn the
+  "database not seeded yet" HEAD into a permissions error. The grant exposes key
+  names, not object contents.
 
 **Before this holds real patient data** you need, at minimum: authentication, an
 AWS Business Associate Addendum, encryption with a customer-managed KMS key,
@@ -209,7 +232,7 @@ seeded roster is synthetic.
 | `cloudformation.yaml` | The whole stack, one template |
 | `build-lambda.sh` | Builds the arm64 deployment zip from `uv.lock` |
 | `deploy.sh` | Build → deploy → upload SPA → seed → invalidate → smoke test |
-| `destroy.sh` | Tears it down; keeps the database unless `--delete-data` |
+| `destroy.sh` | Tears it down; keeps the database and the SSM parameters unless `--delete-data` / `--delete-secrets` |
 
 Application-side code lives in `backend/app/aws/` and
 `backend/app/lambda_handler.py`, covered by `backend/tests/test_aws_storage.py`
@@ -232,8 +255,9 @@ and `backend/tests/test_lambda_handler.py`.
 `./infra/deploy.sh --reseed`.
 
 **`llm_provider` is `fallback` when a key is set.** Either the key is missing
-from Parameter Store, or Groq is inside its 3-minute failure cooldown. Check
-the function logs:
+from Parameter Store, or Groq is inside its 3-minute cooldown. The cooldown is
+armed by a failed call and also by three consecutive completions that parse but
+fail the product's output validation. Check the function logs:
 `aws logs tail /aws/lambda/recovery-copilot-api --follow`.
 
 **Stack fails on `ReservedConcurrentExecutions`.** The account's concurrency

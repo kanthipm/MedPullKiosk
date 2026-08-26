@@ -10,7 +10,13 @@ import logging
 from typing import Any
 
 from app.llm.insights import BANNED, _transcript
-from app.llm.provider import LLMError, complete_json, provider_name
+from app.llm.provider import (
+    LLMError,
+    complete_json,
+    note_invalid_output,
+    note_valid_output,
+    provider_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +68,10 @@ def draft_message(db, patient, assessment) -> dict[str, str]:
             )
             message = str(raw.get("message", "")).strip()
             if 20 <= len(message) <= 320 and not BANNED.search(message):
+                note_valid_output(provider)
                 return {"message": message, "provider": provider}
             logger.warning("Draft failed validation; using fallback")
+            note_invalid_output(provider)
         except LLMError as e:
             logger.warning("Draft LLM call failed: %s", e)
     return {"message": _fallback_draft(patient, assessment.reasons), "provider": "fallback"}

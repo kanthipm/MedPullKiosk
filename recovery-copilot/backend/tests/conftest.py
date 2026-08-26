@@ -4,10 +4,17 @@ The DATABASE_URL override must land before any app module import, because
 app.database binds the engine at import time.
 """
 
+import atexit
 import os
+import shutil
 import tempfile
 
+# mkdtemp rather than the tmp_path fixture: DATABASE_URL has to be set before
+# app.database is imported, which happens at module scope below. Nothing else
+# removes this directory, so register the cleanup here or every run leaks the
+# seeded database.
 _TMP = tempfile.mkdtemp(prefix="recovery-copilot-tests-")
+atexit.register(shutil.rmtree, _TMP, ignore_errors=True)
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP}/test.db"
 os.environ["GROQ_API_KEY"] = ""  # force the deterministic fallback everywhere
 os.environ["OLLAMA_URL"] = ""  # never let a locally running Ollama into the tests

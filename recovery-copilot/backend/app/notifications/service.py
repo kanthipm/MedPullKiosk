@@ -16,13 +16,20 @@ def notify_high_priority(db: Session, patient: Patient, assessment: RiskAssessme
     # In-app notifications navigate on click; out-of-band channels need the link.
     linked_body = f"{top_reason}. Review at /patients/{patient.id}."
 
+    # Read every row, not just the enabled ones, so "this recipient has never
+    # set preferences" stays distinguishable from "this recipient turned
+    # everything off". Falling back to in-app on an empty *enabled* set made
+    # those two identical and silently re-enabled a channel the provider had
+    # just switched off in the settings screen.
     prefs = db.scalars(
         select(NotificationPreference).where(
             NotificationPreference.recipient_id == patient.assigned_provider_id,
-            NotificationPreference.enabled.is_(True),
         )
     ).all()
-    channels = [p.channel for p in prefs] or [NotificationChannel.IN_APP]
+    if prefs:
+        channels = [p.channel for p in prefs if p.enabled]
+    else:
+        channels = [NotificationChannel.IN_APP]
 
     for channel in channels:
         notification = Notification(

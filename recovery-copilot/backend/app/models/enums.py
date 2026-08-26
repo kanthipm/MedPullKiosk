@@ -69,11 +69,15 @@ class MetricType(StrEnum):
     # personal baseline (can be negative); WHOOP/Withings are ABSOLUTE degC.
     # SKIN_TEMP keeps the absolute convention; deltas land here.
     SKIN_TEMP_DELTA = "skin_temp_delta"
-    # Distinguishes "not worn" from "worn 40 minutes" from "not synced" — both
-    # the confidence gate's denominator and the evidence an RTM auditor asks
-    # for on each qualifying day.
+    # Distinguishes "not worn" from "worn 40 minutes" from "not synced", and is
+    # the evidence an RTM auditor asks for on each qualifying day. Declared
+    # ahead of its use: no connector emits it, and engine/confidence.py gates on
+    # KEY_METRICS coverage instead, which does not include it.
     WEAR_TIME_MINUTES = "wear_time_minutes"
-    # --- P0: the RTM-qualifying patient-reported stream ---
+    # --- The RTM-qualifying patient-reported stream (SPEC.md §2, unbuilt) ---
+    # Declared so the vocabulary is settled, but nothing produces or consumes
+    # these yet: there is no patient-facing capture path and the engine analyzes
+    # device metrics only (engine/pipeline.py ANALYZED_METRICS).
     PAIN_NRS = "pain_nrs"                    # 0-10 numeric rating scale
     RANGE_OF_MOTION = "range_of_motion"      # degrees; details in value_json
     THERAPY_ADHERENCE = "therapy_adherence"  # HEP sessions completed per day

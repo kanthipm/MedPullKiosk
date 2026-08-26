@@ -259,6 +259,33 @@ def test_expired_lock_is_broken(s3, monkeypatch):
     assert aws_settings.s3_lock_key in s3.objects
 
 
+def test_expired_lock_is_not_taken_from_the_writer_that_broke_it_first(s3, monkeypatch):
+    """Reading the lock and replacing it are two calls. If another writer breaks
+    the expired lock and takes it in between, this one must back off — clearing
+    whatever is there at that point hands the database to two writers at once."""
+    monkeypatch.setattr(aws_settings, "lock_acquire_timeout_seconds", 0.2)
+    s3.put_object("test-bucket", aws_settings.s3_lock_key, str(time.time() - 1).encode())
+    original_get = s3.get_object
+
+    def racing_get(Bucket, Key):  # noqa: N803 — boto3 casing
+        stale = original_get(Bucket=Bucket, Key=Key)
+        if Key == aws_settings.s3_lock_key:
+            # The other writer wins the break and starts its own request, while
+            # we are still holding the expired object it replaced.
+            s3.delete_object(Bucket=Bucket, Key=Key)
+            s3.put_object(
+                Bucket=Bucket, Key=Key, Body=str(time.time() + 60).encode(), IfNoneMatch="*"
+            )
+        return stale
+
+    monkeypatch.setattr(s3, "get_object", racing_get)
+
+    with pytest.raises(storage.LockUnavailable):
+        storage.acquire_lock()
+    # The live lock is still the other writer's, not a replacement of ours.
+    assert float(s3.objects[aws_settings.s3_lock_key]) > time.time()
+
+
 def test_unexpired_lock_is_not_broken(s3, monkeypatch):
     monkeypatch.setattr(aws_settings, "lock_acquire_timeout_seconds", 0.2)
     s3.put_object("test-bucket", aws_settings.s3_lock_key, str(time.time() + 60).encode())
@@ -428,8 +455,29 @@ def test_middleware_read_serves_the_response_despite_a_failed_write_back(s3, mon
 
 def test_session_commit_marks_the_database_dirty(s3, db):
     """A GET that lazily recomputes an assessment has to be detectable, and
-    the HTTP verb cannot tell us that — the sessionmaker can."""
+    the HTTP verb cannot tell us that — the sessionmaker can.
+
+    Uninstalled again on the way out: the listener stays on this sessionmaker,
+    which is the suite-wide one every other test commits through, so one left
+    behind here marks the database dirty for the rest of the run — which is
+    exactly the leak that used to make tests/test_lambda_handler.py pass for
+    the wrong reason.
+    """
     storage.install_change_tracking()
-    assert storage.is_dirty() is False
+    try:
+        assert storage.is_dirty() is False
+        db.commit()
+        assert storage.is_dirty() is True
+    finally:
+        storage.uninstall_change_tracking()
+
+
+def test_change_tracking_install_is_idempotent_and_reversible(s3, db):
+    """Two installs must not stack two listeners, or one uninstall would leave
+    the database silently dirtying itself forever."""
+    storage.install_change_tracking()
+    storage.install_change_tracking()
+    storage.uninstall_change_tracking()
+
     db.commit()
-    assert storage.is_dirty() is True
+    assert storage.is_dirty() is False

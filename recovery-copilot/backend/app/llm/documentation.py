@@ -14,7 +14,14 @@ from sqlalchemy.orm import Session
 
 from app.llm.insights import BANNED, _strings, _transcript
 from app.llm.prompts import SYSTEM
-from app.llm.provider import LLMError, complete_json, model_name, provider_name
+from app.llm.provider import (
+    LLMError,
+    complete_json,
+    model_name,
+    note_invalid_output,
+    note_valid_output,
+    provider_name,
+)
 from app.models.enums import GUARDRAIL_SENTENCE, DocumentKind, DocumentStatus
 from app.models.insight import RiskAssessment
 from app.models.patient import Patient
@@ -26,8 +33,9 @@ CONTRACTS: dict[DocumentKind, str] = {
     DocumentKind.ENCOUNTER_NOTE: (
         '{"title": "<max 60 chars, e.g. \\"RTM encounter note — postop day 14\\">", '
         '"body": "<120-220 words: current recovery status with the signals that moved, '
-        "what the patient reported, treatment-management activity this month (minutes, "
-        "interactions), and the plan. Written as a clinical note a provider signs. End "
+        "what the patient reported, treatment-management activity over the last 30 "
+        "days (minutes, interactions), and the plan. Written as a clinical note a "
+        "provider signs. End "
         f'with exactly this sentence: {GUARDRAIL_SENTENCE}">}}'
     ),
     DocumentKind.MONTHLY_SUMMARY: (
@@ -58,9 +66,26 @@ def _validate(content: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _month_context(db: Session, patient_id: str, today: date) -> dict[str, Any]:
-    from datetime import datetime, time, timedelta
+    """Treatment-management activity over the billing window ending today.
 
-    since = datetime.combine(today - timedelta(days=29), time.min)
+    Not the calendar month the documents are filed under: the CPT ladder in
+    rtm/readiness.py counts the same way, and it is that module's own floor
+    being called here rather than a second copy of the arithmetic, so the note
+    and the ladder cannot drift apart. That includes the enrollment clamp —
+    a note claiming thirty-two minutes of treatment management beside a ladder
+    that counts none of them (because they predate enrollment) is a signed
+    document contradicting the claim it supports.
+    """
+    from app.models.rtm import EnrollmentStatus
+    from app.rtm.readiness import billing_floor
+
+    enrollment = db.get(EnrollmentStatus, patient_id)
+    enrolled_at = (
+        enrollment.enrolled_at
+        if enrollment and enrollment.complete and enrollment.enrolled_at
+        else None
+    )
+    since = billing_floor(today, enrolled_at)
     seconds = db.scalar(
         select(func.coalesce(func.sum(ProviderTimeLog.seconds), 0)).where(
             ProviderTimeLog.patient_id == patient_id, ProviderTimeLog.occurred_at >= since
@@ -101,8 +126,8 @@ def _fallback(
             f"{patient.name}, {patient.procedure_display}, postop day {postop}. "
             f"Monitoring signals this period: {findings}. "
             f"Remote therapeutic monitoring active with {days} monitoring days in the "
-            f"current 30-day window. Treatment management this month: {minutes} minutes "
-            f"of provider review"
+            f"current 30-day window. Treatment management over that window: "
+            f"{minutes} minutes of provider review"
             + (
                 " including live patient interaction. "
                 if readiness["treatment_management"]["interactive_communication"]
@@ -195,6 +220,9 @@ def get_document(
             content = _validate(raw)
             if content is None:
                 logger.warning("Doc LLM output failed validation for %s/%s", patient.id, kind)
+                note_invalid_output(provider)
+            else:
+                note_valid_output(provider)
         except LLMError as e:
             logger.warning("Doc LLM call failed for %s/%s: %s", patient.id, kind, e)
 

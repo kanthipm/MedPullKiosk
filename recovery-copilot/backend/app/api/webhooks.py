@@ -131,8 +131,23 @@ def verify_signature(provider: SourceProvider, headers: Mapping[str, str], body:
     return scheme.verify(secret, headers, body)
 
 
+async def _raw_body(request: Request) -> bytes:
+    """Reading the body is the one asynchronous step, so it is the only part
+    that belongs on the event loop — the handler itself stays synchronous."""
+    return await request.body()
+
+
 @router.post("/webhooks/wearables/{provider}")
-async def ingest_webhook(provider: str, request: Request, db: Session = Depends(get_db)) -> dict:
+def ingest_webhook(
+    provider: str,
+    request: Request,
+    body: bytes = Depends(_raw_body),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Synchronous like every other route, and deliberately so: normalize,
+    upsert and run_patient are blocking SQLAlchemy and pandas work, and FastAPI
+    only moves plain `def` handlers to the threadpool. As a coroutine this
+    handler held the event loop for the whole pipeline."""
     try:
         key = SourceProvider(provider)
     except ValueError:
@@ -144,7 +159,6 @@ async def ingest_webhook(provider: str, request: Request, db: Session = Depends(
             detail=f"{info.name if info else provider} webhooks are scaffolded but not yet implemented — POST to /api/webhooks/wearables/mock for the demo path.",
         )
 
-    body = await request.body()
     headers = {k.lower(): v for k, v in request.headers.items()}
     signature_valid = verify_signature(key, headers, body)
 

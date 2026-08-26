@@ -15,20 +15,21 @@ TIER_ORDER = {RiskLevel.HIGH: 0, RiskLevel.MEDIUM: 1, RiskLevel.MISSING_DATA: 2,
 
 
 def ensure_fresh_assessment(db: Session, patient_id: str):
-    """Lazy staleness check: recompute only when observations changed."""
-    from app.engine.pipeline import compute_input_hash, latest_assessment, run_patient
+    """Lazy staleness check: recompute only when observations changed.
 
-    current = latest_assessment(db, patient_id)
-    if current is None or current.input_hash != compute_input_hash(db, patient_id):
-        return run_patient(db, patient_id)
-    return current
+    One definition, in the engine, so the practice strip cannot drift from the
+    worklist it sits above — and so the monitoring window is refreshed on
+    exactly the same terms as the assessment."""
+    from app.engine.pipeline import ensure_current
+
+    return ensure_current(db, patient_id)
 
 
 @router.get("/worklist")
 def worklist(db: Session = Depends(get_db)) -> dict:
     from app.llm.insights import get_daily_briefing, get_patient_insight
-    from app.models.rtm import EnrollmentStatus, MonitoringWindow
-    from app.rtm.coverage import QUALIFY_DAYS
+    from app.models.rtm import EnrollmentStatus
+    from app.rtm.coverage import QUALIFY_DAYS, get_current
 
     patients = db.scalars(select(Patient)).all()
     enrolled_ids = set(
@@ -42,17 +43,16 @@ def worklist(db: Session = Depends(get_db)) -> dict:
             select(Checkin.patient_id, func.max(Checkin.occurred_at)).group_by(Checkin.patient_id)
         ).all()
     )
-    # latest monitoring window per patient, one query
-    monitoring: dict[str, int] = {}
-    for window in db.scalars(
-        select(MonitoringWindow).order_by(MonitoringWindow.window_end, MonitoringWindow.id)
-    ):
-        monitoring[window.patient_id] = window.days_with_data
 
     rows = []
     stats = {"total": len(patients), "high": 0, "medium": 0, "missing": 0, "low": 0}
     for patient in patients:
         assessment = ensure_fresh_assessment(db, patient.id)
+        # after the recompute, never before: run_patient writes today's
+        # monitoring window, so a table snapshot taken ahead of the loop holds
+        # yesterday's count and the row chip contradicts the patient page it
+        # links to. Same read as GET /api/patients/{id}, same stored flag.
+        window = get_current(db, patient.id)
         reason = get_patient_insight(db, InsightKind.WORKLIST_REASON, patient.id)
         analytics = assessment.analytics
         level = RiskLevel(assessment.risk_level)
@@ -83,9 +83,9 @@ def worklist(db: Session = Depends(get_db)) -> dict:
                     "pct": analytics["trajectory"]["pct"],
                 },
                 "rtm": {
-                    "days": monitoring.get(patient.id, 0),
+                    "days": window.days_with_data if window else 0,
                     "target": QUALIFY_DAYS,
-                    "eligible": monitoring.get(patient.id, 0) >= QUALIFY_DAYS,
+                    "eligible": bool(window.qualifies_16_of_30) if window else False,
                     "enrolled": patient.id in enrolled_ids,
                 },
             }

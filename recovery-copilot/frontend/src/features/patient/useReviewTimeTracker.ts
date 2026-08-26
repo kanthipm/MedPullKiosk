@@ -1,4 +1,6 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { rtmKeys } from '../../api/queries'
 
 /** Quietly logs time spent reviewing a patient record to the RTM time ledger
  *  (chart-review activity, CPT 98980 clock).
@@ -7,11 +9,15 @@ import { useEffect } from 'react'
  *  while the tab is hidden, and an engagement segment ends after two minutes
  *  without any interaction — a chart left open in a background tab accrues
  *  nothing. Posts once on leave via keepalive fetch; sub-15-second totals are
- *  discarded server-side.
+ *  discarded server-side. A logged segment moves the RTM minute count, so the
+ *  readiness card and the practice strip are invalidated once it lands —
+ *  otherwise the provider never sees the minutes they just earned.
  */
 const IDLE_MS = 2 * 60_000
 
 export default function useReviewTimeTracker(patientId: string) {
+  const qc = useQueryClient()
+
   useEffect(() => {
     let accumulatedMs = 0
     let lastActivity = Date.now()
@@ -61,7 +67,12 @@ export default function useReviewTimeTracker(patientId: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seconds }),
         keepalive: true,
-      }).catch(() => {})
+      })
+        .then((res) => {
+          if (!res.ok) return
+          for (const queryKey of rtmKeys(patientId)) qc.invalidateQueries({ queryKey })
+        })
+        .catch(() => {})
     }
 
     const activityEvents = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'scroll'] as const
@@ -76,5 +87,5 @@ export default function useReviewTimeTracker(patientId: string) {
       window.removeEventListener('pagehide', post)
       post()
     }
-  }, [patientId])
+  }, [patientId, qc])
 }

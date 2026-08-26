@@ -97,20 +97,44 @@ def is_dirty() -> bool:
         return bool(_state["dirty"])
 
 
+def _mark_dirty_on_commit(_session) -> None:
+    mark_dirty()
+
+
 def install_change_tracking() -> None:
     """Flag the database dirty whenever any session commits.
 
     Hooking the sessionmaker rather than the HTTP verb is what lets a GET that
     quietly refreshed an assessment still get written back.
+
+    The listener is scoped to the sessionmaker it is registered on, not to the
+    Session class: a session built by a *different* sessionmaker bound to the
+    same engine does not fire it. That is why this asks the registry whether
+    the hook is already there rather than latching a flag — a rebuilt
+    app.database means a new sessionmaker that genuinely needs hooking, and
+    only sessions from that one will report.
     """
     from sqlalchemy import event
 
     from app.database import SessionLocal
 
-    if getattr(install_change_tracking, "_installed", False):
+    if event.contains(SessionLocal, "after_commit", _mark_dirty_on_commit):
         return
-    event.listen(SessionLocal, "after_commit", lambda _session: mark_dirty())
-    install_change_tracking._installed = True  # type: ignore[attr-defined]
+    event.listen(SessionLocal, "after_commit", _mark_dirty_on_commit)
+
+
+def uninstall_change_tracking() -> None:
+    """Remove the commit hook. The inverse of install_change_tracking, and the
+    only way to scope one: the listener outlives the request that installed it,
+    so a caller that installs one and walks away keeps flagging every later
+    commit made through that sessionmaker."""
+    from sqlalchemy import event
+
+    from app.database import SessionLocal
+
+    if not event.contains(SessionLocal, "after_commit", _mark_dirty_on_commit):
+        return
+    event.remove(SessionLocal, "after_commit", _mark_dirty_on_commit)
 
 
 # --------------------------------------------------------------------------
@@ -125,9 +149,12 @@ def _dispose_engine() -> None:
     pointing at the unlinked old inode — reads would silently return the
     pre-download data forever.
     """
-    from app.database import engine
+    from app.database import engine, schema_needs_recheck
 
     engine.dispose()
+    # The file about to land here is a different database, possibly written
+    # before a table the models now declare.
+    schema_needs_recheck()
 
 
 def hydrate(force: bool = False) -> bool:
@@ -265,7 +292,7 @@ def acquire_lock() -> None:
 
     ``If-None-Match: *`` makes S3 object creation a compare-and-swap, which is
     all a mutex needs. A holder that dies mid-request leaves the object behind,
-    so every lock carries its own expiry and a later writer may break it.
+    so every lock carries its own expiry and a later writer takes it over.
     """
     if not enabled():
         return
@@ -285,28 +312,48 @@ def acquire_lock() -> None:
         except Exception as e:  # noqa: BLE001
             if not (hasattr(e, "response") and _is_conflict(e)):
                 raise
-        _break_lock_if_expired()
+        if _take_over_expired_lock(expires_at):
+            return
         if time.monotonic() >= deadline:
             raise LockUnavailable("Timed out waiting for the database write lock")
         time.sleep(delay)
         delay = min(delay * 2, 0.5)
 
 
-def _break_lock_if_expired() -> None:
+def _take_over_expired_lock(expires_at: float) -> bool:
+    """Claim a lock whose holder died. Returns True if this process now holds it.
+
+    Reading the lock and clearing it are two round trips, and another writer
+    may break and retake it in between — deleting whatever is there at that
+    point drops a lock somebody is actively holding. Overwriting under
+    ``If-Match`` folds the break and the acquire into one compare-and-swap
+    instead, so a lock that changed since the read is left alone.
+    """
     try:
         obj = client().get_object(Bucket=aws_settings.s3_bucket, Key=aws_settings.s3_lock_key)
-        expires_at = float(obj["Body"].read().decode() or 0)
-    except Exception as e:  # noqa: BLE001
-        if hasattr(e, "response") and _is_missing(e):
-            return  # already released; the next create will win
-        return  # unreadable lock body — let the acquire loop time out instead
-    if time.time() < expires_at:
-        return
-    logger.warning("Breaking an expired database write lock (held past %.0f)", expires_at)
+        held_etag = obj["ETag"]
+        held_until = float(obj["Body"].read().decode() or 0)
+    except Exception:  # noqa: BLE001
+        # Already released, or a body no float can be made of. Either way this
+        # is not ours to break: fall back to the plain create on the next pass.
+        return False
+    if time.time() < held_until:
+        return False
+    logger.warning("Breaking an expired database write lock (held past %.0f)", held_until)
     try:
-        client().delete_object(Bucket=aws_settings.s3_bucket, Key=aws_settings.s3_lock_key)
-    except Exception:  # noqa: BLE001 — a concurrent breaker deleting it first is fine
-        logger.debug("Lock delete raced with another writer", exc_info=True)
+        client().put_object(
+            Bucket=aws_settings.s3_bucket,
+            Key=aws_settings.s3_lock_key,
+            Body=str(expires_at).encode(),
+            IfMatch=held_etag,
+        )
+    except Exception as e:  # noqa: BLE001
+        if hasattr(e, "response") and _is_conflict(e):
+            # Another writer broke it first and is holding the replacement.
+            logger.debug("Lock takeover raced with another writer", exc_info=True)
+            return False
+        raise
+    return True
 
 
 def release_lock() -> None:

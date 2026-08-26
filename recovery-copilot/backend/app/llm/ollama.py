@@ -12,7 +12,7 @@ import logging
 import httpx
 
 from app.config import settings
-from app.llm.provider import LLMError
+from app.llm.provider import LLMError, note_provider_failure
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,14 @@ def complete_json(
             {"role": "user", "content": user},
         ],
     }
+    # A failure here trips the provider-level cooldown, exactly as the Groq
+    # client's does. Ollama had no such hook, and the asymmetry was the whole
+    # bug: with the daemon reachable but /api/chat failing, the probe kept
+    # reporting Ollama available and every request paid thirteen more calls of
+    # up to TIMEOUT seconds each, indefinitely. One failed call is enough to
+    # step down a tier for the cooldown window; there is no retry budget here
+    # to distinguish a blip from an outage, and the next tier is a working
+    # deterministic renderer.
     try:
         response = httpx.post(f"{settings.ollama_url}/api/chat", json=body, timeout=TIMEOUT)
         response.raise_for_status()
@@ -45,4 +53,8 @@ def complete_json(
             raise LLMError("Ollama returned empty content (model may be thinking-only)")
         return json.loads(content)
     except (httpx.HTTPError, json.JSONDecodeError, KeyError) as e:
+        note_provider_failure("ollama")
         raise LLMError(f"Ollama call failed: {e}") from e
+    except LLMError:
+        note_provider_failure("ollama")
+        raise

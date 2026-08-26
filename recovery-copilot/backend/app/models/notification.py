@@ -15,7 +15,9 @@ class Notification(Base):
     recipient_id: Mapped[str | None] = mapped_column(
         ForeignKey("care_team_members.id"), nullable=True
     )
-    kind: Mapped[str] = mapped_column(String)  # priority_high | data_gap
+    # priority_high (engine, on a non-HIGH -> HIGH edge) | escalation (a
+    # provider pressing Escalate on the patient page)
+    kind: Mapped[str] = mapped_column(String)
     title: Mapped[str] = mapped_column(String)
     body: Mapped[str] = mapped_column(String)
     channel: Mapped[NotificationChannel] = mapped_column(String)

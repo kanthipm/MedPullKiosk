@@ -3,8 +3,15 @@
 The output is a tier plus TYPED reason codes. Reasons are the contract between
 the deterministic engine, the LLM prompts, and the UI: everything narrative is
 derived from them, so they must stay short, human, and concrete.
+
+Every rule here judges the patient TODAY, so a metric that stopped reporting
+days ago is excluded before any of them run: an eight-day-old temperature is a
+fact about the day it was measured, never grounds for paging the care team
+tonight. What it does earn is a coverage reason — the signal is dark, and the
+clinician should be told that rather than told nothing.
 """
 
+from app.engine.deviation import RECENCY_WINDOW_DAYS, REF_ANCHORED_CURVE, is_stale
 from app.engine.types import (
     AdherenceResult,
     CompositeResult,
@@ -33,7 +40,28 @@ _FLAG_REASONS: dict[str, tuple[str, str, int]] = {
     str(M.RESPIRATORY_RATE): ("RR_RISING", "Respiratory rate elevated", 3),
 }
 
+# Same finding, honest about a weaker comparison. A patient with no pre-op
+# history is scored against the SHAPE of the expected curve projected from
+# their own early post-op level (engine/deviation.py), which supports a claim
+# about progress and not one about how far below normal they are.
+_ANCHORED_FLAG_TEXT: dict[str, str] = {
+    str(M.STEPS): "Activity not progressing from its post-op start",
+    str(M.WALKING_SPEED): "Walking speed not progressing from its post-op start",
+}
+
 VITAL_KEYS = {str(M.RESTING_HR), str(M.SKIN_TEMP)}
+
+METRIC_LABELS: dict[str, str] = {
+    str(M.STEPS): "Activity",
+    str(M.HRV_RMSSD): "HRV",
+    str(M.RESTING_HR): "Resting HR",
+    str(M.SLEEP_DURATION): "Sleep",
+    str(M.SKIN_TEMP): "Skin temperature",
+    str(M.WALKING_SPEED): "Walking speed",
+    str(M.SPO2): "Blood oxygen",
+    str(M.RESPIRATORY_RATE): "Respiratory rate",
+    str(M.WALKING_ASYMMETRY_PCT): "Walking asymmetry",
+}
 
 
 def score_risk(
@@ -44,6 +72,7 @@ def score_risk(
     confidence: ConfidenceResult,
     adherence: AdherenceResult,
     gait_asymmetry_latest: float | None,
+    gait_asymmetry_day: int | None = None,
 ) -> RiskResult:
     reasons: list[RiskReason] = []
 
@@ -60,16 +89,34 @@ def score_risk(
         )
         return RiskResult(level=RiskLevel.MISSING_DATA, score=0.0, reasons=reasons)
 
-    flagged = {m: d for m, d in deviations.items() if d.flagged}
-    drifting = [m for m, d in deviations.items() if d.drifting and not d.flagged]
+    stale = {m for m, d in deviations.items() if is_stale(d, postop_day)}
+    flagged = {m: d for m, d in deviations.items() if d.flagged and m not in stale}
+    drifting = [
+        m for m, d in deviations.items()
+        if d.drifting and not d.flagged and m not in stale
+    ]
 
     for metric, dev in flagged.items():
         if metric in _FLAG_REASONS:
             code, text, severity = _FLAG_REASONS[metric]
+            if dev.reference == REF_ANCHORED_CURVE:
+                text = _ANCHORED_FLAG_TEXT.get(metric, text)
             reasons.append(RiskReason(code=code, text=text, metric_type=metric, severity=severity))
 
-    gait_flagged = (
+    # Gait is the one rule fed a bare number rather than a DeviationResult, so
+    # it carries its own day: asking `not in stale` alone would wave through a
+    # patient whose asymmetry never earned a baseline at all (fewer than three
+    # readings), since a metric with no deviation entry is in neither dict. The
+    # day is checked against the engine-wide recency window, so this rule and
+    # the metric card agree about when a limp stopped being news.
+    gait_current = (
         gait_asymmetry_latest is not None
+        and gait_asymmetry_day is not None
+        and postop_day - gait_asymmetry_day <= RECENCY_WINDOW_DAYS
+        and str(M.WALKING_ASYMMETRY_PCT) not in stale
+    )
+    gait_flagged = (
+        gait_current
         and postop_day > GAIT_FLAG_AFTER_DAY
         and gait_asymmetry_latest > GAIT_FLAG_PCT
     )
@@ -103,23 +150,33 @@ def score_risk(
             )
         )
 
-    drift_labels = {
-        str(M.STEPS): "Activity",
-        str(M.HRV_RMSSD): "HRV",
-        str(M.RESTING_HR): "Resting HR",
-        str(M.SLEEP_DURATION): "Sleep",
-        str(M.SKIN_TEMP): "Skin temperature",
-        str(M.WALKING_SPEED): "Walking speed",
-        str(M.SPO2): "Blood oxygen",
-        str(M.RESPIRATORY_RATE): "Respiratory rate",
-    }
     for metric in drifting:
-        label = drift_labels.get(metric, "A signal")
+        label = METRIC_LABELS.get(metric, "A signal")
         reasons.append(
             RiskReason(
                 code="DRIFT_DETECTED",
                 text=f"{label} sliding gradually day over day",
                 metric_type=metric,
+                severity=2,
+            )
+        )
+
+    # Signals that could have raised a flag but have gone quiet. LOW_COVERAGE
+    # is the right code even above the confidence gate: the suggested action it
+    # renders is to check the device, which is exactly the ask. Only metrics
+    # with a known last reading qualify — we say a signal went quiet when we
+    # know when it last spoke, never when it was simply never scored.
+    dark = [
+        m for m, d in deviations.items()
+        if m in stale and m in _FLAG_REASONS and d.last_day is not None
+    ]
+    if dark:
+        labels = ", ".join(METRIC_LABELS.get(m, "A signal") for m in dark)
+        reasons.append(
+            RiskReason(
+                code="LOW_COVERAGE",
+                text=f"{labels} no longer reporting",
+                metric_type=None,
                 severity=2,
             )
         )
@@ -143,11 +200,14 @@ def score_risk(
         score = min(95.0, 75.0 + composite.index * 5.0)
         return RiskResult(level=RiskLevel.HIGH, score=round(score, 1), reasons=reasons)
 
-    # MEDIUM: anything worth a look this week.
+    # MEDIUM: anything worth a look this week — including a vital that has gone
+    # dark, since "we stopped being able to see the two signals that decide the
+    # HIGH tier" is a finding, not a quiet week.
     if (
         flagged
         or drifting
         or gait_flagged
+        or any(m in VITAL_KEYS for m in dark)
         or trajectory.state == TrajectoryState.BEHIND
         or (adherence.assigned > 0 and adherence.rate < ADHERENCE_LOW)
     ):
@@ -161,11 +221,17 @@ def score_risk(
         return RiskResult(level=RiskLevel.MEDIUM, score=round(score, 1), reasons=reasons)
 
     if not reasons:
-        text = (
-            "Recovery tracking as expected"
-            if trajectory.state != TrajectoryState.AHEAD
-            else "Recovery ahead of the expected curve"
-        )
+        # Never claim more than was measured. UNKNOWN means no functional index
+        # could be compared to the curve at all (too little history, or no
+        # pre-op norm to express it in), and "tracking as expected" printed
+        # above a card that says the pace could not be compared is the header
+        # contradicting its own evidence.
+        if trajectory.state == TrajectoryState.AHEAD:
+            text = "Recovery ahead of the expected curve"
+        elif trajectory.state == TrajectoryState.UNKNOWN:
+            text = "No concerning signals — recovery pace not compared"
+        else:
+            text = "Recovery tracking as expected"
         reasons.append(RiskReason(code="ON_TRACK", text=text, metric_type=None, severity=1))
     score = 10.0 + (5.0 if trajectory.state == TrajectoryState.AHEAD else 0.0)
     return RiskResult(level=RiskLevel.LOW, score=score, reasons=reasons)
