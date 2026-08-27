@@ -46,6 +46,8 @@ def patient_detail(patient_id: str, db: Session = Depends(get_db)) -> dict:
         .order_by(Checkin.occurred_at.desc())
         .limit(1)
     )
+    # Patient.devices is ordered newest-connected-first, so an upgraded watch
+    # wins over the row that happened to be written first.
     device = patient.devices[0] if patient.devices else None
     rtm = get_current(db, patient_id)
     enrollment = db.get(EnrollmentStatus, patient_id)
@@ -201,6 +203,10 @@ def patient_observations(
             Observation.patient_id == patient_id,
             Observation.metric_type == metric,
             Observation.start_time >= since,
+            # A provider tombstone is a retraction: connectors/ingest soft-deletes
+            # so the deletion survives redelivery, and every reader owes it the
+            # filter or the chart keeps plotting a value the source withdrew.
+            Observation.deleted_at.is_(None),
         )
         .order_by(Observation.start_time)
     ).all()
@@ -216,12 +222,20 @@ def patient_observations(
     }
 
 
-@router.post("/{patient_id}/recompute", status_code=202)
+@router.post("/{patient_id}/recompute")
 def recompute(patient_id: str, db: Session = Depends(get_db)) -> dict:
     """Full refresh: rerun the deterministic engine AND bust the narrative
     caches, so the next reads trigger fresh LLM generations — this patient's
-    insights plus the roster briefing (which embeds this patient's reason)."""
-    from sqlalchemy import delete, or_
+    insights plus the roster briefing (which embeds this patient's reason).
+
+    It runs to completion and returns the fresh assessment, so it answers 200
+    rather than the 202 it used to declare for work it never deferred.
+
+    Not every roster-level row is the briefing: `/api/ask` answers are stored
+    with a NULL patient_id too, keyed on questions this patient's numbers need
+    not appear in. Deleting by "patient_id IS NULL" emptied that cache as well,
+    at one LLM call per cached question to refill."""
+    from sqlalchemy import and_, delete, or_
 
     from app.engine.pipeline import run_patient
     from app.models.insight import Insight
@@ -229,7 +243,13 @@ def recompute(patient_id: str, db: Session = Depends(get_db)) -> dict:
     _get_patient(db, patient_id)
     db.execute(
         delete(Insight).where(
-            or_(Insight.patient_id == patient_id, Insight.patient_id.is_(None))
+            or_(
+                Insight.patient_id == patient_id,
+                and_(
+                    Insight.patient_id.is_(None),
+                    Insight.kind == InsightKind.DAILY_BRIEFING,
+                ),
+            )
         )
     )
     db.commit()
@@ -251,6 +271,11 @@ class MessageBody(BaseModel):
 
 @router.post("/{patient_id}/actions/assign-task")
 def assign_task(patient_id: str, body: AssignTaskBody, db: Session = Depends(get_db)) -> dict:
+    """Records the assignment and the coordination time. Completion is NOT
+    tracked: `engine.adherence.compute_adherence` scores `AdherenceRecord` rows
+    only, and nothing in the product writes one — there is no patient app and no
+    completion endpoint — so this task cannot move the adherence rate. The
+    status says so rather than letting the caller infer follow-through."""
     from app.api.rtm import _log
     from app.models.enums import InteractionKind, TimeLogActivity
 
@@ -270,7 +295,11 @@ def assign_task(patient_id: str, body: AssignTaskBody, db: Session = Depends(get
         TimeLogActivity.CARE_COORDINATION, seconds=60,
     )
     db.commit()
-    return {"ok": True, "task": {"id": task.id, "title": task.title}}
+    return {
+        "ok": True,
+        "status": "assigned_untracked",
+        "task": {"id": task.id, "title": task.title},
+    }
 
 
 @router.post("/{patient_id}/actions/message")

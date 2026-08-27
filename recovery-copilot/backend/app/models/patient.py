@@ -36,7 +36,12 @@ class Patient(Base):
 
     surgeon: Mapped[CareTeamMember] = relationship(foreign_keys=[surgeon_id])
     assigned_provider: Mapped[CareTeamMember] = relationship(foreign_keys=[assigned_provider_id])
-    devices: Mapped[list["Device"]] = relationship(back_populates="patient")
+    # Newest connection first: a patient who upgrades a watch keeps both rows,
+    # and readers that take devices[0] as "the" device need that to be stable
+    # rather than whichever row the planner returned.
+    devices: Mapped[list["Device"]] = relationship(
+        back_populates="patient", order_by="(Device.connected_at.desc(), Device.id)"
+    )
 
 
 class Device(Base):

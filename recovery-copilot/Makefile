@@ -25,11 +25,12 @@ build: ## Production frontend build (served by FastAPI in `make run`)
 run: ## Single-process demo: API + built frontend on :8000
 	cd backend && uv run uvicorn app.main:app --port 8000
 
-test: ## Backend test suite
+test: ## Backend test suite (pytest). There are no frontend tests.
 	cd backend && uv run pytest -q
 
-lint:
+lint: ## ESLint over frontend/src + ruff over backend/app and backend/tests
 	cd frontend && npm run lint
+	cd backend && uv run ruff check app tests
 
 deploy: ## Deploy to AWS (see infra/README.md)
 	./infra/deploy.sh
@@ -43,5 +44,5 @@ reseed: ## Rebuild the demo database on AWS (dates shift to today)
 destroy: ## Tear the AWS stack down
 	./infra/destroy.sh
 
-clean:
+clean: ## Remove the local database, the frontend build, and the Lambda build dir
 	rm -rf backend/data/*.db frontend/dist infra/.build

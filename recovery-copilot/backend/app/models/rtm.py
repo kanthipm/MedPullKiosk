@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -9,10 +9,17 @@ from app.models.enums import DocumentKind, DocumentStatus, InteractionKind, Time
 
 
 class MonitoringWindow(Base):
-    """RTM monitoring-day coverage per rolling 30-day window (CPT 98985/98977:
-    >=16 monitoring days per 30-day period, counted from enrollment)."""
+    """RTM monitoring-day coverage per rolling 30-day window, counted from
+    enrollment. The day count picks the CPT code: 98985 covers 2-15 monitoring
+    days in the window, 98977 covers >=16 (SPEC.md §8, rtm/readiness.py)."""
 
     __tablename__ = "monitoring_windows"
+    # One row per patient per window. coverage.update_window() selects then
+    # inserts, so without this a second writer that misses the select inserts a
+    # twin and get_current() can serve whichever copy won the id race.
+    __table_args__ = (
+        UniqueConstraint("patient_id", "window_start", name="uq_monitoring_window"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     patient_id: Mapped[str] = mapped_column(ForeignKey("patients.id"), index=True)
@@ -44,8 +51,10 @@ class EnrollmentStatus(Base):
 
 class ProviderTimeLog(Base):
     """Provider review/treatment-management time (CPT 98979/98980/98981).
-    Aggregated per calendar month; `interactive` marks a live patient
-    interaction (call), which the treatment-management codes require."""
+    `interactive` marks a live patient interaction (call), which the
+    treatment-management codes require. Readiness sums a rolling 30-day window
+    on `occurred_at` rather than calendar months, which are flaky near a month
+    boundary (rtm/readiness.py)."""
 
     __tablename__ = "rtm_time_logs"
 
@@ -57,7 +66,8 @@ class ProviderTimeLog(Base):
     interactive: Mapped[bool] = mapped_column(Boolean, default=False)
     note: Mapped[str | None] = mapped_column(String, nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    # "YYYY-MM", indexed for the monthly rollups billing works from
+    # "YYYY-MM" stamp kept for export and audit. Nothing in the app reads it:
+    # every minutes calculation runs off occurred_at.
     month: Mapped[str] = mapped_column(String, index=True)
 
 

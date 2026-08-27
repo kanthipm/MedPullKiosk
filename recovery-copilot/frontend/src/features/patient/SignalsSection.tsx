@@ -10,13 +10,22 @@ import SectionCard from '../../components/SectionCard'
 import { RefreshOverlay, SkeletonCard } from '../../components/Skeleton'
 import { METRIC_STATUS } from '../../lib/risk'
 
-function MetricCard({ m, index }: { m: MetricInsight; index: number }) {
+function MetricCard({
+  m,
+  index,
+  refreshing,
+}: {
+  m: MetricInsight
+  index: number
+  refreshing: boolean
+}) {
   const s = METRIC_STATUS[m.status]
   return (
     <div
       style={{ '--rise-delay': `${index * 40}ms` } as CSSProperties}
       className="rise relative overflow-hidden rounded-card border border-line bg-panel p-4 pl-[18px]"
     >
+      <RefreshOverlay show={refreshing} />
       <span aria-hidden className={`absolute inset-y-0 left-0 w-[2px] ${s.spine}`} />
       <div className="flex items-center justify-between gap-2">
         <span className="text-[13.5px] font-semibold tracking-[-.01em] text-ink">{m.name}</span>
@@ -107,7 +116,7 @@ function SignalsBody({
 
       <div className="grid gap-3 sm:grid-cols-2">
         {data.metrics.map((m, i) => (
-          <MetricCard key={m.metric_key} m={m} index={i} />
+          <MetricCard key={m.metric_key} m={m} index={i} refreshing={refreshing} />
         ))}
       </div>
 

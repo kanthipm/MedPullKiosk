@@ -19,19 +19,92 @@ from app.config import settings
 from tests.test_aws_storage import FakeS3
 
 
-def _import_handler(monkeypatch, tmp_path, *, db_dir="/tmp", secret=""):
+# app.config and app.aws.* are deliberately NOT rebuilt: the tests monkeypatch
+# attributes on the `settings`, `aws_settings` and `storage` module objects, and
+# a rebuild would hand the handler fresh instances that never saw those patches.
+# Everything else under app.* is rebuilt as one unit — see _import_handler.
+def _rebuildable(name: str) -> bool:
+    return (
+        name.startswith("app.")
+        and name != "app.config"
+        and name != "app.aws"
+        and not name.startswith("app.aws.")
+    )
+
+
+def _detach(name: str) -> None:
+    """Forget a module completely: sys.modules *and* the parent package.
+
+    Popping sys.modules alone is not enough. Importing app.seed.seed also binds
+    `seed` as an attribute of the app.seed package object, and that attribute
+    survives the pop — so anything reaching the module by attribute walk rather
+    than by import keeps finding the discarded one. pytest's
+    monkeypatch.setattr("app.seed.seed.run_seed", ...) resolves exactly that
+    way, which had it patching a dead module while the handler imported a live
+    one and ran the *real* seed against the developer's database.
+    """
+    sys.modules.pop(name, None)
+    parent_name, _, leaf = name.rpartition(".")
+    parent = sys.modules.get(parent_name)
+    if parent is not None:
+        try:
+            delattr(parent, leaf)
+        except AttributeError:
+            pass
+
+
+def _attach(name: str, module) -> None:
+    parent_name, _, leaf = name.rpartition(".")
+    parent = sys.modules.get(parent_name)
+    if parent is not None:
+        setattr(parent, leaf, module)
+
+
+@pytest.fixture(autouse=True)
+def _restore_module_graph():
+    """Put sys.modules back exactly as it was after every test in this file.
+
+    _import_handler rebuilds app.* on purpose, and those rebuilt modules are
+    poison for every later test file: the fresh `Base` has no models registered
+    on it, and the fresh sessionmaker is bound to this file's throwaway
+    database. Leaving them behind used to strand app.seed.seed on an empty
+    metadata and take twenty tests in tests/test_api.py down with it, depending
+    on file order. Restoring by identity — not by re-importing — keeps the
+    class objects the rest of the suite already holds references to.
+    """
+    snapshot = {k: v for k, v in sys.modules.items() if k == "app" or k.startswith("app.")}
+    try:
+        yield
+    finally:
+        for name in [k for k in sys.modules if k == "app" or k.startswith("app.")]:
+            if name not in snapshot:
+                _detach(name)
+        sys.modules.update(snapshot)
+        for name, module in snapshot.items():
+            _attach(name, module)
+        # The rebuilt sessionmaker this file hooked is gone with the restore,
+        # but drop any listener sitting on the restored one too: a leaked
+        # after_commit hook marks the database dirty for the rest of the run.
+        storage.uninstall_change_tracking()
+
+
+def _import_handler(monkeypatch, tmp_path, *, db_dir=None, secret=""):
     """Import app.lambda_handler with AWS wiring pointed at a fake S3.
 
-    app.main and app.database are rebuilt too, not just app.lambda_handler:
-    both are import-time wiring (the middleware guard, the engine binding), and
-    an earlier test importing them without S3 configured would otherwise leave
-    a middleware-less app cached in sys.modules — these tests would then pass
-    against an app that never touches the persistence layer at all.
+    The whole app.* graph is rebuilt, not just app.lambda_handler: on Lambda
+    this module tree is imported exactly once, in this order, so a faithful
+    cold start has to start from nothing. Rebuilding only app.database and
+    app.main — as this helper used to — is worse than rebuilding nothing,
+    because app.api.* keep the *previous* get_db and therefore the previous
+    engine. The handler under test then served every request off a sessionmaker
+    that storage.install_change_tracking had never hooked, so a POST committed
+    without ever marking the database dirty and the upload was silently skipped.
     """
     fake = FakeS3()
-    db_path = f"{db_dir}/recovery-copilot-handler-test.db"
-    if db_dir == "/tmp":  # a leftover from a previous run must not fake a hydrate
-        Path(db_path).unlink(missing_ok=True)
+    # tmp_path is per-test and already lives under /tmp, so it satisfies the
+    # handler's writable-path guard while keeping runs isolated. A shared fixed
+    # filename left a database behind that the next run would hydrate from.
+    db_path = f"{db_dir}/recovery-copilot-handler-test.db" if db_dir else f"{tmp_path}/recovery-copilot-handler-test.db"
 
     monkeypatch.setattr(settings, "database_url", f"sqlite:///{db_path}")
     monkeypatch.setattr(aws_settings, "s3_bucket", "test-bucket")
@@ -39,12 +112,16 @@ def _import_handler(monkeypatch, tmp_path, *, db_dir="/tmp", secret=""):
     monkeypatch.setattr(storage, "client", lambda: fake)
     monkeypatch.setattr(storage, "_client", fake)
     monkeypatch.setattr(storage, "_state", {"etag": None, "checked_at": 0.0, "dirty": False})
-    # Change tracking must re-hook onto the freshly bound sessionmaker below,
-    # not skip because an earlier test hooked the suite-wide one.
-    monkeypatch.delattr(storage.install_change_tracking, "_installed", raising=False)
 
-    for mod in ("app.lambda_handler", "app.main", "app.database"):
-        sys.modules.pop(mod, None)
+    # Deepest first, so each module's parent package is still around to be
+    # cleaned when its child is detached.
+    for mod in sorted(filter(_rebuildable, list(sys.modules)), key=lambda n: -n.count(".")):
+        _detach(mod)
+    # Import the model package explicitly so the freshly built Base carries the
+    # full schema. app.main pulls in most of it through the routers, but
+    # _seeded_db_bytes below builds a database off Patient.metadata and needs
+    # every table, not just the ones some router happened to reach.
+    importlib.import_module("app.models")
     module = importlib.import_module("app.lambda_handler")
     return module, fake
 
@@ -227,3 +304,60 @@ def _seeded_db_bytes() -> bytes:
         finally:
             conn.close()
         return path.read_bytes()
+
+
+def test_the_rebuilt_app_shares_one_database_binding(monkeypatch, tmp_path):
+    """Every module the handler serves through must resolve to the *same*
+    app.database.
+
+    This is the invariant behind the upload assertion above, and it fails in a
+    much more confusing way: rebuilding app.database while app.api.* keep the
+    previous get_db gives an app that reads one file, a change-tracking hook
+    installed on a sessionmaker nobody uses, and — because a fresh Base has no
+    models registered on it — a schema that exists nowhere. Asserting it
+    directly turns a twenty-test cascade in another file into one clear
+    failure here.
+    """
+    handler, _ = _import_handler(monkeypatch, tmp_path)
+
+    import app.database
+    from app.api import patients, worklist
+    from app.models.patient import Patient
+
+    assert patients.get_db is app.database.get_db
+    assert worklist.get_db is app.database.get_db
+    assert str(app.database.engine.url).endswith("recovery-copilot-handler-test.db")
+    # The handler's app was built from these same modules, not a cached one.
+    assert handler.app is __import__("app.main", fromlist=["app"]).app
+    # A fresh Base with no models on it is the other half of the old failure.
+    assert Patient.metadata is app.database.Base.metadata
+    assert "observations" in app.database.Base.metadata.tables
+
+
+def test_detaching_a_module_also_clears_the_parent_package(monkeypatch, tmp_path):
+    """Popping sys.modules is only half of forgetting a module.
+
+    `import app.seed.seed` also binds `seed` as an attribute of the app.seed
+    package object, and that binding survives the pop. Anything that reaches a
+    module by attribute walk instead of by import then keeps finding the
+    discarded copy — pytest's own monkeypatch.setattr("app.seed.seed.run_seed")
+    resolves exactly that way, so it patched a dead module while the handler
+    imported a live one and ran the *real* seed. That is a test helper firing a
+    full re-seed at whatever database happens to be configured, which is worth
+    a guard of its own.
+    """
+    import app as app_pkg
+
+    importlib.import_module("app.seed.seed")
+    assert getattr(app_pkg, "seed", None) is not None
+
+    _detach("app.seed.seed")
+    _detach("app.seed")
+    assert not hasattr(app_pkg, "seed"), (
+        "the parent package still points at the discarded module"
+    )
+
+    # And a fresh import resolves to the same object by both routes.
+    fresh = importlib.import_module("app.seed.seed")
+    assert app_pkg.seed.seed is fresh
+    assert sys.modules["app.seed.seed"] is fresh

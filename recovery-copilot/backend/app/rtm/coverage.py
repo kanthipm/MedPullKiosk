@@ -5,6 +5,11 @@ Device data collected before enrollment completes (the CPT 98975 setup +
 education + baseline event) feeds the engine's pre-op baselines but never
 counts toward the 98985/98977 monitoring thresholds — a patient can't accrue
 billable monitoring days before they are enrolled in monitoring.
+
+The window is bounded on BOTH sides. A backdated or future-dated delivery must
+not lift a patient over the 16-of-30 cliff, and the upper bound is what makes
+"days out of 30" a count that cannot exceed 30 — readiness.py relies on that
+to read `>= 16` as the spec's "16–30".
 """
 
 from datetime import date, datetime, timedelta
@@ -47,19 +52,23 @@ def update_window(db: Session, patient_id: str, today: date | None = None) -> Mo
             select(func.count(distinct(Observation.local_date))).where(
                 Observation.patient_id == patient_id,
                 Observation.local_date >= start,
+                Observation.local_date <= today,
                 Observation.qualifies_for_rtm.is_(True),
                 Observation.deleted_at.is_(None),
             )
         ) or 0
 
-    row = db.scalar(
+    # Oldest first, so a table that already holds twins resolves to one row
+    # deterministically instead of to whichever copy the planner returned.
+    rows = db.scalars(
         select(MonitoringWindow)
         .where(
             MonitoringWindow.patient_id == patient_id,
             MonitoringWindow.window_start == window_start,
         )
-        .limit(1)
-    )
+        .order_by(MonitoringWindow.id)
+    ).all()
+    row = rows[0] if rows else None
     if row is None:
         row = MonitoringWindow(
             patient_id=patient_id, window_start=window_start, window_end=today,
@@ -71,6 +80,13 @@ def update_window(db: Session, patient_id: str, today: date | None = None) -> Mo
         row.days_with_data = int(days)
         row.qualifies_16_of_30 = days >= QUALIFY_DAYS
         row.computed_at = datetime.now()
+    # The model now carries a unique constraint on (patient_id, window_start),
+    # but there are no migrations and create_all is additive, so a database
+    # written before it keeps the old schema and can already hold twins from a
+    # lost select-then-upsert race. Collapse them onto the row just refreshed,
+    # or get_current() goes on serving whichever copy won the id race.
+    for twin in rows[1:]:
+        db.delete(twin)
     db.commit()
     return row
 

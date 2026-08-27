@@ -71,12 +71,23 @@ def _origin_is_cloudfront(event: dict) -> bool:
 def _seed(event: dict) -> dict:
     from app.seed.seed import run_seed
 
-    reset = bool(event.get("reset", True))
+    if not bool(event.get("reset", True)):
+        # There is no incremental seed. app.seed builds one fixed roster with
+        # fixed primary keys, so a second pass over a populated database dies on
+        # "UNIQUE constraint failed: care_team_members.id" partway through, with
+        # the write lock held and half a roster written. Refuse it up front.
+        return {
+            "ok": False,
+            "error": "reset=false is not supported: the seed rebuilds a fixed roster, "
+            "so it can only run against an empty schema.",
+        }
+
     with storage.write_lock():
-        # Start from whatever is durable so a non-reset seed tops up the real
-        # database rather than a stale copy left in this instance's /tmp.
+        # Start from whatever is durable rather than a stale copy left in this
+        # instance's /tmp: the reset drops only the tables the models declare,
+        # and everything else in the file rides along into the upload below.
         storage.hydrate(force=True)
-        summary = run_seed(reset=reset)
+        summary = run_seed(reset=True)
         uploaded = storage.persist(conditional=False)
     logger.info("Seed complete: %s (uploaded=%s)", summary, uploaded)
     return {"ok": True, "uploaded": uploaded, "counts": summary}

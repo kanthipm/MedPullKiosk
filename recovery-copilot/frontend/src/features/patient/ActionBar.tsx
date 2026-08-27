@@ -61,12 +61,15 @@ export default function ActionBar({
       { title: taskTitle.trim(), why: taskWhy.trim() },
       {
         onSuccess: () => {
-          toast(`Task assigned to ${firstName}`)
+          // The task is written to the patient's plan and the minute is
+          // logged, but nothing reads it back yet — no patient-facing surface
+          // and no completion tracking — so the toast does not promise one.
+          toast(`Task saved to ${firstName}'s plan — nothing is sent to the patient yet`, 'info')
           setModal(null)
           setTaskTitle('')
           setTaskWhy('')
         },
-        onError: () => toast('Task could not be assigned — try again', 'warning'),
+        onError: () => toast('Task could not be saved — try again', 'warning'),
       },
     )
   }
@@ -189,7 +192,8 @@ export default function ActionBar({
             </div>
             <div>
               <label htmlFor="task-why" className="micro mb-1 block">
-                Why it matters <span className="normal-case tracking-normal">(shown to the patient)</span>
+                Why it matters{' '}
+                <span className="normal-case tracking-normal">(recorded with the task)</span>
               </label>
               <input
                 id="task-why"
@@ -199,13 +203,18 @@ export default function ActionBar({
                 onChange={(e) => setTaskWhy(e.target.value)}
               />
             </div>
+            <p className="text-[11px] font-medium text-faint">
+              Saved to the patient's plan and counted as care-coordination time.
+              Delivery and completion tracking arrive with the patient check-in
+              assistant.
+            </p>
             <button
               type="button"
               onClick={submitTask}
               disabled={!taskTitle.trim() || assign.isPending}
               className="btn-primary"
             >
-              {assign.isPending ? 'Assigning…' : 'Assign task'}
+              {assign.isPending ? 'Saving…' : 'Save task'}
             </button>
           </div>
         </Modal>

@@ -1,14 +1,30 @@
-"""Build the 'supporting signals' metric cards from analytics results."""
+"""Build the 'supporting signals' metric cards from analytics results.
+
+The cards and the risk header are read side by side, so they share their
+thresholds rather than restating them: the recency window and the gait rule
+below are the same ones the engine judged the patient by.
+"""
 
 from datetime import date, timedelta
 
 import pandas as pd
 
-from app.engine.curves import curve_mid
+from app.engine.deviation import (
+    FUNCTIONAL,
+    RECENCY_WINDOW_DAYS,
+    REF_ANCHORED_CURVE,
+    expected_functional,
+    is_stale,
+)
+from app.engine.risk import GAIT_FLAG_AFTER_DAY, GAIT_FLAG_PCT
 from app.engine.types import Baseline, ConfidenceResult, DeviationResult, MetricInsight
 from app.models.enums import ConfidenceLevel, MetricStatus
 from app.models.enums import MetricType as M
 from app.models.enums import ProcedureType
+
+# Asymmetry at or under this is reported as improving rather than watched; the
+# flag threshold above it lives in risk.py, which owns the rule.
+GAIT_OK_PCT = 8.0
 
 CARD_ORDER: list[tuple[M, str, str, bool]] = [
     # metric, display name, unit label, guarded
@@ -68,17 +84,24 @@ def build_cards(
         baseline = baselines.get(key)
         dev = deviations.get(key)
 
-        recent_days = 5
-        has_recent = len(post[post.index >= postop_day - recent_days]) > 0
+        has_recent = len(post[post.index >= postop_day - RECENCY_WINDOW_DAYS]) > 0
 
-        if not has_recent or baseline is None or dev is None:
+        anchored = dev is not None and dev.reference == REF_ANCHORED_CURVE
+        if not has_recent or baseline is None or dev is None or is_stale(dev, postop_day):
             status = MetricStatus.NODATA
-            status_text = "No recent data"
-            finding = "Not enough recent data from the patient's device."
+            status_text, finding = _no_reading_text(
+                metric, post, baseline, has_recent, procedure, postop_day
+            )
             next_step = None
         elif dev.flagged:
             status = MetricStatus.FLAG
-            status_text = STATUS_TEXT.get((dev.direction, True), "Outside expected range")
+            # An anchored comparison never claims a level, only a pace, so the
+            # card says which of the two it is measuring.
+            status_text = (
+                "Behind its post-op pace"
+                if anchored
+                else STATUS_TEXT.get((dev.direction, True), "Outside expected range")
+            )
             finding = _finding(metric, post, baseline, procedure)
             next_step = NEXT_STEPS.get(metric)
         elif dev.drifting or abs(dev.latest_z) > 1.2:
@@ -95,13 +118,13 @@ def build_cards(
         # special-case gait asymmetry: absolute threshold, not baseline z
         if metric == M.WALKING_ASYMMETRY_PCT and has_recent and len(post) > 0:
             latest = float(post.iloc[-1])
-            if postop_day > 10 and latest > 10.0:
+            if postop_day > GAIT_FLAG_AFTER_DAY and latest > GAIT_FLAG_PCT:
                 status = MetricStatus.FLAG
                 status_text = "Favoring one side"
                 next_step = NEXT_STEPS[metric]
             elif status is not MetricStatus.NODATA:
-                status = MetricStatus.OK if latest <= 8.0 else MetricStatus.WATCH
-                status_text = "Improving" if latest <= 8.0 else "Still elevated"
+                status = MetricStatus.OK if latest <= GAIT_OK_PCT else MetricStatus.WATCH
+                status_text = "Improving" if latest <= GAIT_OK_PCT else "Still elevated"
 
         window = confidence.window_days or 1
         covered = min(
@@ -133,15 +156,48 @@ def build_cards(
     return cards
 
 
+def _no_reading_text(
+    metric: M,
+    post: pd.Series,
+    baseline: Baseline | None,
+    has_recent: bool,
+    procedure: ProcedureType,
+    postop_day: int,
+) -> tuple[str, str]:
+    """Why this card carries no verdict — the two reasons look identical on
+    screen otherwise, and 'No recent data' is a lie for a patient whose device
+    reports faithfully but who cannot be measured against anything."""
+    if (
+        has_recent
+        and baseline is not None
+        and metric in FUNCTIONAL
+        and expected_functional(baseline, procedure, postop_day) is None
+    ):
+        latest = _fmt(float(post.iloc[-1]), metric)
+        return (
+            "No comparison available",
+            f"Latest {latest}, but this metric has no baseline days the "
+            "expected curve can be anchored to.",
+        )
+    return "No recent data", "Not enough recent data from the patient's device."
+
+
 def _reference(
     metric: M, baseline: Baseline | None, procedure: ProcedureType, postop_day: int
 ) -> float | None:
     """Dashed reference for the sparkline: expected-today for functional
-    metrics, personal baseline for vitals."""
+    metrics, personal baseline for vitals.
+
+    Functional metrics read the one shared definition of "expected", so the
+    line under the chart is the number the flag was raised against — including
+    for a patient with no pre-op history, whose line is the curve's shape
+    projected from their own early post-op level rather than a fraction of a
+    pre-op norm they never recorded."""
     if baseline is None:
         return None
-    if metric in (M.STEPS, M.WALKING_SPEED):
-        return round(baseline.mean * float(curve_mid(procedure, postop_day)), 2)
+    if metric in FUNCTIONAL:
+        expected = expected_functional(baseline, procedure, postop_day)
+        return None if expected is None else round(expected, 2)
     if metric == M.WALKING_ASYMMETRY_PCT:
         return None
     return round(baseline.mean, 2)
@@ -150,12 +206,30 @@ def _reference(
 def _finding(metric: M, post: pd.Series, baseline: Baseline, procedure: ProcedureType) -> str:
     latest = float(post.iloc[-1])
     latest_str = _fmt(latest, metric)
-    if metric in (M.STEPS, M.WALKING_SPEED):
+    if metric in FUNCTIONAL:
         day = int(post.index[-1])
-        expected = baseline.mean * float(curve_mid(procedure, day))
+        expected = expected_functional(baseline, procedure, day)
+        if expected is None:
+            return f"Latest {latest_str}."
         pct = (latest / expected - 1.0) * 100 if expected > 0 else 0.0
         rel = f"{abs(pct):.0f}% {'below' if pct < 0 else 'above'} expected for day {day}"
-        return f"Latest {latest_str} — {rel}."
+        if baseline.is_preop:
+            return f"Latest {latest_str} — {rel}."
+        # Say out loud that the expectation is a projection from this
+        # patient's own early post-op level: it is a claim about pace, and
+        # reading it as a claim about capacity would overstate it.
+        anchor_days = [d for d in baseline.window_days if d >= 0]
+        span = (
+            f"post-op day{'s' if len(anchor_days) > 1 else ''} "
+            f"{min(anchor_days)}-{max(anchor_days)}"
+            if anchor_days
+            else "the early post-op days"
+        )
+        return (
+            f"Latest {latest_str} — {rel}, projecting the recovery curve from "
+            f"their own {span} level. No pre-op history, so this tracks pace, "
+            "not capacity."
+        )
     if metric == M.WALKING_ASYMMETRY_PCT:
         return f"Latest {latest_str}% of walking time favoring one side."
     delta = latest - baseline.mean

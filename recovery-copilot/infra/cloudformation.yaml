@@ -168,7 +168,12 @@ Resources:
               - Effect: Allow
                 # Without ListBucket, S3 answers a HEAD for a missing key with
                 # 403 instead of 404, and the "database not seeded yet" path
-                # would surface as a permissions error.
+                # would surface as a permissions error. Deliberately carries no
+                # s3:prefix condition: that key is only populated for list
+                # requests, so conditioning on it would fail the implicit check
+                # behind that HEAD and reintroduce the 403 on a fresh bucket.
+                # The grant is therefore key enumeration only — reads and writes
+                # stay scoped to db/ by the statement above.
                 Action: s3:ListBucket
                 Resource: !GetAtt DataBucket.Arn
               - Effect: Allow
@@ -212,9 +217,12 @@ Resources:
       Handler: app.lambda_handler.handler
       Role: !GetAtt LambdaRole.Arn
       MemorySize: !Ref LambdaMemoryMB
-      # Comfortably above the CloudFront origin read timeout, so a slow Groq
-      # call fails as a 504 at the edge rather than a truncated Lambda.
-      Timeout: 30
+      # Comfortably above the Distribution's OriginReadTimeout of 30s below, so
+      # a slow Groq call is given up on at the edge while the function keeps
+      # running: it finishes its write-back and releases the S3 lock instead of
+      # being killed mid-upload. Equal values would race, and the loser would be
+      # a truncated Lambda holding the lock until its TTL expires.
+      Timeout: 45
       ReservedConcurrentExecutions: !If
         - HasReservedConcurrency
         - !Ref ApiReservedConcurrency
@@ -265,8 +273,10 @@ Resources:
           GROQ_MODEL: !Ref GroqModel
           OLLAMA_URL: ""
           WARM_CACHES_ON_STARTUP: "false"
-          # The seed holds the write lock for its whole run.
-          LOCK_TTL_SECONDS: "900"
+          # The seed holds the write lock for its whole run, so the TTL has to
+          # cover it — but stay under the 900s timeout above, or a seed the
+          # runtime kills leaves a lock no later writer is allowed to break.
+          LOCK_TTL_SECONDS: "840"
 
   ApiFunctionUrl:
     Type: AWS::Lambda::Url
@@ -359,6 +369,9 @@ Resources:
               OriginProtocolPolicy: https-only
               HTTPSPort: 443
               OriginSSLProtocols: [TLSv1.2]
+              # CloudFront allows 1-60s here without a quota increase. 30 pairs
+              # with the API function's 45s timeout: the edge stops waiting
+              # first, by 15s, on every slow request.
               OriginReadTimeout: 30
             OriginCustomHeaders:
               - HeaderName: x-origin-verify

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { QueryKey } from '@tanstack/react-query'
 import { fetchJson } from './client'
 import type {
   AppNotification,
@@ -175,11 +176,34 @@ export function usePracticeOverview() {
   })
 }
 
+/** Caches an RTM write moves: the patient's own readiness card, and the
+ *  practice strip, which sums every patient's minutes into ready-to-bill and
+ *  estimated revenue. */
+export function rtmKeys(id: string): QueryKey[] {
+  return [
+    ['patient', id, 'rtm'],
+    ['practice-overview'],
+  ]
+}
+
+/** Caches a recompute moves: the patient record, its worklist row and the
+ *  headline above it, the practice strip's needs-review count — which counts
+ *  the same tier the headline does, so the two must move together — and the
+ *  bell, since a recompute that flips a patient to high writes a notification
+ *  server-side. */
+export function recomputeKeys(id: string): QueryKey[] {
+  return [
+    ['patient', id],
+    ['worklist'],
+    ['practice-overview'],
+    ['notifications'],
+  ]
+}
+
 function useRtmInvalidation(id: string) {
   const qc = useQueryClient()
   return () => {
-    qc.invalidateQueries({ queryKey: ['patient', id, 'rtm'] })
-    qc.invalidateQueries({ queryKey: ['practice-overview'] })
+    for (const queryKey of rtmKeys(id)) qc.invalidateQueries({ queryKey })
   }
 }
 
@@ -249,12 +273,9 @@ export function useRecompute(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => fetchJson(`/api/patients/${id}/recompute`, { method: 'POST' }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['patient', id] })
-      qc.invalidateQueries({ queryKey: ['worklist'] })
-      // recompute can flip a patient to high priority, which creates a bell
-      // notification server-side
-      qc.invalidateQueries({ queryKey: ['notifications'] })
-    },
+    // awaited on purpose: the mutation stays pending until the refetched
+    // analysis has landed, which is what the refresh shimmer waits on
+    onSuccess: () =>
+      Promise.all(recomputeKeys(id).map((queryKey) => qc.invalidateQueries({ queryKey }))),
   })
 }

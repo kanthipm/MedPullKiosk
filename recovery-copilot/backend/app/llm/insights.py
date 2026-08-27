@@ -10,14 +10,22 @@ import hashlib
 import json
 import logging
 import re
+from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.llm import fallback
 from app.llm.prompts import PROMPT_VERSION, SYSTEM, briefing_prompt, patient_prompt
-from app.llm.provider import LLMError, complete_json, model_name, provider_name
+from app.llm.provider import (
+    LLMError,
+    complete_json,
+    model_name,
+    note_invalid_output,
+    note_valid_output,
+    provider_name,
+)
 from app.models.checkin import Checkin
 from app.models.enums import GUARDRAIL_SENTENCE, InsightKind
 from app.models.insight import Insight, RiskAssessment
@@ -27,6 +35,24 @@ logger = logging.getLogger(__name__)
 
 # Word-prefix match: catches detect/detected/detection, diagnose/diagnosis/...
 BANNED = re.compile(r"\b(detect|diagnos)", re.IGNORECASE)
+
+# Rows are keyed by an input hash that turns over on every engine recompute
+# (and, because date.today() is in it, at least once a calendar day), so only
+# the newest few of a (patient, kind) series can ever be read again. The rest
+# are dead cache entries, and on Lambda the whole SQLite file is re-uploaded
+# whenever they accumulate — so each write trims its own series.
+KEEP_PER_SERIES = 6
+
+# /ask is the exception, and treating it like the others was a cost regression
+# in the shape of a cleanup. Every answer to every question lives in ONE
+# (patient_id=NULL, kind='ask') series, so a cap of 6 evicts by recency across
+# unrelated questions: with eight questions in rotation nothing is ever a hit
+# again, and each round costs a fresh set of LLM calls forever. The rows are
+# tiny and a clinician's rotation is not, so the cap is a bound on the table
+# rather than a bound on the working set — and the real garbage, answers whose
+# roster digest has turned over, is collected by age instead.
+ASK_KEEP = 250
+ASK_MAX_AGE_DAYS = 3
 
 
 def _strings(value: Any) -> list[str]:
@@ -82,7 +108,15 @@ def _validate(kind: InsightKind, content: dict[str, Any]) -> dict[str, Any] | No
     return content
 
 
-def _cached(db: Session, patient_id: str | None, kind: InsightKind, cache_hash: str) -> Insight | None:
+def _cached(
+    db: Session,
+    patient_id: str | None,
+    kind: InsightKind,
+    cache_hash: str,
+    key_provider: str,
+) -> Insight | None:
+    """Reads the row for one cache key. `key_provider` is the provider the key
+    was built from, which is what separates the two kinds of fallback row."""
     row = db.scalar(
         select(Insight)
         .where(
@@ -93,12 +127,53 @@ def _cached(db: Session, patient_id: str | None, kind: InsightKind, cache_hash: 
         .order_by(Insight.id.desc())
         .limit(1)
     )
-    # A fallback row written during a transient LLM failure (e.g. a rate-limit
-    # burst) must not permanently satisfy a real-provider cache key — treat it
-    # as a miss so the next read retries the LLM.
-    if row is not None and row.llm_provider == "fallback" and provider_name() != "fallback":
+    # A fallback row under a REAL-provider key is degraded output — written
+    # during a transient LLM failure (e.g. a rate-limit burst) — and must not
+    # satisfy that key permanently; treat it as a miss so the next read
+    # retries the LLM. A fallback row under a fallback key is the intended
+    # output of a deliberate skip and caches like any other row.
+    if row is not None and row.llm_provider == "fallback" and key_provider != "fallback":
         return None
     return row
+
+
+def _prune(db: Session, patient_id: str | None, kind: InsightKind) -> None:
+    """Drops superseded rows of one (patient, kind) series, newest kept."""
+    if kind == InsightKind.ASK:
+        _prune_ask(db)
+        return
+    superseded = db.scalars(
+        select(Insight.id)
+        .where(Insight.patient_id == patient_id, Insight.kind == kind)
+        .order_by(Insight.id.desc())
+        .offset(KEEP_PER_SERIES)
+    ).all()
+    if superseded:
+        db.execute(delete(Insight).where(Insight.id.in_(superseded)))
+
+
+def _prune_ask(db: Session) -> None:
+    """Age first, then a ceiling.
+
+    An ask row dies when the roster digest baked into its key turns over,
+    which happens at least daily — so anything a few days old is unreachable
+    whatever question produced it. Recency across questions is NOT a proxy for
+    that: the oldest surviving row is simply the question asked least
+    recently, and evicting it is throwing away a cache hit."""
+    cutoff = datetime.now() - timedelta(days=ASK_MAX_AGE_DAYS)
+    db.execute(
+        delete(Insight).where(
+            Insight.kind == InsightKind.ASK, Insight.generated_at < cutoff
+        )
+    )
+    overflow = db.scalars(
+        select(Insight.id)
+        .where(Insight.kind == InsightKind.ASK)
+        .order_by(Insight.id.desc())
+        .offset(ASK_KEEP)
+    ).all()
+    if overflow:
+        db.execute(delete(Insight).where(Insight.id.in_(overflow)))
 
 
 def _persist(
@@ -118,6 +193,8 @@ def _persist(
         model=model_name() if provider != "fallback" else None,
     )
     db.add(insight)
+    db.flush()  # sessions run autoflush=False; the prune must see this row
+    _prune(db, patient_id, kind)
     db.commit()
     return insight
 
@@ -164,32 +241,35 @@ def get_patient_insight(db: Session, kind: InsightKind, patient_id: str) -> Insi
         raise ValueError(f"Unknown patient: {patient_id}")
     assessment = _latest_assessment(db, patient_id)
     transcript = _transcript(db, patient_id)
+    analytics = assessment.analytics
+
+    # Stable patients' worklist reasons are pure status lines ("tracking as
+    # expected") — the deterministic text is already exact, and skipping the
+    # LLM keeps the worklist fast on cold caches. A deliberate skip is keyed
+    # as what it produces, so the row it writes is a cache hit next time
+    # rather than a fallback row sitting under a key that expects an LLM.
+    skip_llm = (
+        kind == InsightKind.WORKLIST_REASON
+        and analytics.get("risk", {}).get("level") == "low"
+    )
+    provider = "fallback" if skip_llm else provider_name()
 
     digest = hashlib.sha256(json.dumps(transcript).encode()).hexdigest()[:16]
     # risk_level is included so prose can never lag a tier change, even if an
     # assessment is somehow regenerated under an unchanged input hash.
     cache_hash = hashlib.sha256(
         f"{kind}:{assessment.input_hash}:{assessment.risk_level}:{digest}:"
-        f"{PROMPT_VERSION}:{provider_name()}".encode()
+        f"{PROMPT_VERSION}:{provider}".encode()
     ).hexdigest()
 
-    cached = _cached(db, patient_id, kind, cache_hash)
+    cached = _cached(db, patient_id, kind, cache_hash, provider)
     if cached is not None:
         return cached
 
-    analytics = assessment.analytics
     header = _header(patient, analytics.get("postop_day", 0))
 
     content: dict[str, Any] | None = None
-    provider = provider_name()
-    # Stable patients' worklist reasons are pure status lines ("tracking as
-    # expected") — the deterministic text is already exact, and skipping the
-    # LLM keeps the worklist fast on cold caches.
-    skip_llm = (
-        kind == InsightKind.WORKLIST_REASON
-        and analytics.get("risk", {}).get("level") == "low"
-    )
-    if provider != "fallback" and not skip_llm:
+    if provider != "fallback":
         try:
             # warm enough that a manual Refresh visibly rewrites the narrative
             raw = complete_json(
@@ -198,6 +278,9 @@ def get_patient_insight(db: Session, kind: InsightKind, patient_id: str) -> Insi
             content = _validate(kind, raw)
             if content is None:
                 logger.warning("LLM output for %s/%s failed validation; using fallback", patient_id, kind)
+                note_invalid_output(provider)
+            else:
+                note_valid_output(provider)
         except LLMError as e:
             logger.warning("LLM call failed for %s/%s: %s", patient_id, kind, e)
 
@@ -215,10 +298,24 @@ def get_patient_insight(db: Session, kind: InsightKind, patient_id: str) -> Insi
 
 def get_daily_briefing(db: Session) -> Insight:
     patients = db.scalars(select(Patient).order_by(Patient.id)).all()
+    assessments = [(patient, _latest_assessment(db, patient.id)) for patient in patients]
+
+    provider = provider_name()
+    cache_hash = hashlib.sha256(
+        (
+            ";".join(f"{p.id}:{a.input_hash}:{a.risk_level}" for p, a in assessments)
+            + f":{PROMPT_VERSION}:{provider}"
+        ).encode()
+    ).hexdigest()
+
+    # The cache is consulted before the roster is built: each roster entry
+    # costs a per-patient insight lookup, so a warm briefing has to be free.
+    cached = _cached(db, None, InsightKind.DAILY_BRIEFING, cache_hash, provider)
+    if cached is not None:
+        return cached
+
     roster: list[dict[str, Any]] = []
-    hash_parts: list[str] = []
-    for patient in patients:
-        assessment = _latest_assessment(db, patient.id)
+    for patient, assessment in assessments:
         reason = get_patient_insight(db, InsightKind.WORKLIST_REASON, patient.id)
         roster.append(
             {
@@ -229,26 +326,21 @@ def get_daily_briefing(db: Session) -> Insight:
                 "procedure": patient.procedure_display,
             }
         )
-        hash_parts.append(f"{patient.id}:{assessment.input_hash}:{assessment.risk_level}")
-
-    cache_hash = hashlib.sha256(
-        (";".join(hash_parts) + f":{PROMPT_VERSION}:{provider_name()}").encode()
-    ).hexdigest()
-
-    cached = _cached(db, None, InsightKind.DAILY_BRIEFING, cache_hash)
-    if cached is not None:
-        return cached
 
     # sort: high first for the prompt/template
     order = {"high": 0, "medium": 1, "missing_data": 2, "low": 3}
     roster.sort(key=lambda p: order.get(p["priority"], 4))
 
     content: dict[str, Any] | None = None
-    provider = provider_name()
     if provider != "fallback":
         try:
             raw = complete_json(SYSTEM, briefing_prompt(roster), temperature=0.6)
             content = _validate(InsightKind.DAILY_BRIEFING, raw)
+            if content is None:
+                logger.warning("LLM briefing output failed validation; using fallback")
+                note_invalid_output(provider)
+            else:
+                note_valid_output(provider)
         except LLMError as e:
             logger.warning("LLM briefing failed: %s", e)
 

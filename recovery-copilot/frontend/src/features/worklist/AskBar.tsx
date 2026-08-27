@@ -101,7 +101,7 @@ export default function AskBar({
           sum
           spine="bg-brand"
           className="rise mt-3"
-          eyebrow={<AIAttribution label="AI answer" generatedAt={result.generated_at} provider={result.provider} />}
+          eyebrow={<AIAttribution kind="answer" generatedAt={result.generated_at} provider={result.provider} />}
           aside={
             result.patient_ids.length > 0 ? (
               <span className="chip bg-brand-tint text-brand">

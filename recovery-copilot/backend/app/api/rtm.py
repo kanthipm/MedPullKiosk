@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.worklist import ensure_fresh_assessment
 from app.database import get_db
 from app.models.enums import (
     DocumentKind,
@@ -72,9 +73,14 @@ def _log(
 
 @router.get("/patients/{patient_id}/rtm")
 def rtm_readiness(patient_id: str, db: Session = Depends(get_db)) -> dict:
+    """The readiness card. Recomputes first, because compute_readiness only
+    reads the stored monitoring window — without this the card serves
+    yesterday's monitoring days while the rest of the patient page serves
+    today's."""
     from app.rtm.readiness import compute_readiness
 
     patient = _get_patient(db, patient_id)
+    ensure_fresh_assessment(db, patient_id)
     readiness = compute_readiness(db, patient)
     interactions = db.scalars(
         select(RtmInteraction)

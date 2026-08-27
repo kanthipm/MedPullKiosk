@@ -2,10 +2,13 @@
 #
 # Tear the Recovery Copilot stack down. The data bucket is created with
 # DeletionPolicy: Retain, so the demo database survives unless you pass
-# --delete-data.
+# --delete-data, and the SSM parameters are kept unless you pass
+# --delete-secrets: deploy.sh reuses both, so removing them turns every
+# redeploy into a re-entry of the Groq key.
 #
-#   ./infra/destroy.sh                # delete the stack, keep the S3 data
-#   ./infra/destroy.sh --delete-data  # delete everything, including the database
+#   ./infra/destroy.sh                   # delete the stack, keep data + secrets
+#   ./infra/destroy.sh --delete-data     # also delete the database bucket
+#   ./infra/destroy.sh --delete-secrets  # also delete the SSM parameters
 #
 set -euo pipefail
 
@@ -15,7 +18,15 @@ GROQ_PARAM="${GROQ_PARAM:-/recovery-copilot/groq-api-key}"
 ORIGIN_SECRET_PARAM="${ORIGIN_SECRET_PARAM:-/recovery-copilot/origin-verify-secret}"
 
 DELETE_DATA=false
-[ "${1:-}" = "--delete-data" ] && DELETE_DATA=true
+DELETE_SECRETS=false
+for arg in "$@"; do
+  case "$arg" in
+    --delete-data) DELETE_DATA=true ;;
+    --delete-secrets) DELETE_SECRETS=true ;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    *) echo "unknown flag: $arg" >&2; exit 1 ;;
+  esac
+done
 
 log()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
@@ -31,6 +42,7 @@ DATA_BUCKET="$(aws_ cloudformation describe-stacks --stack-name "$STACK_NAME" \
 log "About to delete stack '$STACK_NAME' in $REGION"
 [ -n "$DATA_BUCKET" ] && info "data bucket: $DATA_BUCKET $($DELETE_DATA && echo '(WILL BE DELETED)' || echo '(retained)')"
 info "artifact bucket: $ARTIFACT_BUCKET (will be emptied and deleted)"
+info "SSM parameters: $($DELETE_SECRETS && echo 'WILL BE DELETED' || echo 'retained')"
 printf '    Type the stack name to confirm: '
 read -r CONFIRM
 [ "$CONFIRM" = "$STACK_NAME" ] || { echo "aborted"; exit 1; }
@@ -46,9 +58,16 @@ aws_ cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
 
 log "Cleaning up"
 aws_ s3api delete-bucket --bucket "$ARTIFACT_BUCKET" 2>/dev/null || true
-aws_ ssm delete-parameter --name "$ORIGIN_SECRET_PARAM" 2>/dev/null || true
-aws_ ssm delete-parameter --name "$GROQ_PARAM" 2>/dev/null || true
-info "removed the SSM parameters"
+if $DELETE_SECRETS; then
+  aws_ ssm delete-parameter --name "$ORIGIN_SECRET_PARAM" 2>/dev/null || true
+  aws_ ssm delete-parameter --name "$GROQ_PARAM" 2>/dev/null || true
+  info "removed the SSM parameters"
+else
+  # Standard parameters cost nothing to keep, and deploy.sh reuses both: the
+  # origin secret has to survive anyway (CloudFront and the function compare
+  # against the same value), and deleting the Groq key means typing it in again.
+  info "kept the SSM parameters — rerun with --delete-secrets to remove them"
+fi
 
 if $DELETE_DATA && [ -n "$DATA_BUCKET" ]; then
   log "Deleting the data bucket"

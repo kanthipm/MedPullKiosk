@@ -2,6 +2,7 @@ import { ChevronRight, MessageSquareText, Smartphone } from 'lucide-react'
 import { useState } from 'react'
 import { usePatientCheckins } from '../../api/queries'
 import SectionCard from '../../components/SectionCard'
+import { RefreshOverlay } from '../../components/Skeleton'
 import { relativeTime } from '../../lib/format'
 import type { Checkin } from '../../api/types'
 
@@ -88,7 +89,13 @@ function CheckinRow({ checkin }: { checkin: Checkin }) {
   )
 }
 
-export default function CheckinHistory({ patientId }: { patientId: string }) {
+export default function CheckinHistory({
+  patientId,
+  refreshing,
+}: {
+  patientId: string
+  refreshing: boolean
+}) {
   const { data } = usePatientCheckins(patientId)
   const [showAll, setShowAll] = useState(false)
   const checkins = data?.checkins ?? []
@@ -105,6 +112,7 @@ export default function CheckinHistory({ patientId }: { patientId: string }) {
         )
       }
     >
+      <RefreshOverlay show={refreshing} />
       {checkins.length === 0 ? (
         <p className="text-[11.5px] font-medium text-muted">No recovery conversations yet.</p>
       ) : (

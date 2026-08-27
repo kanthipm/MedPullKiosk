@@ -19,7 +19,6 @@ from app.connectors.capabilities import CAPABILITIES
 from app.connectors.mock import daily_observation
 from app.engine.curves import curve_mid, recovery_progress
 from app.models.enums import MetricType as M
-from app.models.enums import SourceProvider
 from app.seed.patients import PatientSpec, get_spec
 from app.seed.scenarios import ScenarioSpec, get_scenario
 

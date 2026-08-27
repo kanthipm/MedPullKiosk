@@ -9,6 +9,9 @@ Design (from integration research, mid-2026):
   depend on a specific provider.
 - Ingestion is idempotent: dedupe_key is deterministic per (provider, patient,
   metric, window) so re-delivered webhooks and back-fills upsert cleanly.
+- There is exactly one day definition: local_date_of() resolves the patient-
+  local calendar day once, at ingest, and readers index the materialized column
+  rather than re-deriving a day of their own from start_time.
 """
 
 from __future__ import annotations
@@ -26,9 +29,14 @@ def local_date_of(start_time: datetime, tz_id: str) -> date:
     """The patient-local calendar day an instant belongs to.
 
     Aware datetimes are converted into the observation's zone; naive ones are
-    trusted as already-local wall time (the seed and mock paths). This is the
-    single definition the RTM day counter is allowed to use — func.date() on a
-    naive UTC instant moves a West Coast evening onto the next calendar day.
+    trusted as already-local wall time (the seed and mock paths).
+
+    This is the product's only day definition. The column it materializes is
+    what the RTM day counter counts (rtm/coverage.py) and what the engine's
+    post-op day axis is built from (engine/dataload.py); no reader may derive a
+    second day from start_time, because func.date() on a naive UTC instant
+    moves a West Coast evening onto the next calendar day and the two
+    definitions would then disagree about which day a reading belongs to.
     """
     if start_time.tzinfo is not None:
         return start_time.astimezone(ZoneInfo(tz_id)).date()

@@ -13,7 +13,6 @@ from typing import Any
 from app.models.enums import (
     ConfidenceLevel,
     MetricStatus,
-    MetricType,
     RiskLevel,
     TrajectoryState,
 )
@@ -26,6 +25,11 @@ class Baseline:
     sd: float
     n_days: int
     window: str  # e.g. "pre-op days -10..-1"
+    is_preop: bool  # False = anchored on post-op days, so not a pre-op norm
+    # Post-op day indices the mean was taken from (negative = pre-op). A
+    # post-op anchor is only interpretable next to where the expected curve
+    # says the patient already was on those days, so the days travel with it.
+    window_days: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -39,7 +43,19 @@ class DeviationResult:
     raw_z: float                  # latest single-day z-score (composite uses this)
     consecutive_out: int
     drifting: bool                # CUSUM slow-drift alarm
+    # Post-op day of the reading behind raw_z, or None when nothing was scored.
+    # How far it sits behind today is what makes a metric stale, and a stale
+    # metric may not raise a flag, weigh into the composite, or move a tier.
+    last_day: int | None = None
     series_z: list[float] = field(default_factory=list)
+    # What the z-scores are measured against, so every consumer phrases the
+    # finding as the comparison that was actually made:
+    #   "baseline"        vitals vs the patient's own personal norm
+    #   "preop_curve"     functional vs the expected curve, in pre-op units
+    #   "anchored_curve"  functional vs the SHAPE of the expected curve,
+    #                     anchored on the patient's own early post-op level
+    #                     (no pre-op norm exists, so no absolute claim is made)
+    reference: str = "baseline"
 
 
 @dataclass
@@ -67,6 +83,9 @@ class TrajectoryResult:
     change_point_day: int | None          # post-op day of detected mean shift
     actual: list[dict[str, Any]] = field(default_factory=list)    # [{day, v}] functional index
     expected: list[dict[str, Any]] = field(default_factory=list)  # [{day, lo, mid, hi}]
+    # True when the index was built without any pre-op norm, so the verdict is
+    # about pace rather than capacity — and AHEAD is withheld.
+    anchored: bool = False
 
 
 @dataclass
@@ -85,6 +104,7 @@ class ConfidenceResult:
     level: ConfidenceLevel
     days_with_data: int
     window_days: int
+    dark_metrics: list[str] = field(default_factory=list)  # silent all window
 
 
 @dataclass

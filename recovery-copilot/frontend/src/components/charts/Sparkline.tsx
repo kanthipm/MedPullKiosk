@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import {
   Area,
   ComposedChart,
@@ -9,8 +10,8 @@ import {
 import { shortDate } from '../../lib/format'
 
 /** 14-day micro-trend inside a metric card, in the demo sparkline style:
- *  brand-purple stroke with a soft fading area fill and a white-cored dot marking the
- *  latest reading. Status still lives in the card's pill, not the line. */
+ *  brand-purple stroke with a soft fading area fill and a panel-cored dot marking
+ *  the latest reading. Status still lives in the card's pill, not the line. */
 export default function Sparkline({
   series,
   baseline,
@@ -20,6 +21,12 @@ export default function Sparkline({
   baseline?: number | null
   unit: string
 }) {
+  // A metric grid renders one of these per card; a shared gradient id would
+  // make every card paint from whichever <defs> the document happened to
+  // parse first. Strip the punctuation React wraps the id in so the fragment
+  // reference stays a plain SVG name.
+  const gradientId = `spark-fade-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+
   if (series.length === 0) {
     return <div className="h-10 rounded-[10px] border border-line bg-soft" />
   }
@@ -28,7 +35,7 @@ export default function Sparkline({
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={series} margin={{ top: 4, right: 6, bottom: 2, left: 2 }}>
           <defs>
-            <linearGradient id="spark-fade" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor="rgb(var(--brand))" stopOpacity=".22" />
               <stop offset="1" stopColor="rgb(var(--brand))" stopOpacity="0" />
             </linearGradient>
@@ -40,7 +47,7 @@ export default function Sparkline({
             type="monotone"
             dataKey="value"
             stroke="none"
-            fill="url(#spark-fade)"
+            fill={`url(#${gradientId})`}
             isAnimationActive={false}
           />
           <Line

@@ -75,16 +75,23 @@ function ProviderCard({ p, index }: { p: IntegrationProvider; index: number }) {
         )}
       </div>
 
+      {/* Neither button has anywhere to go yet: the demo source has no live
+          connection behind it, and the provider connect flow arrives with the
+          aggregator. The span carries the tooltip because a disabled button
+          takes no pointer events. */}
       <div className="mt-auto pt-4">
-        {connected ? (
-          <button type="button" className="qa-btn w-full">
-            Manage connection
+        <span
+          className="block"
+          title={
+            connected
+              ? 'This workspace runs on the demo data source — there is no live connection to manage yet.'
+              : 'Connecting a live provider arrives with the wearable aggregator integration.'
+          }
+        >
+          <button type="button" disabled className="qa-btn w-full">
+            {connected ? 'Manage connection' : 'Connect'}
           </button>
-        ) : (
-          <button type="button" disabled className="qa-btn w-full opacity-50">
-            Connect
-          </button>
-        )}
+        </span>
       </div>
     </div>
   )
@@ -151,7 +158,8 @@ export default function IntegrationsPage() {
 
       <p className="mt-6 border-t border-line pt-2 text-[11px] font-medium leading-[1.5] text-faint">
         Gait &amp; mobility metrics (walking speed, asymmetry, steadiness) are measured only by
-        Apple devices — patient charts adapt automatically to what each device can provide.
+        Apple devices. A patient chart carries a card for each signal their own device
+        reported, so those cards are simply absent for everyone else.
       </p>
     </div>
   )

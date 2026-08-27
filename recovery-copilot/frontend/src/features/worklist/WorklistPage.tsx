@@ -8,7 +8,6 @@ import AskBar from './AskBar'
 import AIAttribution from '../../components/AIAttribution'
 import ConfidenceChip from '../../components/ConfidenceChip'
 import InlineReadout from '../../components/InlineReadout'
-import type { ReadoutItem } from '../../components/MetricCluster'
 import PriorityBadge from '../../components/PriorityBadge'
 import GuardrailFootnote from '../../components/GuardrailFootnote'
 import SectionCard from '../../components/SectionCard'
@@ -17,12 +16,13 @@ import { SkeletonCard, SkeletonLine } from '../../components/Skeleton'
 import EmptyState from '../../components/EmptyState'
 import { longDate, relativeTime } from '../../lib/format'
 import { PRIORITY, type Priority } from '../../lib/risk'
+import { practiceReadout } from './practiceStrip'
 
 type Filter = 'all' | 'high' | 'missing_data'
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'high', label: 'Needs review' },
+  { key: 'high', label: 'High risk' },
   { key: 'missing_data', label: 'Missing data' },
 ]
 
@@ -70,50 +70,6 @@ export default function WorklistPage() {
 
   let riseIndex = 0
 
-  // One scan line: triage + operational KPIs, value glued to label.
-  const readout: ReadoutItem[] = [
-    { key: 'total', label: 'monitored', value: data.stats.total },
-    {
-      key: 'high',
-      label: 'need review',
-      value: data.stats.high,
-      tone: data.stats.high > 0 ? 'high' : undefined,
-    },
-    {
-      key: 'missing',
-      label: 'missing data',
-      value: data.stats.missing,
-      tone: data.stats.missing > 0 ? 'missing' : undefined,
-    },
-    {
-      key: 'stable',
-      label: 'stable',
-      value: data.stats.low,
-      tone: 'low',
-    },
-  ]
-
-  if (practice) {
-    readout.push(
-      {
-        key: 'bill',
-        label: 'ready to bill',
-        value: practice.ready_to_bill,
-        tone: practice.ready_to_bill > 0 ? 'low' : undefined,
-      },
-      {
-        key: 'adh',
-        label: 'adherence',
-        value: practice.therapy_adherence_pct != null ? `${practice.therapy_adherence_pct}%` : '—',
-      },
-      {
-        key: 'rev',
-        label: 'est. revenue',
-        value: `$${practice.estimated_revenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
-      },
-    )
-  }
-
   return (
     <div>
       <header className="rise" style={{ '--rise-delay': '0ms' } as CSSProperties}>
@@ -123,12 +79,14 @@ export default function WorklistPage() {
         </h1>
         <div className="mt-4">
           {practice ? (
-            <InlineReadout items={readout} />
+            <InlineReadout items={practiceReadout(practice)} />
           ) : (
             <div className="flex gap-5">
+              <SkeletonLine className="h-6 w-20" />
               <SkeletonLine className="h-6 w-24" />
               <SkeletonLine className="h-6 w-28" />
               <SkeletonLine className="h-6 w-24" />
+              <SkeletonLine className="h-6 w-28" />
             </div>
           )}
         </div>
@@ -139,7 +97,7 @@ export default function WorklistPage() {
           spine="bg-brand"
           eyebrow={
             <AIAttribution
-              label="AI daily briefing"
+              kind="daily briefing"
               generatedAt={data.briefing.generated_at}
               provider={data.briefing.provider}
             />

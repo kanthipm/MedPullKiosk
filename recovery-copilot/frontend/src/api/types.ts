@@ -89,6 +89,9 @@ export interface PatientMetrics {
     change_point_day: number | null
     actual: { day: number; v: number }[]
     expected: { day: number; lo: number; mid: number; hi: number }[]
+    // true when the index carries no pre-op norm: the verdict is about pace
+    // rather than capacity, and `ahead` is withheld
+    anchored: boolean
   }
   composite: {
     index: number
@@ -175,7 +178,16 @@ export interface RtmReadiness {
     eligible: boolean
     enrolled: boolean
   }
-  treatment_management: { minutes: number; interactive_communication: boolean }
+  treatment_management: {
+    minutes: number
+    interactive_communication: boolean
+    // the period the minutes were counted over — `billable_from` is the
+    // enrollment date once enrolled, since pre-enrollment minutes are real
+    // work but not billable work
+    counted_from: string
+    counted_to: string
+    billable_from: string | null
+  }
   documentation_ready: boolean
   billing: RtmBillingCode[]
   ready_to_bill: boolean

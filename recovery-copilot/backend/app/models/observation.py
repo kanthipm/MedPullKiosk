@@ -33,9 +33,13 @@ class Observation(Base):
     end_time: Mapped[datetime] = mapped_column(DateTime)
     timezone: Mapped[str] = mapped_column(String, default="America/New_York")  # IANA tz id
     utc_offset_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # The patient-local calendar day — the auditable unit of RTM day-counting.
-    # Materialized at ingest, never derived from func.date(start_time): a West
-    # Coast patient's evening activity must not land on the next UTC day.
+    # The patient-local calendar day — the auditable unit of RTM day-counting,
+    # materialized at ingest (connectors/base.local_date_of) so no reader has
+    # to call func.date(start_time): a West Coast patient's evening activity
+    # must not land on the next UTC day. This column is the product's single
+    # day definition — RTM counts it (rtm/coverage.py) and the engine builds
+    # its post-op day axis from it (engine/dataload.py), so the two cannot
+    # drift apart whatever tz an observation arrives in.
     local_date: Mapped[date] = mapped_column(Date)
     granularity: Mapped[Granularity] = mapped_column(String)
     # Laterality/site — without these, operative-vs-contralateral comparison is
