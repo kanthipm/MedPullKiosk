@@ -324,10 +324,9 @@ def test_restatement_cannot_promote_a_row_into_the_billable_set(db):
 
 
 def test_registry_shape():
-    assert len(PROVIDERS) == 11
+    assert len(PROVIDERS) == 10
     assert get_connector(SourceProvider.MOCK) is not None
-    assert get_connector(SourceProvider.JUNCTION) is not None  # the live aggregator
-    assert get_connector(SourceProvider.FITBIT) is None  # a brand, reached through Junction
+    assert get_connector(SourceProvider.FITBIT) is None  # scaffolded only
 
 
 def test_gait_capability_is_apple_only():
@@ -337,18 +336,9 @@ def test_gait_capability_is_apple_only():
     assert supporting == {SourceProvider.APPLE}
 
 
-def test_stub_connectors_raise_not_implemented(db):
-    for connector in (TerraConnector(), AppleHealthKitConnector()):
+def test_stub_connectors_raise_not_implemented():
+    for connector in (TerraConnector(), JunctionConnector(), AppleHealthKitConnector()):
         with pytest.raises(NotImplementedError):
-            connector.authorize(db, "marcus")
+            connector.authorize("marcus")
         with pytest.raises(NotImplementedError):
             connector.normalize({})
-
-
-def test_the_junction_connector_is_no_longer_a_stub():
-    """Its contract is exercised in test_junction.py; here only that it is
-    the registered aggregator and declares the aggregator posture on dates."""
-    connector = JunctionConnector()
-    assert connector.provider is SourceProvider.JUNCTION
-    assert connector.drops_out_of_window_rows is True
-    assert MockConnector().drops_out_of_window_rows is False

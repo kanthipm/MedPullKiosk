@@ -2,7 +2,6 @@
 
 from app.models.adherence import AdherenceRecord, AdherenceTask
 from app.models.checkin import Checkin, CheckinMessage
-from app.models.connection import WearableConnection
 from app.models.insight import EstablishedBaseline, Insight, RiskAssessment
 from app.models.notification import Notification, NotificationPreference
 from app.models.observation import Observation, WebhookEvent
@@ -30,7 +29,6 @@ __all__ = [
     "CareTeamMember",
     "Device",
     "Patient",
-    "WearableConnection",
     "MonitoringWindow",
     "EnrollmentStatus",
     "ProviderTimeLog",

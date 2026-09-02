@@ -16,22 +16,12 @@ leaves the per-patient date window to ingest, which is the one place every
 connector's output passes through.
 """
 
-from __future__ import annotations
-
 from datetime import date, datetime, time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from app.connectors.base import (
-    CanonicalObservation,
-    OAuthResult,
-    PatientContext,
-    WearableConnector,
-)
+from app.connectors.base import CanonicalObservation, OAuthResult, WearableConnector
 from app.connectors.ingest import MAX_BATCH_OBSERVATIONS
 from app.models.enums import Granularity, MetricType, SourceProvider
-
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
 
 UNITS: dict[MetricType, str] = {
     MetricType.STEPS: "count",
@@ -90,12 +80,10 @@ def daily_observation(
 class MockConnector(WearableConnector):
     provider = SourceProvider.MOCK
 
-    def authorize(self, db: Session, patient_id: str) -> str:
+    def authorize(self, patient_id: str) -> str:
         return "mock://connected"
 
-    def handle_oauth_callback(
-        self, db: Session, patient_id: str, params: dict[str, Any]
-    ) -> OAuthResult:
+    def handle_oauth_callback(self, patient_id: str, params: dict[str, Any]) -> OAuthResult:
         return OAuthResult(authorized=True, provider_user_id=f"mock-{patient_id}")
 
     def register_webhook(self, callback_url: str) -> bool:
@@ -103,7 +91,6 @@ class MockConnector(WearableConnector):
 
     def fetch_historical(
         self,
-        db: Session,
         patient_id: str,
         start: date,
         end: date,
@@ -114,13 +101,8 @@ class MockConnector(WearableConnector):
 
         return generate_range(patient_id, start, end, metric_types)
 
-    def normalize(
-        self, raw_payload: dict[str, Any], patient: PatientContext | None = None
-    ) -> list[CanonicalObservation]:
+    def normalize(self, raw_payload: dict[str, Any]) -> list[CanonicalObservation]:
         """Parse a demo webhook body into canonical rows, stamped MOCK.
-
-        The body is the identity here, so `patient` (the handler's resolved
-        context) is not consulted: resolve_patient() read the same field.
 
         The body's `provider` field is provenance, never identity. This
         endpoint is unsigned by design (`_verify_mock` accepts every delivery),
