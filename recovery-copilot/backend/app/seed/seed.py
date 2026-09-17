@@ -30,6 +30,7 @@ from app.models.enums import NotificationChannel
 from app.seed import adherence as adh
 from app.seed.conversations import CONVERSATIONS
 from app.seed.generators import generate_patient_observations
+from app.seed.ortho import generate_ortho_observations
 from app.seed.patients import CARE_TEAM, PATIENTS
 from app.seed.scenarios import get_scenario
 
@@ -78,6 +79,17 @@ def seed_core(db: Session, today: date) -> dict[str, int]:
         ingested, _, _ = ingest_observations(db, obs)
         total_obs += ingested
     counts["observations"] = total_obs
+
+    # the orthopedic streams — patient-reported pain and wound checks, ROM
+    # readings, nightly awakenings — for the measures beside the risk tier.
+    # Same ingest path, delivered after the wearable batch so a patient's
+    # pre-op baselines are established from device data alone.
+    total_ortho = 0
+    for spec in PATIENTS:
+        obs = generate_ortho_observations(spec, get_scenario(spec.id), today)
+        ingested, _, _ = ingest_observations(db, obs)
+        total_ortho += ingested
+    counts["ortho_observations"] = total_ortho
 
     # check-ins
     n_checkins = 0

@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.engine.ortho_measures import build_ortho_measures
 from app.llm.insights import BANNED, _cached, _persist
 from app.llm.prompts import PROMPT_VERSION
 from app.llm.provider import LLMError, complete_json, provider_name
@@ -107,6 +108,12 @@ def _roster_context(db: Session) -> list[dict[str, Any]]:
             for m in analytics.get("metrics", [])
             if m["status"] in ("flag", "watch")
         ]
+        # the orthopedic measures that moved — wound, pain curve, ROM, nights
+        notable += [
+            f"{m['name']} ({m['status_text']}): {m['finding']}"
+            for m in build_ortho_measures(db, patient)["measures"]
+            if m["status"] in ("flag", "watch")
+        ]
         recent = db.scalars(
             select(Checkin)
             .where(Checkin.patient_id == patient.id)
@@ -153,6 +160,11 @@ _TERM_GROUPS: list[tuple[tuple[str, ...], Any]] = [
      lambda p: any("hr " in r.lower() or "heart" in r.lower() for r in p["reasons"])),
     (("limp", "gait", "asymmetry", "favoring"),
      lambda p: any("asymmetry" in r.lower() or "favoring" in r.lower() for r in p["reasons"])),
+    (("wound", "drainage", "incision", "dressing"),
+     lambda p: any("drainage" in s.lower() for s in p["notable_signals"])),
+    (("flexion", "range of motion", "stiff", "extension", "rom"),
+     lambda p: any("flexion" in s.lower() or "elevation" in s.lower() or "extension" in s.lower()
+                   for s in p["notable_signals"])),
     (("behind", "plateau", "slow", "stalled", "lagging"),
      lambda p: p["trajectory"] == "behind"),
     (("adherence", "exercises", "compliance", "skipping"),

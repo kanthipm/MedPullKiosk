@@ -11,7 +11,7 @@ from typing import Any
 from app.models.enums import GUARDRAIL_SENTENCE, InsightKind
 
 # Bump to invalidate cached insights when prompt wording changes.
-PROMPT_VERSION = "1"
+PROMPT_VERSION = "2"
 
 SYSTEM = f"""You are the clinical monitoring assistant inside MedPull Recovery Copilot, \
 summarizing post-surgical recovery signals for orthopedic surgeons and their care teams.
@@ -37,7 +37,9 @@ CONTRACTS: dict[InsightKind, str] = {
     InsightKind.PATIENT_SUMMARY: (
         '{"summary": "<one paragraph, 90-150 words, for the treating clinician: what is '
         "happening with this recovery, which signals moved and by how much, what the "
-        "patient reported in their own words, and what the trajectory looks like. End "
+        "orthopedic measures (pain curve, wound check, range of motion, load tolerance, "
+        "nights) show, what the patient reported in their own words, and what the "
+        "trajectory looks like. End "
         f'with exactly this sentence: {GUARDRAIL_SENTENCE}">}}'
     ),
     InsightKind.SUGGESTED_ACTIONS: (
@@ -92,10 +94,14 @@ def patient_prompt(
     patient_header: dict[str, Any],
     analytics: dict[str, Any],
     transcript: list[dict[str, str]],
+    ortho_measures: list[dict[str, Any]] | None = None,
 ) -> str:
     payload = {
         "patient": patient_header,
         "analytics": _compact_analytics(analytics),
+        # The five orthopedic measures (engine/ortho_measures.py): status and
+        # finding only. They sit beside the risk tier and do not set it.
+        "orthopedic_measures": ortho_measures or [],
         "recent_checkin_messages": transcript[-24:],
     }
     return (

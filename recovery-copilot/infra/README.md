@@ -127,7 +127,7 @@ recommends against creating them at all.
 | `AWS_REGION` | `us-east-1` | Deployment region |
 | `STACK_NAME` | `recovery-copilot` | CloudFormation stack name |
 | `GROQ_API_KEY` | — | Skips the prompt; also read from `recovery-copilot/.env` |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Overrides the model |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Overrides the model |
 | `BUDGET_EMAIL` | — | Enables the monthly cost alarm |
 | `API_RESERVED_CONCURRENCY` | `5` | `-1` leaves concurrency unreserved |
 

@@ -25,6 +25,7 @@ from app.models.notification import Notification, NotificationPreference
 from app.models.observation import Observation, WebhookEvent
 from app.models.patient import CareTeamMember, Device
 from app.models.rtm import ProviderTimeLog, RtmDocument, RtmInteraction
+from app.seed.patients import PATIENTS
 
 
 def test_health(client):
@@ -35,7 +36,7 @@ def test_health(client):
 
 def test_worklist_shape_and_ordering(client):
     body = client.get("/api/worklist").json()
-    assert body["stats"]["total"] == 10
+    assert body["stats"]["total"] == len(PATIENTS)
     assert body["briefing"]["text"]
     priorities = [p["priority"] for p in body["patients"]]
     order = {"high": 0, "medium": 1, "missing_data": 2, "low": 3}

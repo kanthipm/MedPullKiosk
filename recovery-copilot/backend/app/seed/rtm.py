@@ -17,6 +17,7 @@ seed date. The roster deliberately covers every compliance stage:
   aisha   enrolled, 25 min incl. call — 98980 met, documentation pending
   james   enrolled, 21 min incl. call, docs approved — Ready to Bill
   david   enrolled, 45 min incl. call, docs approved — Ready to Bill + 98981
+  chris   enrolled, 8 min incl. a message, no call — early monitoring (demo stand-in)
 """
 
 from dataclasses import dataclass, field
@@ -141,6 +142,14 @@ RTM_STATES: dict[str, RtmSpec] = {
             TimeEntry(3, TimeLogActivity.CALL, 8, interactive=True, note="Check-in call — progressing"),
         ],
         monitoring_days=11,
+    ),
+    "chris": RtmSpec(
+        11, 11, 10, "ACL accelerated return-to-sport",
+        [
+            TimeEntry(5, TimeLogActivity.CHART_REVIEW, 5, note="Step-band + extension review"),
+            TimeEntry(1, TimeLogActivity.MESSAGING, 3, note="Message re: day-10 step spike and evening swelling"),
+        ],
+        monitoring_days=9,
     ),
 }
 

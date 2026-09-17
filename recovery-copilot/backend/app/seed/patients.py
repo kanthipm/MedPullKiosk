@@ -1,5 +1,8 @@
 """The seeded roster. Nine patients ported from the orthopedic-demo domain
-model plus one new early-post-op case (Grace Kim)."""
+model, one new early-post-op case (Grace Kim), and one demo stand-in (Chris
+Morgan) — a placeholder identity for filmed walkthroughs, so the presenter can
+point at "their own" recovery without a real name on screen. Every record here
+is synthetic."""
 
 from dataclasses import dataclass
 
@@ -77,6 +80,10 @@ PATIENTS: list[PatientSpec] = [
           "Total Knee Replacement (TKA)", 40, SourceProvider.FITBIT, "Fitbit Sense 3", 2),
     _spec("elena", "Elena Ruiz", 33, "F", ProcedureType.MENISCUS,
           "Meniscus Repair", 19, SourceProvider.APPLE, "Apple Watch Series 10", 0),
+    # Demo stand-in under a placeholder name: an on-track ACL recovery with one
+    # instructive over-exertion day, so the presenter's "own" page has a story.
+    _spec("chris", "Chris Morgan", 26, "M", ProcedureType.ACL,
+          "ACL Reconstruction", 12, SourceProvider.APPLE, "Apple Watch Series 10", 0),
 ]
 
 

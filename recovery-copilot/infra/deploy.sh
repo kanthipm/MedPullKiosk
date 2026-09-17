@@ -19,7 +19,7 @@ STACK_NAME="${STACK_NAME:-recovery-copilot}"
 REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
 GROQ_PARAM="${GROQ_PARAM:-/recovery-copilot/groq-api-key}"
 ORIGIN_SECRET_PARAM="${ORIGIN_SECRET_PARAM:-/recovery-copilot/origin-verify-secret}"
-GROQ_MODEL="${GROQ_MODEL:-llama-3.3-70b-versatile}"
+GROQ_MODEL="${GROQ_MODEL:-openai/gpt-oss-120b}"
 BUDGET_EMAIL="${BUDGET_EMAIL:-}"
 
 RESEED=false

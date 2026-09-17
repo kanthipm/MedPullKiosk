@@ -61,6 +61,12 @@ TASKS: dict[str, list[TaskSpec]] = {
         TaskSpec("Strengthening plan, 3x weekly", "Protects the repaired meniscus", "self-report"),
         TaskSpec("Avoid deep squats and twisting", "Lets the repair mature", "self-report"),
     ],
+    "chris": [
+        TaskSpec("Stay within today's step band", "Prevents effusion from over-doing it", "step data"),
+        TaskSpec("Heel slides + quad sets, 3x daily", "Restores extension and quad control", "self-report"),
+        TaskSpec("Log knee pain AM & PM", "Anchors tolerance and trajectory tracking", "app entry"),
+        TaskSpec("Wear the watch overnight", "Night-pain proxy and surveillance", "device sync"),
+    ],
 }
 
 # target completion rate per patient over the last 14 days
@@ -75,6 +81,7 @@ RATES: dict[str, float] = {
     "david": 0.95,
     "james": 0.90,
     "elena": 0.88,
+    "chris": 0.90,
 }
 
 

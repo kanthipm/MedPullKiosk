@@ -477,6 +477,8 @@ def test_golden_tiers(db):
         "david": RiskLevel.LOW,
         "james": RiskLevel.LOW,
         "elena": RiskLevel.LOW,
+        # the demo stand-in: a single favorable step spike never moves a tier
+        "chris": RiskLevel.LOW,
     }
     for patient_id, tier in expected.items():
         assessment = latest_assessment(db, patient_id)

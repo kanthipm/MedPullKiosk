@@ -97,7 +97,28 @@ def _scenario_effect(scenario: ScenarioSpec, metric: M, day: int) -> tuple[float
         f = ramp.factor(day)
         add += ramp.add * f
         mult *= 1.0 + (ramp.mult_to - 1.0) * f
+    for spike in scenario.spikes:
+        if spike.metric is metric and spike.day == day:
+            mult *= spike.mult
     return (add, mult)
+
+
+def dropped_days(spec: PatientSpec, scenario: ScenarioSpec) -> set[int]:
+    """Post-op days with no device data at all (not worn / not synced).
+
+    Shared with the orthopedic streams (seed/ortho.py) so a barely-worn device
+    and a barely-used app tell one story: the same days are dark for both.
+    Deterministic — the draw sequence is one call per post-op day, in order.
+    """
+    drop_rng = _rng(spec.id, "dropout")
+    dropped = {
+        d for d in range(0, spec.postop_day + 1) if drop_rng.random() < scenario.dropout_frac
+    }
+    # Never drop today for patients who have data at all — the demo needs a
+    # current reading; priya stays sparse either way.
+    if scenario.dropout_frac < 0.5:
+        dropped.discard(spec.postop_day)
+    return dropped
 
 
 def _effective_day(scenario: ScenarioSpec, day: int) -> int:
@@ -177,14 +198,7 @@ def generate_patient_observations(
     days = list(range(-PRE_OP_DAYS, spec.postop_day + 1))
 
     # Deterministic dropout: whole days where the device wasn't worn/synced.
-    drop_rng = _rng(spec.id, "dropout")
-    dropped = {
-        d for d in days if d >= 0 and drop_rng.random() < scenario.dropout_frac
-    }
-    # Never drop today for patients who have data at all — the demo needs a
-    # current reading; priya stays sparse either way.
-    if scenario.dropout_frac < 0.5:
-        dropped.discard(spec.postop_day)
+    dropped = dropped_days(spec, scenario)
 
     out: list[CanonicalObservation] = []
     noise_by_metric = {m: _rng(spec.id, f"noise:{m}").standard_normal(len(days)) for m in metrics}

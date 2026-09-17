@@ -44,6 +44,11 @@ UNITS: dict[MetricType, str] = {
     MetricType.STAIR_SPEED_DOWN: "m/s",
     MetricType.SIX_MIN_WALK: "m",
     MetricType.CALORIES: "kcal",
+    # patient-reported / clinician-entered streams (seed/ortho.py)
+    MetricType.PAIN_NRS: "nrs",
+    MetricType.RANGE_OF_MOTION: "deg",
+    MetricType.WOUND_DRAINAGE: "grade",
+    MetricType.SLEEP_AWAKENINGS: "count",
 }
 
 

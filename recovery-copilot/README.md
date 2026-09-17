@@ -62,9 +62,16 @@ per call from what's configured and reachable (`app/llm/provider.py`); there
 is no other provider — no OpenAI, Anthropic, or xAI code path anywhere.
 
 - **Groq (the cloud model):** set `GROQ_API_KEY` in `.env` (free tier at
-  console.groq.com). Model: `llama-3.3-70b-versatile` by default — override
+  console.groq.com). Model: `openai/gpt-oss-120b` by default (the earlier
+  `llama-3.3-70b-versatile` default was retired from Groq) — override
   with `GROQ_MODEL`. Calls go to Groq's OpenAI-compatible chat-completions
   endpoint with JSON response format and retry-after-aware 429 handling.
+- **Before a demo:** `make warm`. The free tier allows 8,000 tokens a minute,
+  which is about three narratives; the seed's quick warm-up lands a few and
+  the rest fall back to the rules-based text until asked again. `make warm`
+  paces itself and comes back for whatever fell back (about ten minutes for
+  the roster). Narratives regenerate on the first request of each calendar
+  day, so run it on the day.
 - **No LLM at all:** the deterministic engine renders narratives from typed
   reason codes.
 - **Ollama (opt-in, off by default):** set `OLLAMA_URL` explicitly (e.g.
@@ -316,11 +323,25 @@ check-ins) is not built; SPEC.md's status table says which is which.
 
 ## Demo roster
 
-Seeded deterministically (`app/seed/`): 10 patients across 7 orthopedic
-procedures. Marcus Reyes (TKA day 8) carries a possible-infection signal
-pattern — coupled RHR/temperature rise, falling HRV, activity collapse — that
-exercises every part of the engine, including the high-priority notification
-path. Priya Nair's barely-worn watch exercises the missing-data gate.
+Seeded deterministically (`app/seed/`): 11 patients across 7 orthopedic
+procedures, every one of them synthetic. Marcus Reyes (TKA day 8) carries a
+possible-infection signal pattern — coupled RHR/temperature rise, falling HRV,
+activity collapse, and a wound that drains again in week 2 — that exercises
+every part of the engine, including the high-priority notification path.
+Priya Nair's barely-worn watch exercises the missing-data gate. Chris Morgan
+(ACL day 12) is a placeholder identity for filmed walkthroughs: an on-track
+recovery with one over-exertion day, so a presenter can point at "their own"
+page without a real name on screen.
+
+Alongside the wearable streams, `app/seed/ortho.py` seeds the orthopedic
+measure inputs — patient-reported pain (AM/PM NRS) and daily wound checks,
+clinic- and phone-measured range of motion, and nightly awakenings — which
+`app/engine/ortho_measures.py` turns into the five **orthopedic recovery
+measures** on the patient page (pain trajectory, load–pain sensitivity, range
+of motion vs milestone, incision drainage ladder, nocturnal disruption). They
+come from the practice's Ortho Metrics & Task Library and the clinical
+content review in `docs/backend-design/`, cite their thresholds on each card,
+and never move the risk tier.
 
 Demo webhook (full ingestion path against the seeded DB). Dates are bounded per
 patient, so use a recent one; the seed is generated relative to the day it ran:

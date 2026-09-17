@@ -102,6 +102,35 @@ export interface PatientMetrics {
   adherence: { rate: number; verified: number; assigned: number; self_attested: number; days: number[] }
 }
 
+export interface OrthoMeasure {
+  key: string
+  name: string
+  family: string
+  source: 'patient_reported' | 'clinician_entered' | 'derived'
+  source_label: string
+  status: MetricStatus
+  status_text: string
+  value: string | null
+  unit: string
+  delta: string | null
+  finding: string
+  next_step: string | null
+  evidence: string
+  coverage_text: string
+  guarded: boolean
+  reference: number | null
+  series_unit: string
+  series: { date: string; value: number }[]
+}
+
+export interface OrthoMeasures {
+  postop_day: number
+  generated_at: string
+  summary: { flagged: number; watch: number; nodata: number }
+  provenance: { developed_with: string; evidence_base: string; boundary: string }
+  measures: OrthoMeasure[]
+}
+
 export interface TimelineEvent {
   date: string
   kind: 'surgery' | 'discharge' | 'checkin' | 'flag' | 'change_point' | 'today'

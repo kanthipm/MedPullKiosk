@@ -46,6 +46,14 @@ def _cooling_down(provider: str) -> bool:
     return time.monotonic() < _cooldowns.get(provider, 0.0)
 
 
+def reset_cooldowns() -> None:
+    """Forget every provider cooldown. For the offline warm-up (seed/warm.py),
+    which paces itself under the free tier's per-minute budget and so wants to
+    re-ask a rate-limited provider on its own schedule, not three minutes later."""
+    _cooldowns.clear()
+    _rejections.clear()
+
+
 def note_provider_failure(provider: str) -> None:
     """Called by a provider client after a call fails.
 

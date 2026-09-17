@@ -117,6 +117,18 @@ def patient_metrics(patient_id: str, db: Session = Depends(get_db)) -> dict:
     }
 
 
+@router.get("/{patient_id}/ortho-measures")
+def patient_ortho_measures(patient_id: str, db: Session = Depends(get_db)) -> dict:
+    """The five orthopedic recovery measures — pain trajectory, load–pain
+    sensitivity, range of motion vs milestone, incision drainage, nocturnal
+    disruption. Computed on read from a handful of rows; deliberately not part
+    of the stored assessment, since they inform review and never set the tier."""
+    from app.engine.ortho_measures import build_ortho_measures
+
+    patient = _get_patient(db, patient_id)
+    return build_ortho_measures(db, patient)
+
+
 @router.get("/{patient_id}/timeline")
 def patient_timeline(patient_id: str, db: Session = Depends(get_db)) -> dict:
     patient = _get_patient(db, patient_id)

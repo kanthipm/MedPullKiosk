@@ -74,15 +74,24 @@ class MetricType(StrEnum):
     # ahead of its use: no connector emits it, and engine/confidence.py gates on
     # KEY_METRICS coverage instead, which does not include it.
     WEAR_TIME_MINUTES = "wear_time_minutes"
-    # --- The RTM-qualifying patient-reported stream (SPEC.md §2, unbuilt) ---
-    # Declared so the vocabulary is settled, but nothing produces or consumes
-    # these yet: there is no patient-facing capture path and the engine analyzes
-    # device metrics only (engine/pipeline.py ANALYZED_METRICS).
-    PAIN_NRS = "pain_nrs"                    # 0-10 numeric rating scale
-    RANGE_OF_MOTION = "range_of_motion"      # degrees; details in value_json
+    # --- The RTM-qualifying patient-reported stream (SPEC.md §2) ---
+    # PAIN_NRS, RANGE_OF_MOTION, WOUND_DRAINAGE and SLEEP_AWAKENINGS are
+    # produced by the demo seed (seed/ortho.py) and read by the orthopedic
+    # measures (engine/ortho_measures.py), which sit beside the risk tier and
+    # never move it: the risk engine still analyzes device metrics only
+    # (engine/pipeline.py ANALYZED_METRICS). There is no patient-facing capture
+    # path yet, so outside the seed nothing writes these rows.
+    PAIN_NRS = "pain_nrs"                    # 0-10 numeric rating scale; value_json {am, pm}
+    RANGE_OF_MOTION = "range_of_motion"      # degrees; value_json {joint, motion, measured_by}
     THERAPY_ADHERENCE = "therapy_adherence"  # HEP sessions completed per day
     EXERCISE_REPS = "exercise_reps"          # count
     PROM_SCORE = "prom_score"                # value_json {instrument, score, ceiling}
+    # Daily wound check, ordinal 0-4 (none/minimal/mild/moderate/heavy) — the
+    # week-conditional drainage ladder reads it; value_json {label, dressing_gt_2x2}
+    WOUND_DRAINAGE = "wound_drainage"
+    # Awakenings per night from the wearable's sleep record; value_json
+    # {waso_min}. Fragmentation, never duration, is the night-pain proxy.
+    SLEEP_AWAKENINGS = "sleep_awakenings"
 
 
 class Granularity(StrEnum):

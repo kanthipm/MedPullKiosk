@@ -267,13 +267,19 @@ def get_patient_insight(db: Session, kind: InsightKind, patient_id: str) -> Insi
         return cached
 
     header = _header(patient, analytics.get("postop_day", 0))
+    # Computed only on a cache miss: five small queries, never on the read path.
+    from app.engine.ortho_measures import build_ortho_measures, notable_ortho
+
+    ortho = notable_ortho(build_ortho_measures(db, patient)["measures"])
 
     content: dict[str, Any] | None = None
     if provider != "fallback":
         try:
             # warm enough that a manual Refresh visibly rewrites the narrative
             raw = complete_json(
-                SYSTEM, patient_prompt(kind, header, analytics, transcript), temperature=0.6
+                SYSTEM,
+                patient_prompt(kind, header, analytics, transcript, ortho),
+                temperature=0.6,
             )
             content = _validate(kind, raw)
             if content is None:
@@ -289,9 +295,9 @@ def get_patient_insight(db: Session, kind: InsightKind, patient_id: str) -> Insi
         if kind == InsightKind.WORKLIST_REASON:
             content = fallback.worklist_reason(analytics)
         elif kind == InsightKind.PATIENT_SUMMARY:
-            content = fallback.patient_summary(header, analytics)
+            content = fallback.patient_summary(header, analytics, ortho)
         else:
-            content = fallback.suggested_actions(analytics)
+            content = fallback.suggested_actions(analytics, ortho)
 
     return _persist(db, patient_id, kind, content, cache_hash, provider)
 

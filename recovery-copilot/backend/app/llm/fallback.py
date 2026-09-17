@@ -70,7 +70,24 @@ def worklist_reason(analytics: dict[str, Any]) -> dict[str, str]:
     return {"reason": text[:90]}
 
 
-def patient_summary(patient_header: dict[str, Any], analytics: dict[str, Any]) -> dict[str, str]:
+def _ortho_sentence(ortho: list[dict[str, Any]] | None) -> str | None:
+    """One sentence on the orthopedic measures that moved — flag first, then
+    watch — in the same terse register as the reason codes."""
+    if not ortho:
+        return None
+    moved = [m for m in ortho if m.get("status") in ("flag", "watch")]
+    if not moved:
+        return "The orthopedic measures — pain curve, wound check, range of motion — are within milestones."
+    moved.sort(key=lambda m: 0 if m["status"] == "flag" else 1)
+    parts = [f"{m['name'].lower()} {m['status_text'].lower()}" for m in moved[:3]]
+    return "Orthopedic measures: " + "; ".join(parts) + "."
+
+
+def patient_summary(
+    patient_header: dict[str, Any],
+    analytics: dict[str, Any],
+    ortho: list[dict[str, Any]] | None = None,
+) -> dict[str, str]:
     name = patient_header.get("name", "The patient").split()[0]
     day = analytics.get("postop_day")
     level = analytics.get("risk", {}).get("level")
@@ -105,6 +122,9 @@ def patient_summary(patient_header: dict[str, Any], analytics: dict[str, Any]) -
             parts.append(f"Functional recovery is tracking {abs(round(pct))}% ahead of the expected curve.")
         if adherence.get("assigned") and adherence.get("rate", 1) < 0.7:
             parts.append(f"Task adherence is {int(round(adherence['rate'] * 100))}% over the last two weeks.")
+        ortho_line = _ortho_sentence(ortho)
+        if ortho_line:
+            parts.append(ortho_line)
         if level == RiskLevel.HIGH:
             parts.append("Consider contacting the patient to determine whether earlier clinical follow-up is appropriate.")
 
@@ -112,14 +132,53 @@ def patient_summary(patient_header: dict[str, Any], analytics: dict[str, Any]) -
     return {"summary": " ".join(parts)}
 
 
-def suggested_actions(analytics: dict[str, Any]) -> dict[str, Any]:
+# Actions the orthopedic measures raise on their own — keyed by measure and
+# the status that earns the action. Wound comes first: it is the one channel
+# the clinical review lets set urgency by itself.
+_ORTHO_ACTIONS: list[tuple[str, tuple[str, ...], dict[str, str]]] = [
+    ("Incision drainage", ("flag",), {
+        "title": "Call about wound drainage",
+        "detail": "The drainage pattern this week is one the reference cohort singles out; bring the wound review forward.",
+        "urgency": "today",
+    }),
+    ("Pain trajectory", ("flag",), {
+        "title": "Review pain control plan",
+        "detail": "Pain is above or rising against the expected curve for this post-op day.",
+        "urgency": "this_week",
+    }),
+    ("Range of motion", ("flag", "watch"), {
+        "title": "Review ROM progression with PT",
+        "detail": "Range of motion is short of the protocol milestone for this post-op day.",
+        "urgency": "this_week",
+    }),
+    ("Nocturnal disruption", ("flag",), {
+        "title": "Ask about night pain",
+        "detail": "Nights are fragmented and track the evening pain log; review analgesia timing.",
+        "urgency": "this_week",
+    }),
+    ("Load–pain sensitivity", ("flag", "watch"), {
+        "title": "Hold the step band this week",
+        "detail": "Extra load is still costing next-day pain; advance once the tolerance slope flattens.",
+        "urgency": "routine",
+    }),
+]
+
+
+def suggested_actions(
+    analytics: dict[str, Any], ortho: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     codes = {r["code"] for r in analytics.get("risk", {}).get("reasons", [])}
     actions: list[dict[str, str]] = []
+    status_by_name = {m["name"]: m.get("status") for m in (ortho or [])}
+    for name, statuses, action in _ORTHO_ACTIONS:
+        if status_by_name.get(name) in statuses and action not in actions:
+            actions.append(action)
     for trigger_codes, action in _ACTION_LIBRARY:
         if codes.intersection(trigger_codes) and action not in actions:
             actions.append(action)
-        if len(actions) == 4:
+        if len(actions) >= 4:
             break
+    actions = actions[:4]
     if not actions:
         actions = [_DEFAULT_ACTION]
     return {"actions": actions}

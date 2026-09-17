@@ -175,4 +175,28 @@ CONVERSATIONS: dict[str, list[tuple[int, int, list[tuple[str, str]]]]] = {
             (C, "That's the goal. Stick with the strengthening plan through week six."),
         ]),
     ],
+    "chris": [
+        (5, 19, [
+            (C, "Evening, Chris. One week out — how is the knee after today's PT?"),
+            (P, "Good. Heel slides are getting easier and I can nearly straighten it out."),
+            (C, "That's the milestone we want first. Any swelling after the session?"),
+            (P, "A little puffy by evening, ice takes care of it. Incision is dry."),
+            (C, "Perfect. Keep logging your pain morning and evening so we can see the trend."),
+        ]),
+        (2, 19, [
+            (C, "Hi Chris, evening check-in. How did today go?"),
+            (P, "I was on my feet a lot — walked around campus most of the day. Way more than usual."),
+            (C, "That's well above your step band for the week. How does the knee feel tonight?"),
+            (P, "More swollen than it's been, and more sore than usual. It kept me up a bit."),
+            (C, "Thanks for being honest about it. Ice and elevate tonight, and stay inside the band tomorrow — your care team will see the spike."),
+            (P, "Will do."),
+        ]),
+        (0, 19, [
+            (C, "Evening, Chris. How has the knee settled after the big day?"),
+            (P, "Much better. Stayed inside the step band and the pain is back to where it was. Slept fine."),
+            (C, "Good recovery from it — that's exactly the pattern we want to see. Extension still full?"),
+            (P, "Yes, flat on the table at PT this morning."),
+            (C, "Great. Keep the band this week; we'll advance it once the tolerance trend holds."),
+        ]),
+    ],
 }

@@ -14,6 +14,7 @@ from app.models.enums import GUARDRAIL_SENTENCE
 from app.models.patient import Patient
 from app.rtm.coverage import WINDOW_DAYS
 from app.rtm.readiness import compute_readiness
+from app.seed.patients import PATIENTS
 
 
 def _readiness(db, patient_id: str) -> dict:
@@ -139,7 +140,7 @@ def test_patient_detail_rtm_block_unchanged(client):
 
 def test_practice_overview(client):
     body = client.get("/api/practice/overview").json()
-    assert body["rtm_patients"] == 10
+    assert body["rtm_patients"] == len(PATIENTS)
     assert body["ready_to_bill"] >= 2  # david + james seeded ready
     assert body["needs_review"] >= 1
     assert body["estimated_revenue"] > 0

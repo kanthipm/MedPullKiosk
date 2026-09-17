@@ -6,6 +6,7 @@ import type {
   Checkin,
   IntegrationProvider,
   NotificationPreference,
+  OrthoMeasures,
   PatientDetail,
   PatientMetrics,
   PracticeOverview,
@@ -34,6 +35,15 @@ export function usePatientMetrics(id: string, enabled = true) {
     queryKey: ['patient', id, 'metrics'],
     queryFn: () => fetchJson<PatientMetrics>(`/api/patients/${id}/metrics`),
     enabled,
+  })
+}
+
+/** Keyed under ['patient', id] so a recompute's invalidation refetches it
+ *  with the rest of the page, even though the server computes it on read. */
+export function usePatientOrthoMeasures(id: string) {
+  return useQuery({
+    queryKey: ['patient', id, 'ortho-measures'],
+    queryFn: () => fetchJson<OrthoMeasures>(`/api/patients/${id}/ortho-measures`),
   })
 }
 

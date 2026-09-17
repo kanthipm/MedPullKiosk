@@ -16,6 +16,7 @@ import { relativeTime, signedPct } from '../../lib/format'
 import { PRIORITY, TRAJECTORY_LABEL, URGENCY } from '../../lib/risk'
 import ActionBar from './ActionBar'
 import CheckinHistory from './CheckinHistory'
+import OrthoMeasures from './OrthoMeasures'
 import RecoveryTimeline from './RecoveryTimeline'
 import RtmReadinessCard from './RtmReadinessCard'
 import SignalsSection from './SignalsSection'
@@ -209,6 +210,10 @@ export default function PatientDetailPage() {
         </div>
 
         <div {...rise(7)}>
+          <OrthoMeasures patientId={p.id} refreshing={refreshing} />
+        </div>
+
+        <div {...rise(8)}>
           <SignalsSection patientId={p.id} rtm={p.rtm} refreshing={refreshing} />
         </div>
       </div>

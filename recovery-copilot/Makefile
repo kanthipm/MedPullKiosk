@@ -1,4 +1,4 @@
-.PHONY: setup seed dev dev-backend dev-frontend build run test lint clean \
+.PHONY: setup seed warm dev dev-backend dev-frontend build run test lint clean \
         deploy deploy-backend reseed destroy
 
 setup: ## Install backend (uv) and frontend (npm) dependencies
@@ -7,6 +7,9 @@ setup: ## Install backend (uv) and frontend (npm) dependencies
 
 seed: ## (Re)create the database with deterministic demo data
 	cd backend && uv run python -m app.seed.seed --reset
+
+warm: ## Regenerate every AI narrative, paced under Groq's free tier (~10 min; run before a demo)
+	cd backend && uv run python -m app.seed.warm
 
 dev-backend: ## FastAPI with auto-reload on :8000
 	cd backend && uv run uvicorn app.main:app --reload --port 8000

@@ -34,9 +34,10 @@ from app.models.enums import MetricType as M
 from app.models.observation import Observation
 from app.models.patient import Patient
 
-# Batch ceiling. The whole ten-patient seed is 2,825 rows delivered in ten
-# calls, the largest of them 585; a real connect-time back-fill is the same
-# order. A payload past this is a provider fault or a hostile body, not data.
+# Batch ceiling. The whole eleven-patient seed delivers well under 1,000 rows
+# per call (the largest wearable batch is under 600, the orthopedic streams
+# under 250); a real connect-time back-fill is the same order. A payload past
+# this is a provider fault or a hostile body, not data.
 MAX_BATCH_OBSERVATIONS = 5_000
 
 # How far before surgery an observation may be dated. compute_baseline() takes
@@ -81,6 +82,8 @@ PLAUSIBLE_RANGE: dict[str, tuple[float, float]] = {
     str(M.PAIN_NRS): (0.0, 10.0),
     str(M.RANGE_OF_MOTION): (0.0, 360.0),
     str(M.EXERCISE_REPS): (0.0, 10_000.0),
+    str(M.WOUND_DRAINAGE): (0.0, 4.0),
+    str(M.SLEEP_AWAKENINGS): (0.0, 60.0),
 }
 
 # Observations are dated in patient-local wall time, so a patient east of the

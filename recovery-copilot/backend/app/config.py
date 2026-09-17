@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     )
 
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    # llama-3.3-70b-versatile was retired from Groq (404 model_not_found, Sep 2026)
+    groq_model: str = "openai/gpt-oss-120b"
     # Webhook signing secrets — empty means that provider's deliveries are
     # rejected (verification fails closed; the mock/demo path needs none).
     terra_signing_secret: str = ""

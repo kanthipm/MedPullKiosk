@@ -33,6 +33,16 @@ class Ramp:
 
 
 @dataclass(frozen=True)
+class Spike:
+    """A single-day multiplicative excursion — one big day, gone the next.
+    A Ramp persists; a Spike is the shape of over-doing it once."""
+
+    metric: M
+    day: int
+    mult: float
+
+
+@dataclass(frozen=True)
 class ScenarioSpec:
     # multiplier on the expected-curve trajectory (1.0 on-track, <1 behind, >1 ahead)
     track: float = 1.0
@@ -41,6 +51,7 @@ class ScenarioSpec:
     # fraction of post-op days with no data at all (device not worn/synced)
     dropout_frac: float = 0.0
     ramps: tuple[Ramp, ...] = field(default_factory=tuple)
+    spikes: tuple[Spike, ...] = field(default_factory=tuple)
 
 
 SCENARIOS: dict[str, ScenarioSpec] = {
@@ -84,6 +95,15 @@ SCENARIOS: dict[str, ScenarioSpec] = {
     "david": ScenarioSpec(track=1.02),
     "james": ScenarioSpec(track=1.08),
     "elena": ScenarioSpec(track=1.12),
+    # The demo stand-in: slightly ahead of curve, with one over-exertion day
+    # (day 10) that the load-pain measure should catch as a next-day pain rise.
+    # A single favorable-direction step spike never moves the risk tier. Young
+    # and athletic, so the limp clears faster than the generic ACL curve.
+    "chris": ScenarioSpec(
+        track=1.04,
+        ramps=(Ramp(M.WALKING_ASYMMETRY_PCT, 0, 1, mult_to=0.72),),
+        spikes=(Spike(M.STEPS, 10, 1.55),),
+    ),
 }
 
 
